@@ -506,12 +506,9 @@ distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-mav
     const structure = {
       name: "src",
       isFolder: true,
-      children: ["EmployeeManagement"],
+      children: ["YourNamespace"],
       files: {},
     };
-
-    const fileNameMatch = code.match(/FileName:\s*(\w+)\.cs/);
-    const className = fileNameMatch ? fileNameMatch[1] : "Employee";
 
     const cleanCode = (codeContent) => {
       if (!codeContent) return "";
@@ -524,7 +521,7 @@ distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-mav
 
       // Remove section markers
       cleaned = cleaned.replace(
-        /##(Model|Repository|Service|Controller|Program|appsettings\.json|csproj)\s*/g,
+        /##(Entity|Repository|Service|Controller|application\.properties|Dependencies)\s*/g,
         ""
       );
 
@@ -537,229 +534,120 @@ distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-mav
     };
 
     // Extract different components from the code
-    const modelMatch = code.match(/##Model([\s\S]*?)(?=##|$)/);
+    const entityMatch = code.match(/##Entity([\s\S]*?)(?=##|$)/);
     const repositoryMatch = code.match(/##Repository([\s\S]*?)(?=##|$)/);
     const serviceMatch = code.match(/##Service([\s\S]*?)(?=##|$)/);
     const controllerMatch = code.match(/##Controller([\s\S]*?)(?=##|$)/);
-    const programMatch = code.match(/##Program([\s\S]*?)(?=##|$)/);
-    const appSettingsMatch = code.match(
-      /##appsettings\.json([\s\S]*?)(?=##|$)/
-    );
-    const csprojMatch = code.match(/##csproj([\s\S]*?)(?=##|$)/);
+    const appSettingsMatch = code.match(/##application\.properties([\s\S]*?)(?=##|$)/);
+    const dependenciesMatch = code.match(/##Dependencies([\s\S]*?)(?=##|$)/);
 
-    console.log("Model Match:", modelMatch);
+    console.log("Entity Match:", entityMatch);
     console.log("Repository Match:", repositoryMatch);
     console.log("Service Match:", serviceMatch);
     console.log("Controller Match:", controllerMatch);
-    console.log("Program Match:", programMatch);
     console.log("AppSettings Match:", appSettingsMatch);
-    console.log("Csproj Match:", csprojMatch);
+    console.log("Dependencies Match:", dependenciesMatch);
 
     // Create the file structure
-    structure.children = ["EmployeeManagement"];
+    structure.children = ["YourNamespace"];
     structure.expanded = {
       src: true,
-      "src/EmployeeManagement": true,
-      "src/EmployeeManagement/Models": true,
-      "src/EmployeeManagement/Controllers": true,
-      "src/EmployeeManagement/Services": true,
-      "src/EmployeeManagement/Repositories": true,
+      "src/YourNamespace": true,
+      "src/YourNamespace/Models": true,
+      "src/YourNamespace/Controllers": true,
+      "src/YourNamespace/Services": true,
+      "src/YourNamespace/Repositories": true,
     };
 
     // Populate files
     structure.files = {};
 
-    if (modelMatch) {
-      structure.files[`src/EmployeeManagement/Models/${className}.cs`] =
-        cleanCode(modelMatch[1].trim());
+    if (entityMatch) {
+      const entityContent = entityMatch[1].trim();
+      const fileNameMatch = entityContent.match(/FileName:\s*(\w+)\.cs/);
+      const fileName = fileNameMatch ? fileNameMatch[1] : "User";
+      structure.files[`src/YourNamespace/Models/${fileName}.cs`] = cleanCode(entityContent);
     }
 
     if (repositoryMatch) {
-      structure.files[
-        `src/EmployeeManagement/Repositories/${className}Repository.cs`
-      ] = cleanCode(repositoryMatch[1].trim());
-      structure.files[
-        `src/EmployeeManagement/Repositories/I${className}Repository.cs`
-      ] = `using EmployeeManagement.Models;
-using System.Collections.Generic;
-
-namespace EmployeeManagement.Repositories
-{
-    public interface I${className}Repository
-    {
-        IEnumerable<${className}> GetAll();
-        ${className} GetById(int id);
-        ${className} Add(${className} ${className.toLowerCase()});
-        ${className} Update(${className} ${className.toLowerCase()});
-        void Delete(int id);
-    }
-}`;
+      const repositoryContent = repositoryMatch[1].trim();
+      const files = repositoryContent.split(/FileName:\s*/).filter(Boolean);
+      
+      files.forEach(file => {
+        const fileNameMatch = file.match(/^(\w+)\.cs/);
+        if (fileNameMatch) {
+          const fileName = fileNameMatch[1];
+          structure.files[`src/YourNamespace/Repositories/${fileName}.cs`] = cleanCode(file);
+        }
+      });
     }
 
     if (serviceMatch) {
-      structure.files[
-        `src/EmployeeManagement/Services/${className}Service.cs`
-      ] = cleanCode(serviceMatch[1].trim());
-      structure.files[
-        `src/EmployeeManagement/Services/I${className}Service.cs`
-      ] = `using EmployeeManagement.Models;
-using System.Collections.Generic;
-
-namespace EmployeeManagement.Services
-{
-    public interface I${className}Service
-    {
-        IEnumerable<${className}> GetAll${className}s();
-        ${className} Get${className}ById(int id);
-        ${className} Add${className}(${className} ${className.toLowerCase()});
-        ${className} Update${className}(${className} ${className.toLowerCase()});
-        void Delete${className}(int id);
-    }
-}`;
+      const serviceContent = serviceMatch[1].trim();
+      const files = serviceContent.split(/FileName:\s*/).filter(Boolean);
+      
+      files.forEach(file => {
+        const fileNameMatch = file.match(/^(\w+)\.cs/);
+        if (fileNameMatch) {
+          const fileName = fileNameMatch[1];
+          structure.files[`src/YourNamespace/Services/${fileName}.cs`] = cleanCode(file);
+        }
+      });
     }
 
     if (controllerMatch) {
-      structure.files[
-        `src/EmployeeManagement/Controllers/${className}Controller.cs`
-      ] = cleanCode(controllerMatch[1].trim());
-    }
-
-    if (programMatch) {
-      structure.files[`src/EmployeeManagement/Program.cs`] = cleanCode(
-        programMatch[1].trim()
-      );
-    } else {
-      structure.files[
-        `src/EmployeeManagement/Program.cs`
-      ] = `using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-
-namespace EmployeeManagement
-{
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
-    }
-}`;
+      const controllerContent = controllerMatch[1].trim();
+      const fileNameMatch = controllerContent.match(/FileName:\s*(\w+)\.cs/);
+      const fileName = fileNameMatch ? fileNameMatch[1] : "LoginController";
+      structure.files[`src/YourNamespace/Controllers/${fileName}.cs`] = cleanCode(controllerContent);
     }
 
     if (appSettingsMatch) {
-      structure.files[`src/EmployeeManagement/appsettings.json`] = cleanCode(
-        appSettingsMatch[1].trim()
-      );
-    } else {
-      structure.files[`src/EmployeeManagement/appsettings.json`] = `{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=EmployeeDb;Trusted_Connection=True;MultipleActiveResultSets=true"
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft": "Warning",
-      "Microsoft.Hosting.Lifetime": "Information"
-    }
-  },
-  "AllowedHosts": "*"
-}`;
+      structure.files[`src/YourNamespace/appsettings.json`] = cleanCode(appSettingsMatch[1].trim());
     }
 
-    if (csprojMatch) {
-      structure.files[`src/EmployeeManagement/EmployeeManagement.csproj`] =
-        cleanCode(csprojMatch[1].trim());
-    } else {
-      structure.files[
-        `src/EmployeeManagement/EmployeeManagement.csproj`
-      ] = `<Project Sdk="Microsoft.NET.Sdk.Web">
-
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
-  </ItemGroup>
-
-</Project>`;
+    if (dependenciesMatch) {
+      structure.files[`src/YourNamespace/YourNamespace.csproj`] = cleanCode(dependenciesMatch[1].trim());
     }
 
-    // Add Startup.cs
-    structure.files[
-      `src/EmployeeManagement/Startup.cs`
-    ] = `using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+    // Add Program.cs
+    structure.files[`src/YourNamespace/Program.cs`] = `using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using EmployeeManagement.Data;
-using EmployeeManagement.Services;
-using EmployeeManagement.Repositories;
+using YourNamespace.Services;
+using YourNamespace.Repositories;
 
-namespace EmployeeManagement
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Register services
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ILoginService, LoginService>();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
 {
-    public class Startup
-    {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-        public IConfiguration Configuration { get; }
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
 
-        public void ConfigureServices(IServiceCollection services)
-        {
-            services.AddControllers();
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
-
-            // Register services
-            services.AddScoped<I${className}Repository, ${className}Repository>();
-            services.AddScoped<I${className}Service, ${className}Service>();
-
-            services.AddSwaggerGen();
-        }
-
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-        {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
-
-            app.UseHttpsRedirection();
-            app.UseRouting();
-            app.UseAuthorization();
-
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
-        }
-    }
-}`;
+app.Run();`;
 
     // Add ApplicationDbContext.cs
-    structure.files[
-      `src/EmployeeManagement/Data/ApplicationDbContext.cs`
-    ] = `using Microsoft.EntityFrameworkCore;
-using EmployeeManagement.Models;
+    structure.files[`src/YourNamespace/Data/ApplicationDbContext.cs`] = `using Microsoft.EntityFrameworkCore;
+using YourNamespace.Models;
 
-namespace EmployeeManagement.Data
+namespace YourNamespace.Data
 {
     public class ApplicationDbContext : DbContext
     {
@@ -768,15 +656,14 @@ namespace EmployeeManagement.Data
         {
         }
 
-        public DbSet<${className}> ${className}s { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
             
-            // Configure your entity here
-            modelBuilder.Entity<${className}>()
-                .HasKey(e => e.Id);
+            modelBuilder.Entity<User>()
+                .HasKey(u => u.UserId);
         }
     }
 }`;
@@ -1126,58 +1013,70 @@ namespace EmployeeManagement.Data
             ref={functionalTestsContentRef}
           >
             <div className="text-dark font-monospace fs-6 w-100">
-              {functionalTests.split("\n").map((line, index) => {
-                if (line.trim().startsWith("# ")) {
-                  return (
-                    <h1
-                      key={index}
-                      className="fs-2 fw-bold text-dark mt-4 mb-2 border-bottom pb-1"
-                      style={{ borderColor: "#0d9488" }}
-                    >
-                      {line.replace("# ", "")}
-                    </h1>
-                  );
-                }
-                if (line.trim().startsWith("###**")) {
-                  return (
-                    <h1
-                      key={index}
-                      className="fs-2 fw-bold text-dark mt-4 mb-2 border-bottom pb-1"
-                      style={{ borderColor: "#0d9488" }}
-                    >
-                      {line.replace("###**", "")}
-                    </h1>
-                  );
-                }
-                if (line.trim().startsWith("## ")) {
-                  return (
-                    <h4
-                      key={index}
-                      className="fs-4 fw-semibold text-dark mt-3 mb-2"
-                    >
-                      {line.replace("## ", "")}
-                    </h4>
-                  );
-                }
-                if (
-                  line.trim().startsWith("###") &&
-                  !line.trim().startsWith("###**")
-                ) {
-                  return (
-                    <p key={index} className="text-dark fw-normal mb-2">
-                      {line.replace("###", "").trim()}
-                    </p>
-                  );
-                }
-                return (
-                  <p
-                    key={index}
-                    className="text-dark mb-1 white-space-pre-wrap"
-                  >
-                    {line}
-                  </p>
-                );
-              })}
+              {typeof functionalTests === 'string' ? (
+                functionalTests.split("\n").map((line, index) => {
+                  if (line.trim().startsWith("# ")) {
+                    return (
+                      <h1
+                        key={index}
+                        className="fs-2 fw-bold text-dark mt-4 mb-2 border-bottom pb-1"
+                        style={{ borderColor: "#0d9488" }}
+                      >
+                        {line.replace("# ", "")}
+                      </h1>
+                    );
+                  }
+                  if (line.trim().startsWith("###**")) {
+                    return (
+                      <h1
+                        key={index}
+                        className="fs-2 fw-bold text-dark mt-4 mb-2 border-bottom pb-1"
+                        style={{ borderColor: "#0d9488" }}
+                      >
+                        {line.replace("###**", "")}
+                      </h1>
+                    );
+                  }
+                  if (line.trim().startsWith("## ")) {
+                    return (
+                      <h4
+                        key={index}
+                        className="fs-4 fw-semibold text-dark mt-3 mb-2"
+                      >
+                        {line.replace("## ", "")}
+                      </h4>
+                    );
+                  }
+                  return <div key={index}>{line}</div>;
+                })
+              ) : (
+                // Handle JSON object format
+                <div>
+                  {functionalTests.functionalTests && functionalTests.functionalTests.map((test, index) => (
+                    <div key={index} className="mb-4">
+                      <h4 className="fs-4 fw-semibold text-dark mt-3 mb-2">
+                        {test.id}: {test.title}
+                      </h4>
+                      <div className="ms-3">
+                        <h5 className="fs-5 fw-medium">Steps:</h5>
+                        <ol>
+                          {test.steps.map((step, stepIndex) => (
+                            <li key={stepIndex}>{step}</li>
+                          ))}
+                        </ol>
+                        <h5 className="fs-5 fw-medium">Expected Result:</h5>
+                        <p>{test.expectedResult}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {functionalTests.testStrategy && (
+                    <div className="mt-4">
+                      <h4 className="fs-4 fw-semibold text-dark">Test Strategy</h4>
+                      <p>{functionalTests.testStrategy}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -201,7 +201,15 @@ def analyze_requirements():
     data = request.json
     if not data:
         return jsonify({"error": "No data provided"}), 400
+    
     file_data = data.get("file_data")
+    # Ensure file_data is a dictionary
+    if isinstance(file_data, str):
+        try:
+            file_data = json.loads(file_data)
+        except json.JSONDecodeError:
+            return jsonify({"error": "Invalid file_data format"}), 400
+    
     parse_file_data = classify_uploaded_files(file_data)
 
     source_language = data.get("sourceLanguage")
