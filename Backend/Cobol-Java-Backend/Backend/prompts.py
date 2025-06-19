@@ -137,6 +137,117 @@ def create_technical_requirements_prompt(source_language, target_language, sourc
             {vsam_section}
              """
 
+def create_java_specific_prompt(source_language, source_code, business_requirements, technical_requirements, db_setup_template, vsam_definition=""):
+    """
+    Creates a Java-specific prompt for code conversion.
+    
+    Args:
+        source_language (str): The programming language of the source code
+        source_code (str): The source code to convert
+        business_requirements (str): The business requirements extracted from analysis
+        technical_requirements (str): The technical requirements extracted from analysis
+        db_setup_template (str): The database setup template for Java
+        vsam_definition (str): Optional VSAM file definition
+        
+    Returns:
+        str: The Java-specific prompt for code conversion
+    """
+    return f"""
+    **Java-Specific Requirements:**
+    - Use Spring Boot framework for the application
+    - Follow Java naming conventions (camelCase for variables/methods, PascalCase for classes)
+    - Implement proper exception handling using try-catch blocks
+    - Use Java 8+ features where appropriate
+    - Implement proper logging using SLF4J/Logback
+    - Use Lombok annotations to reduce boilerplate code
+    - Follow Spring Boot best practices for dependency injection
+    - Use JPA/Hibernate for database operations
+    - Implement proper validation using Jakarta Validation
+    - Use proper Java package structure (com.company.project.*)
+    
+    **Required Dependencies:**
+    - spring-boot-starter-web
+    - spring-boot-starter-data-jpa
+    - spring-boot-starter-validation
+    - lombok
+    - spring-boot-starter-test (for testing)
+    
+    **Java Project Structure:**
+    ```
+    src/main/java/com/company/project/
+    ├── config/
+    ├── controller/
+    ├── service/
+    ├── repository/
+    ├── model/
+    ├── dto/
+    └── exception/
+    ```
+    
+    **Java-Specific Annotations:**
+    - Use @RestController for REST controllers
+    - Use @Service for service layer
+    - Use @Repository for repository layer
+    - Use @Entity for JPA entities
+    - Use @Data for Lombok data classes
+    - Use @Valid for validation
+    """
+
+def create_csharp_specific_prompt(source_language, source_code, business_requirements, technical_requirements, db_setup_template, vsam_definition=""):
+    """
+    Creates a C#-specific prompt for code conversion.
+    
+    Args:
+        source_language (str): The programming language of the source code
+        source_code (str): The source code to convert
+        business_requirements (str): The business requirements extracted from analysis
+        technical_requirements (str): The technical requirements extracted from analysis
+        db_setup_template (str): The database setup template for C#
+        vsam_definition (str): Optional VSAM file definition
+        
+    Returns:
+        str: The C#-specific prompt for code conversion
+    """
+    return f"""
+    **C#-Specific Requirements:**
+    - Use .NET Core/.NET 6+ framework
+    - Follow C# naming conventions (PascalCase for public members, camelCase for private)
+    - Implement proper exception handling using try-catch blocks
+    - Use C# 9+ features where appropriate
+    - Implement proper logging using ILogger
+    - Use dependency injection with IServiceCollection
+    - Follow SOLID principles
+    - Use Entity Framework Core for database operations
+    - Implement proper validation using FluentValidation
+    - Use proper C# namespace structure (Company.Project.*)
+    
+    **Required NuGet Packages:**
+    - Microsoft.AspNetCore.App
+    - Microsoft.EntityFrameworkCore
+    - FluentValidation
+    - AutoMapper
+    - Serilog
+    
+    **C# Project Structure:**
+    ```
+    src/
+    ├── Controllers/
+    ├── Services/
+    ├── Repositories/
+    ├── Models/
+    ├── DTOs/
+    ├── Extensions/
+    └── Infrastructure/
+    ```
+    
+    **C#-Specific Attributes:**
+    - Use [ApiController] for API controllers
+    - Use [Route] for routing
+    - Use [FromBody] for request body binding
+    - Use [Required] for validation
+    - Use [JsonProperty] for JSON serialization
+    """
+
 def create_code_conversion_prompt(
     source_language,
     target_language,
@@ -144,15 +255,11 @@ def create_code_conversion_prompt(
     business_requirements,
     technical_requirements,
     db_setup_template,
-    vsam_definition="",
-    is_chunk=False,
-    chunk_type="mixed",
-    chunk_index=0,
-    total_chunks=1
+    vsam_definition=""
 ):
     """
     Creates a prompt for converting code from one language to another.
-    Now enforces a layered architecture output format.
+    Now uses language-specific prompts based on the target language.
 
     Args:
         source_language (str): The programming language of the source code
@@ -162,14 +269,23 @@ def create_code_conversion_prompt(
         technical_requirements (str): The technical requirements extracted from analysis
         db_setup_template (str): The database setup template for the target language
         vsam_definition (str): Optional VSAM file definition
-        is_chunk (bool): Whether the code is a chunk of a larger COBOL program
-        chunk_type (str): Type of chunk ('declarations', 'procedures', or 'mixed')
-        chunk_index (int): Index of current chunk (0-based)
-        total_chunks (int): Total number of chunks
 
     Returns:
         str: The prompt for code conversion
     """
+    # Get language-specific prompt
+    language_specific_prompt = ""
+    if target_language.lower() == "java":
+        language_specific_prompt = create_java_specific_prompt(
+            source_language, source_code, business_requirements,
+            technical_requirements, db_setup_template, vsam_definition
+        )
+    elif target_language.lower() in ["c#", "csharp"]:
+        language_specific_prompt = create_csharp_specific_prompt(
+            source_language, source_code, business_requirements,
+            technical_requirements, db_setup_template, vsam_definition
+        )
+
     vsam_section = ""
     if vsam_definition:
         vsam_section = f"""
@@ -190,93 +306,55 @@ def create_code_conversion_prompt(
     **Source Language:** {source_language}
     **Target Language:** {target_language}
 
+    {language_specific_prompt}
+
     **Required Output Structure:**
+    
+    Give output in below structure mentioned clearly. Each section must be properly formatted with clear section markers.
     
     Your response must be organized in the following sections, each clearly marked with a section header:
 
-    
     ##Entity
-    FileName: 
-    - Define all entities and their properties
-    - Define all domain entities/models
-    - Include all necessary properties and relationships
-    - Add appropriate annotations/decorators
+    FileName: [filename]
+    ```java
+    // Entity code here
+    ```
 
     ##Repository
-    FileName: 
-    - Define repository interfaces
-    - Include necessary data access methods
-    - Add appropriate annotations/decorators
-
+    FileName: [filename]
+    ```java
+    // Repository code here
+    ```
 
     ##Service
-    FileName: 
-    - Define service interfaces and implementations
-    - Include business logic and transaction management
-    - Add appropriate dependency injections and annotations
+    FileName: [filename]
+    ```java
+    // Service code here
+    ```
 
     ##Controller
-    FileName: 
-    - Define REST endpoints or API controllers
-    - Include request/response handling
-    - Add appropriate route mappings and annotations
+    FileName: [filename]
+    ```java
+    // Controller code here
+    ```
+
+    ##application.properties
+    ```properties
+    // Properties configuration here
+    ```
+
+    ##Dependencies
+    ```xml
+    // Dependencies configuration here
+    ```
 
     Each section must be clearly separated using the above headers. Include only relevant code for each layer.
     Ensure proper dependency injection and relationships between layers are maintained.
-   
+    Each code block must be properly formatted with the correct language identifier (java, properties, xml).
+    File names must be clearly specified for each section.
 
     {vsam_section}
-    """
-    
-    if is_chunk:
-        base_prompt += f"""
-    **IMPORTANT CHUNKING INFORMATION:**
-    This code is chunk {chunk_index + 1} of {total_chunks} from a larger {source_language} program.
-    Chunk type identified as: {chunk_type}
-    """
-        
-        if chunk_type == "declarations":
-            base_prompt += f"""
-    **Instructions for Declarations Chunk:**
-    - Focus ONLY on converting data structures, file definitions, and variable declarations in this chunk
-    - Generate appropriate class structures, fields, and data types in {target_language}
-    - If needed, create class skeletons but DO NOT implement full methods
-    - Ensure your output can be combined with other chunks (proper scoping)
-    - Only include database connection setup code if this is the first chunk (chunk {chunk_index + 1})
-    - If this is chunk 1, generate appropriate overall program structure
-    - DO NOT add any "placeholder" or "to be implemented" comments for other chunks
-    """
-        
-        elif chunk_type == "procedures":
-            base_prompt += f"""
-    **Instructions for Procedures Chunk:**
-    - Focus ONLY on converting the business logic and procedures in this chunk
-    - Ensure method implementations and logic maintain the exact behavior as the original
-    - Only include necessary method/function definitions needed for this specific chunk
-    - Assume data declarations are handled in other chunks
-    - DO NOT include database connection code unless it's specifically part of this procedure chunk
-    - DO NOT duplicate database initialization that might have been in previous chunks
-    """
-        
-        else:  # mixed type
-            base_prompt += f"""
-    **Instructions for Mixed Content Chunk:**
-    - Convert BOTH declarations and procedures in this chunk as appropriate
-    - Maintain the structure and relationship between declarations and procedures
-    - Only include database initialization if it's actually in this chunk's source code
-    - If this is chunk 1, include appropriate program structure and entry points
-    - If this chunk contains multiple procedures, ensure they're properly organized
-    """
-            
-        base_prompt += f"""
-    **Chunking Guidelines:**
-    - Generate ONLY code for this specific chunk - don't try to complete the entire program
-    - Ensure your code fragment is syntactically correct on its own
-    - Maintain consistent naming across chunks (follow naming patterns in the source)
-    - If this chunk references variables/methods defined in other chunks, continue using those names
-    """
-    
-    base_prompt += f"""
+
     **Requirements:**
     - The output should be a complete, executable implementation in the target language
     - Maintain all business logic, functionality, and behavior of the original code
@@ -286,49 +364,23 @@ def create_code_conversion_prompt(
     - DO NOT include markdown code blocks (like ```java or ```) in your response, just provide the raw code
     - Do not return any unwanted code in {target_language} or functions which are not in {source_language}.
 
-    **Language-Specific Instructions:**
-    - If converting to Java: Produce a fully functional and idiomatic Java implementation with appropriate class structures
-    - If converting to C#: Produce a fully functional and idiomatic C# implementation that matches the original behavior exactly
-
     **Database-Specific Instructions**
     - If the {source_language} code includes any database-related operations, automatically generate the necessary setup code
-    """
-    
-    # Only include DB setup template for first chunk or if it's a single chunk
-    if not is_chunk or chunk_index == 0:
-        base_prompt += f"""
     - Follow this example format for database initialization and setup:
 
     {db_setup_template if db_setup_template else 'No database setup required.'}
-    """
-    else:
-        base_prompt += f"""
-    - DO NOT include database initialization code as it should be in chunk 1
-    """
 
-    # Include business and technical requirements for context
-    base_prompt += f"""
     **Business Requirements:**
     {business_requirements if business_requirements else 'None provided.'}
 
     **Technical Requirements:**
     {technical_requirements if technical_requirements else 'None provided.'}
 
-    **Source Code ({source_language}{' - CHUNK ' + str(chunk_index + 1) + ' of ' + str(total_chunks) if is_chunk else ''}):**
+    **Source Code ({source_language}):**
     {source_code}
 
     IMPORTANT: Only return the complete converted code WITHOUT any markdown formatting. DO NOT wrap your code in triple backticks (```). Return just the raw code itself.
-    """
 
-    if is_chunk:
-        # Add additional reminder for chunked processing
-        base_prompt += f"""
-    REMINDER: You are converting ONLY CHUNK {chunk_index + 1} of {total_chunks}. Do not try to implement logic from other chunks.
-    For database-related operations, only include connection initialization if this is chunk 1 or if the database operations 
-    are specifically in this chunk.
-    """
-
-    base_prompt += f"""
     **Additional Database Setup Instructions:**
     If database operations are detected in the source code, include these files in your output:
 

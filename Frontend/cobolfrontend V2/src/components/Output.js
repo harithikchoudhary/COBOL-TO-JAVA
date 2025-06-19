@@ -166,14 +166,15 @@ export default function Output({
         isFolder: true,
         children: ["Main"],
         files: {
-          Main: code,
+          Main: typeof code === "string" ? code : JSON.stringify(code, null, 2),
         },
       };
     }
   };
 
-  const parseJavaSpringStructure = (code, unitTests) => {
-    console.log("Parsing Java Spring structure", code);
+  const parseJavaSpringStructure = (codeObj, unitTests) => {
+    console.log("Parsing Java Spring structure", codeObj);
+    
     const structure = {
       name: "src",
       isFolder: true,
@@ -181,58 +182,30 @@ export default function Output({
       files: {},
     };
 
-    const fileNameMatch = code.match(/FileName:\s*(\w+)\.java/);
-    const className = fileNameMatch ? fileNameMatch[1] : "Employee";
+    // Helper function to get content from backend response
+    const getContent = (section) =>
+      codeObj[section] && codeObj[section].content
+        ? codeObj[section].content
+        : "";
 
-    const cleanCode = (codeContent) => {
-      if (!codeContent) return "";
+    // Helper function to get filename from backend response
+    const getFileName = (section, defaultName) =>
+      codeObj[section] && codeObj[section].FileName
+        ? codeObj[section].FileName
+        : defaultName;
 
-      // Remove FileName header and footer, along with any surrounding whitespace
-      let cleaned = codeContent
-        .replace(/FileName:\s*\w+\.java\s*\n?/g, "") // Remove all occurrences of FileName
-        .replace(/\s*FileName:\s*\w+\.java\s*$/g, "") // Remove FileName from end of file
-        .trim();
+    // Extract class name for dynamic naming (fallback to Employee if not found)
+    let className = "Employee";
+    if (codeObj.Entity && codeObj.Entity.FileName) {
+      const match = codeObj.Entity.FileName.match(/(\w+)\.java$/);
+      if (match) {
+        className = match[1];
+      }
+    }
 
-      // Remove section markers
-      cleaned = cleaned.replace(
-        /##(Entity|Repository|Service|Controller|Tests|Dependencies|application\.properties)\s*/g,
-        ""
-      );
+    console.log("Extracted className:", className);
 
-      // Clean up extra whitespace and newlines
-      cleaned = cleaned
-        .replace(/\n{3,}/g, "\n\n") // Replace multiple newlines with double newlines
-        .replace(/[ \t]+$/gm, ""); // Remove trailing whitespace from each line
-
-      return cleaned;
-    };
-
-    // Extract different components from the code
-    const entityMatch = code.match(/##Entity([\s\S]*?)(?=##|$)/);
-    const repositoryMatch = code.match(/##Repository([\s\S]*?)(?=##|$)/);
-    const serviceMatch = code.match(/##Service([\s\S]*?)(?=##|$)/);
-    const controllerMatch = code.match(/##Controller([\s\S]*?)(?=##|$)/);
-    const configMatch = code.match(
-      /##application\.properties([\s\S]*?)(?=##|$)/
-    );
-    const dependenciesMatch = code.match(/##Dependencies([\s\S]*?)(?=##|$)/);
-    const testMatch = code.match(/##Tests([\s\S]*?)(?=##|$)/);
-
-    console.log("Entity Match:", entityMatch);
-    console.log("Repository Match:", repositoryMatch);
-    console.log("Service Match:", serviceMatch);
-    console.log("Controller Match:", controllerMatch);
-    console.log("Config Match:", configMatch);
-    console.log("Dependencies Match:", dependenciesMatch);
-    console.log("Test Match:", testMatch);
-
-    const cleanCode2 = (codeContent) => {
-      if (!codeContent) return codeContent;
-      return codeContent.replace(/FileName:\s*\w+\.java\s*\n?/, "").trim();
-    };
-
-    // Create the file structure
-    structure.children = ["main", "test"];
+    // Set up expanded structure
     structure.expanded = {
       src: true,
       "src/main": true,
@@ -243,42 +216,48 @@ export default function Output({
       "src/main/java": true,
       "src/main/java/com": true,
       "src/main/java/com/demo": true,
+      "src/main/resources": true,
+      ".mvn": true,
+      ".mvn/wrapper": true,
     };
 
-    // Populate files
+    // Populate files from backend response
     structure.files = {};
 
-    if (entityMatch) {
-      structure.files[`src/main/java/com/demo/entity/${className}.java`] =
-        cleanCode(entityMatch[1].trim());
-    }
-
-    if (repositoryMatch) {
+    // Add Entity
+    if (codeObj.Entity) {
       structure.files[
-        `src/main/java/com/demo/repository/${className}Repository.java`
-      ] = cleanCode(repositoryMatch[1].trim());
+        `src/main/java/com/demo/model/${getFileName("Model", `${className}.java`)}`
+      ] = getContent("Entity");
     }
 
-    if (serviceMatch) {
+    // Add Repository
+    if (codeObj.Repository) {
       structure.files[
-        `src/main/java/com/demo/service/${className}Service.java`
-      ] = cleanCode(serviceMatch[1].trim());
+        `src/main/java/com/demo/repository/${getFileName("Repository", `${className}Repository.java`)}`
+      ] = getContent("Repository");
     }
 
-    if (controllerMatch) {
+    // Add Service
+    if (codeObj.Service) {
       structure.files[
-        `src/main/java/com/demo/controller/${className}Controller.java`
-      ] = cleanCode(controllerMatch[1].trim());
+        `src/main/java/com/demo/service/${getFileName("Service", `${className}Service.java`)}`
+      ] = getContent("Service");
     }
 
-    if (configMatch) {
-      structure.files["src/main/resources/application.properties"] = cleanCode(
-        configMatch[1].trim()
-      );
+    // Add Controller
+    if (codeObj.Controller) {
+      structure.files[
+        `src/main/java/com/demo/controller/${getFileName("Controller", `${className}Controller.java`)}`
+      ] = getContent("Controller");
+    }
+
+    // Add application.properties
+    if (codeObj["application.properties"]) {
+      structure.files["src/main/resources/application.properties"] = getContent("application.properties");
     } else {
-      structure.files[
-        "src/main/resources/application.properties"
-      ] = `spring.datasource.url=jdbc:mysql://localhost:3306/yourDatabaseName?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+      // Default application.properties if not provided
+      structure.files["src/main/resources/application.properties"] = `spring.datasource.url=jdbc:mysql://localhost:3306/yourDatabaseName?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
 spring.datasource.username=root
 spring.datasource.password=password
 spring.jpa.hibernate.ddl-auto=update
@@ -286,7 +265,60 @@ spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect`;
     }
 
-    if (dependenciesMatch) {
+    // Add pom.xml - Handle both cases: from backend or generate default
+    if (codeObj.Dependencies && getContent("Dependencies")) {
+      // If Dependencies section contains full pom.xml content
+      const depContent = getContent("Dependencies");
+      if (depContent.includes("<?xml")) {
+        // Full pom.xml provided
+        structure.files["pom.xml"] = depContent;
+      } else {
+        // Only dependencies section provided, wrap in full pom.xml
+        structure.files["pom.xml"] = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.4.5</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent>
+  <groupId>com.example</groupId>
+  <artifactId>${className.toLowerCase()}-management</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>${className.toLowerCase()}-management</name>
+  <description>${className} Management System</description>
+  <url />
+  <licenses>
+    <license/>
+  </licenses>
+  <developers>
+    <developer/>
+  </developers>
+  <scm>
+    <connection/>
+    <developerConnection/>
+    <tag/>
+    <url/>
+  </scm>
+  <properties>
+    <java.version>17</java.version>
+  </properties>
+  ${depContent}
+  
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>`;
+      }
+    } else {
+      // Default pom.xml if not provided
       structure.files["pom.xml"] = `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -318,7 +350,26 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect`;
   <properties>
     <java.version>17</java.version>
   </properties>
-    ${dependenciesMatch[1].trim()}
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
   
   <build>
     <plugins>
@@ -333,8 +384,8 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect`;
 
     // Add main application class
     structure.files[
-      `src/main/java/com/${className}ManagementApplication.java`
-    ] = `package com.example;
+      `src/main/java/com/demo/${className}ManagementApplication.java`
+    ] = `package com.demo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -347,18 +398,27 @@ public class ${className}ManagementApplication {
 }`;
 
     // Add test files
-    if (unitTests || testMatch) {
-      // Use unitTests prop if available, otherwise fall back to testMatch
-      const testContent = unitTests || (testMatch ? testMatch[1].trim() : "");
-      if (testContent) {
-        structure.files[`src/test/java/com/${className}ServiceTest.java`] =
-          testContent;
-      } else {
-        // Create default test files to ensure the test structure is visible
-        structure.files[
-          `src/test/java/com/${className}ServiceTest.java`
-        ] = `Test Cases Not Generated`;
-      }
+    if (unitTests) {
+      structure.files[`src/test/java/com/demo/${className}ServiceTest.java`] = unitTests;
+    } else if (codeObj.Tests) {
+      structure.files[`src/test/java/com/demo/${className}ServiceTest.java`] = getContent("Tests");
+    } else {
+      // Default test placeholder
+      structure.files[
+        `src/test/java/com/demo/${className}ServiceTest.java`
+      ] = `package com.demo;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class ${className}ServiceTest {
+    
+    @Test
+    void contextLoads() {
+        // Test cases not generated
+    }
+}`;
     }
 
     // Add .gitignore file
@@ -442,8 +502,32 @@ mvnw text eol=lf
 # under the License.
 # ----------------------------------------------------------------------------
 
-# Maven wrapper script for Unix platforms - actual content truncated for brevity
-# In a real implementation, this would contain the full Maven wrapper shell script`;
+# Maven wrapper script for Unix platforms
+# This script allows you to run Maven without having Maven installed
+# It will download Maven if needed and then run the specified Maven command
+
+MAVEN_WRAPPER_JAR=".mvn/wrapper/maven-wrapper.jar"
+MAVEN_WRAPPER_PROPERTIES=".mvn/wrapper/maven-wrapper.properties"
+
+# Find Java
+if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+        JAVACMD="$JAVA_HOME/jre/sh/java"
+    else
+        JAVACMD="$JAVA_HOME/bin/java"
+    fi
+    if [ ! -x "$JAVACMD" ] ; then
+        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME"
+    fi
+else
+    JAVACMD="java"
+    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH."
+fi
+
+exec "$JAVACMD" \\
+    -classpath "$MAVEN_WRAPPER_JAR" \\
+    "-Dmaven.multiModuleProjectDirectory=$MAVEN_PROJECTBASEDIR" \\
+    org.apache.maven.wrapper.MavenWrapperMain "$@"`;
 
     // Add mvnw.cmd script
     structure.files[
@@ -467,15 +551,73 @@ mvnw text eol=lf
 @REM under the License.
 @REM ----------------------------------------------------------------------------
 
-@REM Maven wrapper script for Windows - actual content truncated for brevity
-@REM In a real implementation, this would contain the full Maven wrapper batch script`;
+@REM Maven wrapper script for Windows
+@REM This script allows you to run Maven without having Maven installed
+@REM It will download Maven if needed and then run the specified Maven command
+
+@echo off
+set ERROR_CODE=0
+
+:init
+@REM Find java.exe
+if defined JAVA_HOME goto findJavaFromJavaHome
+
+set JAVA_EXE=java.exe
+%JAVA_EXE% -version >NUL 2>&1
+if "%ERRORLEVEL%" == "0" goto execute
+
+echo.
+echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+echo.
+echo Please set the JAVA_HOME variable in your environment to match the
+echo location of your Java installation.
+
+goto error
+
+:findJavaFromJavaHome
+set JAVA_HOME=%JAVA_HOME:"=%
+set JAVA_EXE=%JAVA_HOME%/bin/java.exe
+
+if exist "%JAVA_EXE%" goto execute
+
+echo.
+echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME%
+echo.
+echo Please set the JAVA_HOME variable in your environment to match the
+echo location of your Java installation.
+
+goto error
+
+:execute
+@REM Execute Maven
+"%JAVA_EXE%" -classpath ".mvn/wrapper/maven-wrapper.jar" "-Dmaven.multiModuleProjectDirectory=%~dp0" org.apache.maven.wrapper.MavenWrapperMain %*
+if ERRORLEVEL 1 goto error
+goto end
+
+:error
+set ERROR_CODE=1
+
+:end
+@endlocal & set ERROR_CODE=%ERROR_CODE%
+
+if not "%MAVEN_SKIP_RC%" == "" goto skipRcPost
+@REM check for post script, once with legacy .bat ending and once with .cmd ending
+if exist "%HOME%\mavenrc_post.bat" call "%HOME%\mavenrc_post.bat"
+if exist "%HOME%\mavenrc_post.cmd" call "%HOME%\mavenrc_post.cmd"
+:skipRcPost
+
+@REM pause the script if MAVEN_BATCH_PAUSE is set to 'on'
+if "%MAVEN_BATCH_PAUSE%" == "on" pause
+
+if "%MAVEN_SKIP_RC%" == "" goto skipRcPre
+@REM check for pre script, once with legacy .bat ending and once with .cmd ending
+if exist "%HOME%\mavenrc_pre.bat" call "%HOME%\mavenrc_pre.bat"
+if exist "%HOME%\mavenrc_pre.cmd" call "%HOME%\mavenrc_pre.cmd"
+:skipRcPre
+
+exit /B %ERROR_CODE%`;
 
     // Add .mvn/wrapper/maven-wrapper.properties
-    // First, create the directory structure in the expanded property if it doesn't exist
-    structure.expanded[".mvn"] = true;
-    structure.expanded[".mvn/wrapper"] = true;
-
-    // Then add the file
     structure.files[
       ".mvn/wrapper/maven-wrapper.properties"
     ] = `# Licensed to the Apache Software Foundation (ASF) under one
@@ -498,8 +640,53 @@ wrapperVersion=3.3.2
 distributionType=only-script
 distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip`;
 
+    // Add README.md
+    structure.files["README.md"] = `# ${className} Management System
+
+A Spring Boot application for managing ${className.toLowerCase()} data.
+
+## Features
+
+- CRUD operations for ${className}
+- RESTful API endpoints
+- MySQL database integration
+- JPA/Hibernate for data persistence
+- Maven build system
+
+## Requirements
+
+- Java 17 or higher
+- MySQL 8.0 or higher
+- Maven 3.6 or higher
+
+## Setup
+
+1. Clone the repository
+2. Configure your MySQL database connection in \`src/main/resources/application.properties\`
+3. Run the application:
+   \`\`\`bash
+   ./mvnw spring-boot:run
+   \`\`\`
+
+## API Endpoints
+
+- GET /api/${className.toLowerCase()}s - Get all ${className.toLowerCase()}s
+- GET /api/${className.toLowerCase()}s/{id} - Get ${className.toLowerCase()} by ID
+- POST /api/${className.toLowerCase()}s - Create new ${className.toLowerCase()}
+- PUT /api/${className.toLowerCase()}s/{id} - Update ${className.toLowerCase()}
+- DELETE /api/${className.toLowerCase()}s/{id} - Delete ${className.toLowerCase()}
+
+## Testing
+
+Run tests with:
+\`\`\`bash
+./mvnw test
+\`\`\`
+`;
+
+    console.log("Final structure:", structure);
     return structure;
-  };
+};
 
   const parseCSharpStructure = (code) => {
     console.log("Parsing C# structure", code);

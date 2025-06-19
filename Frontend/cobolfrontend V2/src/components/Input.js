@@ -5,7 +5,6 @@ import {
   RefreshCw,
   FileText,
   X,
-  Eye,
   Code,
 } from "lucide-react";
 
@@ -21,7 +20,7 @@ export default function Input({
 }) {
   const [showDropdownTarget, setShowDropdownTarget] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState({});
-  const [viewingFile, setViewingFile] = useState(null);
+  const [activeFileTab, setActiveFileTab] = useState(null);
 
   // Store JSON data for backend
   const getSourceCodeAsJson = () => {
@@ -35,6 +34,21 @@ export default function Input({
   const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files);
 
+    // Function to determine file type based on extension
+    const getFileType = (fileName) => {
+      const extension = fileName.split('.').pop().toLowerCase();
+      const typeMap = {
+        'cob': 'COBOL',
+        'cobol': 'COBOL', 
+        'cbl': 'COBOL',
+        'jcl': 'JCL',
+        'cpy': 'Copybook',
+        'copybook': 'Copybook',
+        'txt': 'Text'
+      };
+      return typeMap[extension] || 'Unknown';
+    };
+
     const readFiles = await Promise.all(
       files.map(
         (file) =>
@@ -44,6 +58,9 @@ export default function Input({
               resolve({
                 fileName: file.name,
                 content: e.target.result,
+                size: file.size,
+                type: getFileType(file.name),
+                uploadDate: new Date().toISOString()
               });
             };
             reader.readAsText(file);
@@ -59,6 +76,11 @@ export default function Input({
       return updated;
     });
 
+    // Set the first uploaded file as active if no active tab
+    if (!activeFileTab && readFiles.length > 0) {
+      setActiveFileTab(readFiles[0].fileName);
+    }
+
     // Clear input
     event.target.value = "";
   };
@@ -69,14 +91,12 @@ export default function Input({
       delete newFiles[fileName];
       return newFiles;
     });
-    // Close viewer if the file being viewed is removed
-    if (viewingFile && viewingFile.fileName === fileName) {
-      setViewingFile(null);
+    
+    // Handle active tab when file is removed
+    const fileNames = Object.keys(uploadedFiles).filter(name => name !== fileName);
+    if (activeFileTab === fileName) {
+      setActiveFileTab(fileNames.length > 0 ? fileNames[0] : null);
     }
-  };
-
-  const viewFile = (fileName) => {
-    setViewingFile(uploadedFiles[fileName]);
   };
 
   const formatFileSize = (bytes) => {
@@ -87,6 +107,19 @@ export default function Input({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  const getFileTypeIcon = (type) => {
+    switch (type) {
+      case 'COBOL':
+        return '📄';
+      case 'JCL':
+        return '⚙️';
+      case 'Copybook':
+        return '📋';
+      default:
+        return '📄';
+    }
+  };
+
   const hasValidFiles = Object.keys(uploadedFiles).length > 0;
 
   return (
@@ -94,10 +127,10 @@ export default function Input({
       {/* File Upload Section */}
       <div className="d-flex align-items-center gap-2 flex-wrap">
         <label
-          className="d-flex align-items-center btn rounded px-4 py-2 cursor-pointer"
+          className="d-flex align-items-center btn rounded px-3 py-2 cursor-pointer"
           style={{ backgroundColor: "#0f766e", color: "white" }}
         >
-          <Upload size={18} className="me-2" />
+          <Upload size={16} className="me-2" />
           <span>Upload Files</span>
           <input
             type="file"
@@ -110,12 +143,12 @@ export default function Input({
 
         <div className="dropdown position-relative">
           <button
-            className="d-flex align-items-center gap-2 px-4 py-2 btn btn-outline-dark rounded"
+            className="d-flex align-items-center gap-2 px-3 py-2 btn btn-outline-dark rounded"
             onClick={() => setShowDropdownTarget(!showDropdownTarget)}
           >
             <span
               className="d-flex align-items-center justify-content-center text-primary"
-              style={{ width: "1.25rem", height: "1.25rem" }}
+              style={{ width: "1rem", height: "1rem" }}
             >
               {targetLanguages.find((lang) => lang.name === targetLanguage)
                 ?.icon || ""}
@@ -152,138 +185,73 @@ export default function Input({
         </div>
       </div>
 
-      {/* Uploaded Files Display */}
+      {/* File Tabs and Content Display */}
       {hasValidFiles && (
-        <div className="bg-light rounded border p-3">
-          <h6 className="mb-3 text-dark">
-            Uploaded Files ({Object.keys(uploadedFiles).length})
-          </h6>
-          <div className="d-flex flex-wrap gap-2 mb-3">
+        <div className="bg-white rounded border">
+          {/* File Tabs */}
+          <div className="d-flex border-bottom bg-light rounded-top overflow-auto">
             {Object.entries(uploadedFiles).map(([fileName, fileData]) => (
               <div
                 key={fileName}
-                className="d-flex align-items-center px-3 py-2 rounded border bg-white position-relative"
+                className={`d-flex align-items-center px-3 py-2 border-end cursor-pointer position-relative ${
+                  activeFileTab === fileName 
+                    ? 'bg-white border-bottom-0' 
+                    : 'bg-light'
+                }`}
+                style={{ 
+                  minWidth: "120px",
+                  borderBottom: activeFileTab === fileName ? '2px solid transparent' : '1px solid #dee2e6'
+                }}
+                onClick={() => setActiveFileTab(fileName)}
               >
-                <FileText size={16} className="me-2" />
-                <div className="d-flex flex-column me-2">
-                  <span className="fw-medium">{fileName}</span>
-                  <small className="text-muted">
-                    {formatFileSize(fileData.size)}
-                  </small>
+                <span className="me-2">{getFileTypeIcon(fileData.type)}</span>
+                <div className="fw-medium text-truncate me-2" style={{ maxWidth: "80px" }}>
+                  {fileName}
                 </div>
-                <span className="badge bg-secondary me-2">{fileData.type}</span>
-
-                <div className="d-flex gap-1">
-                  <button
-                    className="btn btn-sm p-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      viewFile(fileName);
-                    }}
-                    title="View file content"
-                    style={{ width: "24px", height: "24px" }}
-                  >
-                    <Eye size={14} className="text-primary" />
-                  </button>
-                  <button
-                    className="btn btn-sm p-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFile(fileName);
-                    }}
-                    title="Remove file"
-                    style={{ width: "24px", height: "24px" }}
-                  >
-                    <X size={14} className="text-danger" />
-                  </button>
-                </div>
+                <button
+                  className="btn btn-sm p-1 ms-auto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(fileName);
+                  }}
+                  title="Remove file"
+                  style={{ width: "20px", height: "20px" }}
+                >
+                  <X size={12} className="text-danger" />
+                </button>
               </div>
             ))}
           </div>
-        </div>
-      )}
 
-      {/* File Viewer Modal */}
-      {viewingFile && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-          style={{
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            zIndex: 1050,
-          }}
-          onClick={() => setViewingFile(null)}
-        >
-          <div
-            className="bg-white rounded shadow-lg p-0"
-            style={{
-              width: "90%",
-              maxWidth: "800px",
-              height: "80%",
-              display: "flex",
-              flexDirection: "column",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="d-flex justify-content-between align-items-center p-3 border-bottom">
-              <div className="d-flex align-items-center gap-2">
-                <Code size={20} className="text-primary" />
-                <div>
-                  <h6 className="mb-0">{viewingFile.fileName}</h6>
-                  <small className="text-muted">
-                    {viewingFile.type} • {formatFileSize(viewingFile.size)}
-                  </small>
-                </div>
-              </div>
-              <button
-                className="btn btn-sm p-2"
-                onClick={() => setViewingFile(null)}
-                style={{ width: "32px", height: "32px" }}
-              >
-                <X size={16} />
-              </button>
-            </div>
+          {/* File Content Display */}
+          {activeFileTab && uploadedFiles[activeFileTab] && (
+            <div className="p-0">
 
-            {/* Modal Body */}
-            <div className="flex-grow-1 p-3 overflow-hidden">
+
+              {/* Code Content */}
               <div
-                className="h-100 w-100 overflow-auto"
+                className="overflow-auto"
                 style={{
+                  maxHeight: "400px",
                   backgroundColor: "#f8f9fa",
-                  border: "1px solid #dee2e6",
-                  borderRadius: "4px",
                 }}
               >
                 <pre
-                  className="p-3 mb-0 text-sm"
+                  className="p-3 mb-0"
                   style={{
                     fontFamily: 'Consolas, "Courier New", monospace',
                     fontSize: "14px",
-                    lineHeight: "1.4",
+                    lineHeight: "1.5",
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
+                    margin: 0,
                   }}
                 >
-                  {viewingFile.content}
+                  {uploadedFiles[activeFileTab].content}
                 </pre>
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className="p-3 border-top bg-light">
-              <div className="d-flex justify-content-between align-items-center">
-                <small className="text-muted">
-                  Uploaded: {new Date(viewingFile.uploadDate).toLocaleString()}
-                </small>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setViewingFile(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -318,26 +286,26 @@ export default function Input({
       )}
 
       {/* Action Buttons */}
-      <div className="d-flex justify-content-center gap-4">
+      <div className="d-flex justify-content-center gap-3">
         <button
-          className="btn btn-outline-dark fw-medium px-4 py-3 rounded"
+          className="btn btn-outline-dark fw-medium px-3 py-2 rounded"
           onClick={() => {
             handleReset();
             setUploadedFiles({});
-            setViewingFile(null);
+            setActiveFileTab(null);
           }}
         >
           <div className="d-flex align-items-center">
-            <RefreshCw size={18} className="me-2 text-danger" />
+            <RefreshCw size={16} className="me-2 text-danger" />
             Reset
           </div>
         </button>
 
         <button
-          className="btn text-white fw-medium px-4 py-3 rounded"
+          className="btn text-white fw-medium px-3 py-2 rounded"
           style={{
             backgroundColor: "#0d9488",
-            minWidth: "12rem",
+            minWidth: "10rem",
           }}
           onClick={() =>
             handleGenerateRequirements(setActiveTab, getSourceCodeAsJson())
@@ -355,7 +323,7 @@ export default function Input({
             </div>
           ) : (
             <div className="d-flex align-items-center justify-content-center">
-              <ClipboardList size={18} className="me-2" />
+              <ClipboardList size={16} className="me-2" />
               Generate Requirements
             </div>
           )}
