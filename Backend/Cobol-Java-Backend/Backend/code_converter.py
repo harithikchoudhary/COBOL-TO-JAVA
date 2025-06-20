@@ -28,8 +28,6 @@ class CodeConverter:
         self.client = client
         self.model_name = model_name
     
-
-
     def get_language_enum(self, language_name: str) -> Optional[Language]:
         """
         Convert a language name string to a LangChain Language enum value.
@@ -47,7 +45,6 @@ class CodeConverter:
             logger.warning(f"Language '{language_name}' is not supported by langchain_text_splitters. Using generic splitter.")
             return None
     
-
     def chunk_code(self, source_code: str, source_language: str, 
                 chunk_size: int = 23500, chunk_overlap: int = 1000) -> List[str]:
         """
@@ -82,13 +79,6 @@ class CodeConverter:
         chunks = splitter.split_text(source_code)
         logger.info(f"Split code into {len(chunks)} chunks")
         return chunks
-
-    
-
-
-
-
-
 
     def convert_code_chunks(self, chunks: List[str], source_language: str, 
                            target_language: str,vsam_definition: str, business_requirements: str,
@@ -168,8 +158,6 @@ class CodeConverter:
         
         # Use the structure-aware merge to create the final code
         return self._merge_conversion_results(conversion_results, target_language, structure_result)
-    
-
 
     def _create_structure_prompt(self, chunks: List[str], source_language: str, target_language: str) -> str:
         """
@@ -354,8 +342,6 @@ class CodeConverter:
         ```
         """
 
-    
-
     def _get_code_structure(self, structure_prompt: str, target_language: str) -> Dict[str, Any]:
         """
         Get the overall structure of the code to guide the conversion process.
@@ -463,9 +449,6 @@ class CodeConverter:
                 "patterns": []
             }
     
-    
-
-
     def _convert_single_chunk(self, code_chunk: str, source_language: str,
                             target_language: str,vsam_definition: str, business_requirements: str,
                             technical_requirements: str, db_setup_template: str,
@@ -673,7 +656,6 @@ class CodeConverter:
                 "databaseUsed": False
             }
     
-
     def _validate_code(self, conversion_result: Dict[str, Any], target_language: str) -> None:
         """
         Validate the converted code for common issues and try to fix them.
@@ -745,8 +727,6 @@ class CodeConverter:
             existing_issues = conversion_result.get("potentialIssues", [])
             conversion_result["potentialIssues"] = existing_issues + issues
 
-
-    
     def _merge_conversion_results(self, results: List[Dict[str, Any]], 
                                 target_language: str,
                                 structure_info: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -817,8 +797,6 @@ class CodeConverter:
             "databaseUsed": database_used
         }
 
-
-    
     def _polish_code(self, code: str, target_language: str) -> str:
         """
         Polish the merged code to fix any syntax errors or incomplete blocks.
@@ -955,7 +933,6 @@ class CodeConverter:
             issues.append(f"Found {empty_catches} empty catch blocks")
             
         return issues
-    
 
     def _validate_merged_code(self, merged_code: str, target_language: str) -> List[str]:
         """
@@ -1003,8 +980,6 @@ class CodeConverter:
         
         return issues
     
-
-
     def _merge_oop_code(self, results: List[Dict[str, Any]], 
                         target_language: str,
                         structure_info: Dict[str, Any] = None) -> str:
@@ -1190,7 +1165,6 @@ class CodeConverter:
             return "\n".join(merged_code)
 
 
-
     def _fallback_merge(self, results: List[Dict[str, Any]]) -> str:
         """
         Simple fallback method to merge code chunks when the intelligent merge fails.
@@ -1210,11 +1184,7 @@ class CodeConverter:
                 merged_code += code
         
         return merged_code
-    
-
-    
-            
-
+      
     def _deduplicate_methods(self, class_content: str, method_regex: str) -> str:
             """
             Removes duplicate method definitions in class content based on method signatures.
