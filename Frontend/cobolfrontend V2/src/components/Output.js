@@ -158,7 +158,7 @@ export default function Output({
       language.toLowerCase().includes("csharp") ||
       language.toLowerCase().includes(".net")
     ) {
-      return parseCSharpStructure(code);
+      return parseCSharpStructure(code, unitTests);
     } else {
       // Default case - just show as single file
       return {
@@ -172,7 +172,7 @@ export default function Output({
     }
   };
 
-  const parseJavaSpringStructure = (codeObj, unitTests) => {
+ const parseJavaSpringStructure = (codeObj, unitTests) => {
     console.log("Parsing Java Spring structure", codeObj);
     
     const structure = {
@@ -194,8 +194,8 @@ export default function Output({
         ? codeObj[section].FileName
         : defaultName;
 
-    // Extract class name for dynamic naming (fallback to Employee if not found)
-    let className = "Employee";
+    // Extract class name for dynamic naming (fallback to User if not found)
+    let className = "User";
     if (codeObj.Entity && codeObj.Entity.FileName) {
       const match = codeObj.Entity.FileName.match(/(\w+)\.java$/);
       if (match) {
@@ -205,208 +205,125 @@ export default function Output({
 
     console.log("Extracted className:", className);
 
-    // Set up expanded structure
-    structure.expanded = {
+    // Extract package structure from backend paths
+    let packagePath = "com/company/project";
+    if (codeObj.Entity && codeObj.Entity.Path) {
+      // Extract package path from Entity path: "src/main/java/com/company/project/model/"
+      const pathMatch = codeObj.Entity.Path.match(/src\/main\/java\/(.+)\/\w+\/$/);
+      if (pathMatch) {
+        packagePath = pathMatch[1];
+      }
+    }
+
+    console.log("Extracted packagePath:", packagePath);
+
+    // Set up expanded structure with correct package path
+    const packageParts = packagePath.split('/');
+    const expandedKeys = {
       src: true,
       "src/main": true,
       "src/test": true,
       "src/test/java": true,
-      "src/test/java/com": true,
-      "src/test/java/com/demo": true,
       "src/main/java": true,
-      "src/main/java/com": true,
-      "src/main/java/com/demo": true,
       "src/main/resources": true,
       ".mvn": true,
       ".mvn/wrapper": true,
     };
 
+    // Add expanded keys for package structure
+    let currentPath = "src/main/java";
+    for (const part of packageParts) {
+      currentPath += `/${part}`;
+      expandedKeys[currentPath] = true;
+    }
+
+    // Add test package structure
+    let currentTestPath = "src/test/java";
+    for (const part of packageParts) {
+      currentTestPath += `/${part}`;
+      expandedKeys[currentTestPath] = true;
+    }
+
+    structure.expanded = expandedKeys;
+
     // Populate files from backend response
     structure.files = {};
 
-    // Add Entity
+    // Add Entity (using exact path from backend)
     if (codeObj.Entity) {
-      structure.files[
-        `src/main/java/com/demo/model/${getFileName("Model", `${className}.java`)}`
-      ] = getContent("Entity");
+      const entityPath = codeObj.Entity.Path ? 
+        `${codeObj.Entity.Path}${getFileName("Entity", `${className}.java`)}` :
+        `src/main/java/${packagePath}/model/${getFileName("Entity", `${className}.java`)}`;
+      structure.files[entityPath] = getContent("Entity");
     }
 
-    // Add Repository
+    // Add Repository (using exact path from backend)
     if (codeObj.Repository) {
-      structure.files[
-        `src/main/java/com/demo/repository/${getFileName("Repository", `${className}Repository.java`)}`
-      ] = getContent("Repository");
+      const repoPath = codeObj.Repository.Path ? 
+        `${codeObj.Repository.Path}${getFileName("Repository", `${className}Repository.java`)}` :
+        `src/main/java/${packagePath}/repository/${getFileName("Repository", `${className}Repository.java`)}`;
+      structure.files[repoPath] = getContent("Repository");
     }
 
-    // Add Service
+    // Add Service (using exact path from backend)
     if (codeObj.Service) {
-      structure.files[
-        `src/main/java/com/demo/service/${getFileName("Service", `${className}Service.java`)}`
-      ] = getContent("Service");
+      const servicePath = codeObj.Service.Path ? 
+        `${codeObj.Service.Path}${getFileName("Service", `${className}Service.java`)}` :
+        `src/main/java/${packagePath}/service/${getFileName("Service", `${className}Service.java`)}`;
+      structure.files[servicePath] = getContent("Service");
     }
 
-    // Add Controller
+    // Add Controller (using exact path from backend)
     if (codeObj.Controller) {
-      structure.files[
-        `src/main/java/com/demo/controller/${getFileName("Controller", `${className}Controller.java`)}`
-      ] = getContent("Controller");
+      const controllerPath = codeObj.Controller.Path ? 
+        `${codeObj.Controller.Path}${getFileName("Controller", `${className}Controller.java`)}` :
+        `src/main/java/${packagePath}/controller/${getFileName("Controller", `${className}Controller.java`)}`;
+      structure.files[controllerPath] = getContent("Controller");
     }
 
-    // Add application.properties
-    if (codeObj["application.properties"]) {
-      structure.files["src/main/resources/application.properties"] = getContent("application.properties");
-    } else {
-      // Default application.properties if not provided
-      structure.files["src/main/resources/application.properties"] = `spring.datasource.url=jdbc:mysql://localhost:3306/yourDatabaseName?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
-spring.datasource.username=root
-spring.datasource.password=password
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect`;
+    // Add Main Application (using exact path from backend)
+    if (codeObj.MainApplication) {
+      const mainAppPath = codeObj.MainApplication.Path ? 
+        `${codeObj.MainApplication.Path}${getFileName("MainApplication", "Application.java")}` :
+        `src/main/java/${packagePath}/${getFileName("MainApplication", "Application.java")}`;
+      structure.files[mainAppPath] = getContent("MainApplication");
     }
 
-    // Add pom.xml - Handle both cases: from backend or generate default
-    if (codeObj.Dependencies && getContent("Dependencies")) {
-      // If Dependencies section contains full pom.xml content
-      const depContent = getContent("Dependencies");
-      if (depContent.includes("<?xml")) {
-        // Full pom.xml provided
-        structure.files["pom.xml"] = depContent;
-      } else {
-        // Only dependencies section provided, wrap in full pom.xml
-        structure.files["pom.xml"] = `<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.4.5</version>
-    <relativePath/> <!-- lookup parent from repository -->
-  </parent>
-  <groupId>com.example</groupId>
-  <artifactId>${className.toLowerCase()}-management</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <name>${className.toLowerCase()}-management</name>
-  <description>${className} Management System</description>
-  <url />
-  <licenses>
-    <license/>
-  </licenses>
-  <developers>
-    <developer/>
-  </developers>
-  <scm>
-    <connection/>
-    <developerConnection/>
-    <tag/>
-    <url/>
-  </scm>
-  <properties>
-    <java.version>17</java.version>
-  </properties>
-  ${depContent}
-  
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
-</project>`;
-      }
-    } else {
-      // Default pom.xml if not provided
-      structure.files["pom.xml"] = `<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.4.5</version>
-    <relativePath/> <!-- lookup parent from repository -->
-  </parent>
-  <groupId>com.example</groupId>
-  <artifactId>${className.toLowerCase()}-management</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <name>${className.toLowerCase()}-management</name>
-  <description>${className} Management System</description>
-  <url />
-  <licenses>
-    <license/>
-  </licenses>
-  <developers>
-    <developer/>
-  </developers>
-  <scm>
-    <connection/>
-    <developerConnection/>
-    <tag/>
-    <url/>
-  </scm>
-  <properties>
-    <java.version>17</java.version>
-  </properties>
-  <dependencies>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>mysql</groupId>
-      <artifactId>mysql-connector-java</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-  
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
-</project>`;
+    // Add application.properties (using exact path from backend)
+    if (codeObj.ApplicationProperties) {
+      const propsPath = codeObj.ApplicationProperties.Path ? 
+        `${codeObj.ApplicationProperties.Path}${getFileName("ApplicationProperties", "application.properties")}` :
+        "src/main/resources/application.properties";
+      structure.files[propsPath] = getContent("ApplicationProperties");
     }
 
-    // Add main application class
-    structure.files[
-      `src/main/java/com/demo/${className}ManagementApplication.java`
-    ] = `package com.demo;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@SpringBootApplication
-public class ${className}ManagementApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(${className}ManagementApplication.class, args);
+    // Add pom.xml (using exact path from backend)
+    if (codeObj.PomXml) {
+      structure.files["pom.xml"] = getContent("PomXml");
     }
-}`;
 
-    // Add test files
+    // Add DatabaseConfig if it exists and has content
+    if (codeObj.DatabaseConfig && getContent("DatabaseConfig")) {
+      const configPath = codeObj.DatabaseConfig.Path ? 
+        `${codeObj.DatabaseConfig.Path}${getFileName("DatabaseConfig", "DatabaseConfig.java")}` :
+        `src/main/java/${packagePath}/config/${getFileName("DatabaseConfig", "DatabaseConfig.java")}`;
+      structure.files[configPath] = getContent("DatabaseConfig");
+    }
+
+    // Add test files - prioritize unitTests parameter, then unitTestDetails, then fallback
+    let testContent = "";
+    let testFileName = `${className}ServiceTest.java`;
+    
     if (unitTests) {
-      structure.files[`src/test/java/com/demo/${className}ServiceTest.java`] = unitTests;
-    } else if (codeObj.Tests) {
-      structure.files[`src/test/java/com/demo/${className}ServiceTest.java`] = getContent("Tests");
+      testContent = unitTests;
+    } else if (codeObj.unitTestDetails && codeObj.unitTestDetails.unitTestCode) {
+      testContent = codeObj.unitTestDetails.unitTestCode;
+    } else if (codeObj.unitTests) {
+      testContent = codeObj.unitTests;
     } else {
       // Default test placeholder
-      structure.files[
-        `src/test/java/com/demo/${className}ServiceTest.java`
-      ] = `package com.demo;
+      testContent = `package ${packagePath.replace(/\//g, '.')}.service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -420,6 +337,8 @@ class ${className}ServiceTest {
     }
 }`;
     }
+
+    structure.files[`src/test/java/${packagePath}/service/${testFileName}`] = testContent;
 
     // Add .gitignore file
     structure.files[".gitignore"] = `HELP.md
@@ -457,9 +376,7 @@ build/
 .vscode/`;
 
     // Add .gitattributes file
-    structure.files[
-      ".gitattributes"
-    ] = `# Set default behavior to automatically normalize line endings
+    structure.files[".gitattributes"] = `# Set default behavior to automatically normalize line endings
 * text=auto
 
 # Explicitly declare text files you want to always be normalized and converted to native line endings on checkout
@@ -506,6 +423,8 @@ mvnw text eol=lf
 # This script allows you to run Maven without having Maven installed
 # It will download Maven if needed and then run the specified Maven command
 
+set -e
+
 MAVEN_WRAPPER_JAR=".mvn/wrapper/maven-wrapper.jar"
 MAVEN_WRAPPER_PROPERTIES=".mvn/wrapper/maven-wrapper.properties"
 
@@ -517,11 +436,12 @@ if [ -n "$JAVA_HOME" ] ; then
         JAVACMD="$JAVA_HOME/bin/java"
     fi
     if [ ! -x "$JAVACMD" ] ; then
-        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME"
+        echo "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME" >&2
+        exit 1
     fi
 else
     JAVACMD="java"
-    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH."
+    which java >/dev/null 2>&1 || { echo "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH." >&2; exit 1; }
 fi
 
 exec "$JAVACMD" \\
@@ -530,9 +450,7 @@ exec "$JAVACMD" \\
     org.apache.maven.wrapper.MavenWrapperMain "$@"`;
 
     // Add mvnw.cmd script
-    structure.files[
-      "mvnw.cmd"
-    ] = `@REM ----------------------------------------------------------------------------
+    structure.files["mvnw.cmd"] = `@REM ----------------------------------------------------------------------------
 @REM Licensed to the Apache Software Foundation (ASF) under one
 @REM or more contributor license agreements.  See the NOTICE file
 @REM distributed with this work for additional information
@@ -602,8 +520,8 @@ set ERROR_CODE=1
 
 if not "%MAVEN_SKIP_RC%" == "" goto skipRcPost
 @REM check for post script, once with legacy .bat ending and once with .cmd ending
-if exist "%HOME%\mavenrc_post.bat" call "%HOME%\mavenrc_post.bat"
-if exist "%HOME%\mavenrc_post.cmd" call "%HOME%\mavenrc_post.cmd"
+if exist "%HOME%\\mavenrc_post.bat" call "%HOME%\\mavenrc_post.bat"
+if exist "%HOME%\\mavenrc_post.cmd" call "%HOME%\\mavenrc_post.cmd"
 :skipRcPost
 
 @REM pause the script if MAVEN_BATCH_PAUSE is set to 'on'
@@ -611,16 +529,14 @@ if "%MAVEN_BATCH_PAUSE%" == "on" pause
 
 if "%MAVEN_SKIP_RC%" == "" goto skipRcPre
 @REM check for pre script, once with legacy .bat ending and once with .cmd ending
-if exist "%HOME%\mavenrc_pre.bat" call "%HOME%\mavenrc_pre.bat"
-if exist "%HOME%\mavenrc_pre.cmd" call "%HOME%\mavenrc_pre.cmd"
+if exist "%HOME%\\mavenrc_pre.bat" call "%HOME%\\mavenrc_pre.bat"
+if exist "%HOME%\\mavenrc_pre.cmd" call "%HOME%\\mavenrc_pre.cmd"
 :skipRcPre
 
 exit /B %ERROR_CODE%`;
 
     // Add .mvn/wrapper/maven-wrapper.properties
-    structure.files[
-      ".mvn/wrapper/maven-wrapper.properties"
-    ] = `# Licensed to the Apache Software Foundation (ASF) under one
+    structure.files[".mvn/wrapper/maven-wrapper.properties"] = `# Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
 # regarding copyright ownership.  The ASF licenses this file
@@ -647,15 +563,16 @@ A Spring Boot application for managing ${className.toLowerCase()} data.
 
 ## Features
 
-- CRUD operations for ${className}
+- User authentication and login functionality
 - RESTful API endpoints
 - MySQL database integration
 - JPA/Hibernate for data persistence
 - Maven build system
+- Lombok for reducing boilerplate code
 
 ## Requirements
 
-- Java 17 or higher
+- Java 8 or higher (Java 17+ recommended)
 - MySQL 8.0 or higher
 - Maven 3.6 or higher
 
@@ -663,200 +580,604 @@ A Spring Boot application for managing ${className.toLowerCase()} data.
 
 1. Clone the repository
 2. Configure your MySQL database connection in \`src/main/resources/application.properties\`
-3. Run the application:
+3. Update the database name, username, and password according to your MySQL setup
+4. Run the application:
    \`\`\`bash
    ./mvnw spring-boot:run
    \`\`\`
 
+## Database Configuration
+
+Make sure to update the following properties in \`application.properties\`:
+\`\`\`properties
+spring.datasource.url=jdbc:mysql://localhost:3306/yourDatabaseName
+spring.datasource.username=your_username
+spring.datasource.password=your_password
+\`\`\`
+
 ## API Endpoints
 
-- GET /api/${className.toLowerCase()}s - Get all ${className.toLowerCase()}s
-- GET /api/${className.toLowerCase()}s/{id} - Get ${className.toLowerCase()} by ID
-- POST /api/${className.toLowerCase()}s - Create new ${className.toLowerCase()}
-- PUT /api/${className.toLowerCase()}s/{id} - Update ${className.toLowerCase()}
-- DELETE /api/${className.toLowerCase()}s/{id} - Delete ${className.toLowerCase()}
+- POST /api/login - User login authentication
+  - Parameters: userId, userPassword
+  - Returns: "Login Successful" or "Login Failed"
 
 ## Testing
 
-Run tests with:
+The project includes comprehensive unit tests. Run tests with:
 \`\`\`bash
 ./mvnw test
 \`\`\`
+
+## Project Structure
+
+\`\`\`
+src/
+├── main/
+│   ├── java/
+│   │   └── com/company/project/
+│   │       ├── Application.java
+│   │       ├── controller/
+│   │       │   └── UserController.java
+│   │       ├── model/
+│   │       │   └── User.java
+│   │       ├── repository/
+│   │       │   └── UserRepository.java
+│   │       └── service/
+│   │           └── UserService.java
+│   └── resources/
+│       └── application.properties
+└── test/
+    └── java/
+        └── com/company/project/
+            └── service/
+                └── UserServiceTest.java
+\`\`\`
+
+## Technology Stack
+
+- Spring Boot 2.5.4
+- Spring Data JPA
+- MySQL Connector
+- Lombok
+- JUnit 5 & Mockito for testing
 `;
 
     console.log("Final structure:", structure);
     return structure;
-};
+  };
 
-  const parseCSharpStructure = (code) => {
-    console.log("Parsing C# structure", code);
+const parseCSharpStructure = (backendResponse, includeTests = true) => {
+    console.log("Parsing C# structure from backend response", backendResponse);
+    
+    // Extract the main conversion data
+    const codeObj = backendResponse.convertedCode || backendResponse;
+    const unitTestsData = backendResponse.unitTestDetails || backendResponse.unitTests;
+    const functionalTestsData = backendResponse.functionalTests;
+    
+    // Extract class name dynamically from Entity or default to Employee
+    let className = "Employee";
+    let projectName = "Company.Project";
+    
+    if (codeObj.Entity && codeObj.Entity.content) {
+        const entityMatch = codeObj.Entity.content.match(/public class (\w+)/);
+        if (entityMatch) {
+            className = entityMatch[1];
+        }
+        
+        // Extract namespace/project name
+        const namespaceMatch = codeObj.Entity.content.match(/namespace ([^\n\r{]+)/);
+        if (namespaceMatch) {
+            projectName = namespaceMatch[1].trim();
+        }
+    }
+    
+    console.log(`Detected class name: ${className}, project: ${projectName}`);
+    
     const structure = {
-      name: "src",
-      isFolder: true,
-      children: ["YourNamespace"],
-      files: {},
-    };
-
-    const cleanCode = (codeContent) => {
-      if (!codeContent) return "";
-
-      // Remove FileName header and footer, along with any surrounding whitespace
-      let cleaned = codeContent
-        .replace(/FileName:\s*\w+\.cs\s*\n?/g, "") // Remove all occurrences of FileName
-        .replace(/\s*FileName:\s*\w+\.cs\s*$/g, "") // Remove FileName from end of file
-        .trim();
-
-      // Remove section markers
-      cleaned = cleaned.replace(
-        /##(Entity|Repository|Service|Controller|application\.properties|Dependencies)\s*/g,
-        ""
-      );
-
-      // Clean up extra whitespace and newlines
-      cleaned = cleaned
-        .replace(/\n{3,}/g, "\n\n") // Replace multiple newlines with double newlines
-        .replace(/[ \t]+$/gm, ""); // Remove trailing whitespace from each line
-
-      return cleaned;
-    };
-
-    // Extract different components from the code
-    const entityMatch = code.match(/##Entity([\s\S]*?)(?=##|$)/);
-    const repositoryMatch = code.match(/##Repository([\s\S]*?)(?=##|$)/);
-    const serviceMatch = code.match(/##Service([\s\S]*?)(?=##|$)/);
-    const controllerMatch = code.match(/##Controller([\s\S]*?)(?=##|$)/);
-    const appSettingsMatch = code.match(/##application\.properties([\s\S]*?)(?=##|$)/);
-    const dependenciesMatch = code.match(/##Dependencies([\s\S]*?)(?=##|$)/);
-
-    console.log("Entity Match:", entityMatch);
-    console.log("Repository Match:", repositoryMatch);
-    console.log("Service Match:", serviceMatch);
-    console.log("Controller Match:", controllerMatch);
-    console.log("AppSettings Match:", appSettingsMatch);
-    console.log("Dependencies Match:", dependenciesMatch);
-
-    // Create the file structure
-    structure.children = ["YourNamespace"];
-    structure.expanded = {
-      src: true,
-      "src/YourNamespace": true,
-      "src/YourNamespace/Models": true,
-      "src/YourNamespace/Controllers": true,
-      "src/YourNamespace/Services": true,
-      "src/YourNamespace/Repositories": true,
-    };
-
-    // Populate files
-    structure.files = {};
-
-    if (entityMatch) {
-      const entityContent = entityMatch[1].trim();
-      const fileNameMatch = entityContent.match(/FileName:\s*(\w+)\.cs/);
-      const fileName = fileNameMatch ? fileNameMatch[1] : "User";
-      structure.files[`src/YourNamespace/Models/${fileName}.cs`] = cleanCode(entityContent);
-    }
-
-    if (repositoryMatch) {
-      const repositoryContent = repositoryMatch[1].trim();
-      const files = repositoryContent.split(/FileName:\s*/).filter(Boolean);
-      
-      files.forEach(file => {
-        const fileNameMatch = file.match(/^(\w+)\.cs/);
-        if (fileNameMatch) {
-          const fileName = fileNameMatch[1];
-          structure.files[`src/YourNamespace/Repositories/${fileName}.cs`] = cleanCode(file);
+        isFolder: true,
+        children: [projectName],
+        files: {},
+        expanded: {
+            [projectName]: true,
+            [`${projectName}/Models`]: true,
+            [`${projectName}/Controllers`]: true,
+            [`${projectName}/Services`]: true,
+            [`${projectName}/Services/Interfaces`]: true,
+            [`${projectName}/Repositories`]: true,
+            [`${projectName}/Repositories/Interfaces`]: true,
+            [`${projectName}/Data`]: true,
+            [`${projectName}/DTOs`]: true,
+            [`${projectName}/Middleware`]: true,
+            [`${projectName}/Configuration`]: true,
+            [`${projectName}/Validators`]: true,
+            [`${projectName}/Helpers`]: true,
+            [`${projectName}/Extensions`]: true
         }
-      });
-    }
+    };
 
-    if (serviceMatch) {
-      const serviceContent = serviceMatch[1].trim();
-      const files = serviceContent.split(/FileName:\s*/).filter(Boolean);
-      
-      files.forEach(file => {
-        const fileNameMatch = file.match(/^(\w+)\.cs/);
-        if (fileNameMatch) {
-          const fileName = fileNameMatch[1];
-          structure.files[`src/YourNamespace/Services/${fileName}.cs`] = cleanCode(file);
+    // Helper function to safely extract content
+    const getContent = (section) => {
+        if (!codeObj[section]) return "";
+        return typeof codeObj[section] === "string" 
+            ? codeObj[section] 
+            : (codeObj[section].content || "");
+    };
+
+    // Helper function to safely extract filename
+    const getFileName = (section, defaultName = "") => {
+        if (!codeObj[section]) return defaultName;
+        return codeObj[section].FileName || defaultName;
+    };
+
+    // Helper function to safely extract path and normalize it
+    const getPath = (section, defaultPath = "") => {
+        if (!codeObj[section]) return defaultPath;
+        let path = codeObj[section].Path || defaultPath;
+        // Normalize path - remove leading/trailing slashes and handle "./"
+        path = path.replace(/^\.\//, "").replace(/\/$/, "");
+        return path;
+    };
+
+    // Helper function to ensure directory structure exists
+    const ensureDirectory = (dirPath) => {
+        if (dirPath && !structure.expanded[`${projectName}/${dirPath}`]) {
+            structure.expanded[`${projectName}/${dirPath}`] = true;
         }
-      });
+    };
+
+    // Helper function to add file to structure
+    const addFileToStructure = (filePath, content) => {
+        if (content && content.trim()) {
+            structure.files[filePath] = content;
+            // Ensure parent directory is expanded
+            const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+            if (dir && dir !== projectName) {
+                structure.expanded[dir] = true;
+            }
+        }
+    };
+
+    // Process all known file types from backend response
+    const fileTypeMapping = {
+        // Core application files
+        'Entity': { defaultPath: 'Models', defaultName: `${className}.cs` },
+        'Repository': { defaultPath: 'Repositories/Interfaces', defaultName: `I${className}Repository.cs` },
+        'RepositoryImpl': { defaultPath: 'Repositories', defaultName: `${className}Repository.cs` },
+        'Service': { defaultPath: 'Services/Interfaces', defaultName: `I${className}Service.cs` },
+        'ServiceImpl': { defaultPath: 'Services', defaultName: `${className}Service.cs` },
+        'Controller': { defaultPath: 'Controllers', defaultName: `${className}Controller.cs` },
+        'DbContext': { defaultPath: 'Data', defaultName: 'ApplicationDbContext.cs' },
+        
+        // Configuration files
+        'Program': { defaultPath: '', defaultName: 'Program.cs' },
+        'Startup': { defaultPath: '', defaultName: 'Startup.cs' },
+        'AppSettings': { defaultPath: '', defaultName: 'appsettings.json' },
+        'AppSettingsDev': { defaultPath: '', defaultName: 'appsettings.Development.json' },
+        'AppSettingsProd': { defaultPath: '', defaultName: 'appsettings.Production.json' },
+        
+        // Additional files that might be present
+        'DTO': { defaultPath: 'DTOs', defaultName: `${className}DTO.cs` },
+        'Validator': { defaultPath: 'Validators', defaultName: `${className}Validator.cs` },
+        'Mapper': { defaultPath: 'Mappers', defaultName: `${className}Mapper.cs` },
+        'Middleware': { defaultPath: 'Middleware', defaultName: 'CustomMiddleware.cs' },
+        'Extension': { defaultPath: 'Extensions', defaultName: 'ServiceExtensions.cs' },
+        'Helper': { defaultPath: 'Helpers', defaultName: 'ApplicationHelper.cs' },
+        'Configuration': { defaultPath: 'Configuration', defaultName: 'AppConfiguration.cs' }
+    };
+
+    // Process each file type
+    Object.keys(fileTypeMapping).forEach(fileType => {
+        if (codeObj[fileType]) {
+            const mapping = fileTypeMapping[fileType];
+            const filePath = getPath(fileType, mapping.defaultPath);
+            const fileName = getFileName(fileType, mapping.defaultName);
+            const content = getContent(fileType);
+            
+            if (content) {
+                const fullPath = filePath 
+                    ? `${projectName}/${filePath}/${fileName}`
+                    : `${projectName}/${fileName}`;
+                
+                addFileToStructure(fullPath, content);
+                console.log(`✅ Added ${fileType}: ${fullPath}`);
+            }
+        }
+    });
+
+    // Handle multiple controllers if they exist as an array or object
+    if (codeObj.Controllers && typeof codeObj.Controllers === 'object') {
+        if (Array.isArray(codeObj.Controllers)) {
+            // Handle array of controllers
+            codeObj.Controllers.forEach((controller, index) => {
+                const controllerName = controller.FileName || `Controller${index + 1}.cs`;
+                const controllerPath = controller.Path || 'Controllers';
+                const fullPath = `${projectName}/${controllerPath}/${controllerName}`;
+                addFileToStructure(fullPath, controller.content);
+                console.log(`✅ Added Controller ${index + 1}: ${fullPath}`);
+            });
+        } else {
+            // Handle object with multiple controllers
+            Object.keys(codeObj.Controllers).forEach(key => {
+                const controller = codeObj.Controllers[key];
+                const controllerName = controller.FileName || `${key}Controller.cs`;
+                const controllerPath = controller.Path || 'Controllers';
+                const fullPath = `${projectName}/${controllerPath}/${controllerName}`;
+                addFileToStructure(fullPath, controller.content);
+                console.log(`✅ Added Controller ${key}: ${fullPath}`);
+            });
+        }
     }
 
-    if (controllerMatch) {
-      const controllerContent = controllerMatch[1].trim();
-      const fileNameMatch = controllerContent.match(/FileName:\s*(\w+)\.cs/);
-      const fileName = fileNameMatch ? fileNameMatch[1] : "LoginController";
-      structure.files[`src/YourNamespace/Controllers/${fileName}.cs`] = cleanCode(controllerContent);
+    // Handle multiple models/entities
+    if (codeObj.Models && typeof codeObj.Models === 'object') {
+        if (Array.isArray(codeObj.Models)) {
+            codeObj.Models.forEach((model, index) => {
+                const modelName = model.FileName || `Model${index + 1}.cs`;
+                const modelPath = model.Path || 'Models';
+                const fullPath = `${projectName}/${modelPath}/${modelName}`;
+                addFileToStructure(fullPath, model.content);
+                console.log(`✅ Added Model ${index + 1}: ${fullPath}`);
+            });
+        } else {
+            Object.keys(codeObj.Models).forEach(key => {
+                const model = codeObj.Models[key];
+                const modelName = model.FileName || `${key}.cs`;
+                const modelPath = model.Path || 'Models';
+                const fullPath = `${projectName}/${modelPath}/${modelName}`;
+                addFileToStructure(fullPath, model.content);
+                console.log(`✅ Added Model ${key}: ${fullPath}`);
+            });
+        }
     }
 
-    if (appSettingsMatch) {
-      structure.files[`src/YourNamespace/appsettings.json`] = cleanCode(appSettingsMatch[1].trim());
+    // Handle multiple services
+    if (codeObj.Services && typeof codeObj.Services === 'object') {
+        Object.keys(codeObj.Services).forEach(key => {
+            const service = codeObj.Services[key];
+            if (service && service.content) {
+                const serviceName = service.FileName || `${key}Service.cs`;
+                const servicePath = service.Path || 'Services';
+                const fullPath = `${projectName}/${servicePath}/${serviceName}`;
+                addFileToStructure(fullPath, service.content);
+                console.log(`✅ Added Service ${key}: ${fullPath}`);
+            }
+        });
     }
 
-    if (dependenciesMatch) {
-      structure.files[`src/YourNamespace/YourNamespace.csproj`] = cleanCode(dependenciesMatch[1].trim());
+    // Handle multiple repositories
+    if (codeObj.Repositories && typeof codeObj.Repositories === 'object') {
+        Object.keys(codeObj.Repositories).forEach(key => {
+            const repository = codeObj.Repositories[key];
+            if (repository && repository.content) {
+                const repoName = repository.FileName || `${key}Repository.cs`;
+                const repoPath = repository.Path || 'Repositories';
+                const fullPath = `${projectName}/${repoPath}/${repoName}`;
+                addFileToStructure(fullPath, repository.content);
+                console.log(`✅ Added Repository ${key}: ${fullPath}`);
+            }
+        });
     }
 
-    // Add Program.cs
-    structure.files[`src/YourNamespace/Program.cs`] = `using Microsoft.AspNetCore.Builder;
+    // Add default files if not provided by backend
+    
+    // Add default Program.cs if not provided
+    if (!structure.files[`${projectName}/Program.cs`]) {
+        const defaultProgramCs = `using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using YourNamespace.Services;
-using YourNamespace.Repositories;
+using ${projectName}.Data;
+using ${projectName}.Repositories;
+using ${projectName}.Repositories.Interfaces;
+using ${projectName}.Services;
+using ${projectName}.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register services
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<ILoginService, LoginService>();
+// Configure Entity Framework
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+// Register repositories and services
+builder.Services.AddScoped<I${className}Repository, ${className}Repository>();
+builder.Services.AddScoped<I${className}Service, ${className}Service>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();`;
-
-    // Add ApplicationDbContext.cs
-    structure.files[`src/YourNamespace/Data/ApplicationDbContext.cs`] = `using Microsoft.EntityFrameworkCore;
-using YourNamespace.Models;
-
-namespace YourNamespace.Data
+// Ensure database is created
+using (var scope = app.Services.CreateScope())
 {
-    public class ApplicationDbContext : DbContext
-    {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
-        {
-        }
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.EnsureCreated();
+}
 
-        public DbSet<User> Users { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-            
-            modelBuilder.Entity<User>()
-                .HasKey(u => u.UserId);
-        }
+app.Run();`;
+        addFileToStructure(`${projectName}/Program.cs`, defaultProgramCs);
     }
-}`;
 
+    // Add default project file if not provided
+    if (!structure.files[`${projectName}/${projectName}.csproj`]) {
+        const defaultProjectFile = `<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="7.0.0" />
+  </ItemGroup>
+
+</Project>`;
+        addFileToStructure(`${projectName}/${projectName}.csproj`, defaultProjectFile);
+    }
+
+    // Add default appsettings.json if not provided
+    if (!structure.files[`${projectName}/appsettings.json`]) {
+        const defaultAppSettings = `{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=${className}DB;User Id=sa;Password=YourPassword123!;TrustServerCertificate=true;"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}`;
+        addFileToStructure(`${projectName}/appsettings.json`, defaultAppSettings);
+    }
+
+
+
+    // Handle Unit Tests
+    if (includeTests && (unitTestsData || backendResponse.unitTests)) {
+        const testProjectName = `${projectName}.Tests`;
+        structure.children.push(testProjectName);
+        structure.expanded[testProjectName] = true;
+        structure.expanded[`${testProjectName}/Services`] = true;
+        structure.expanded[`${testProjectName}/Controllers`] = true;
+        structure.expanded[`${testProjectName}/Repositories`] = true;
+
+        // Add test project file
+        const testProjectFile = `<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Moq" Version="4.20.69" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\\${projectName}\\${projectName}.csproj" />
+  </ItemGroup>
+
+</Project>`;
+        addFileToStructure(`${testProjectName}/${testProjectName}.csproj`, testProjectFile);
+
+        // Extract and add unit test content
+        let unitTestContent = "";
+        
+        if (typeof unitTestsData === "string") {
+            unitTestContent = unitTestsData;
+        } else if (unitTestsData && unitTestsData.unitTestCode) {
+            unitTestContent = unitTestsData.unitTestCode;
+        } else if (backendResponse.unitTests) {
+            if (typeof backendResponse.unitTests === "string") {
+                unitTestContent = backendResponse.unitTests;
+            } else if (backendResponse.unitTests.unitTestCode) {
+                unitTestContent = backendResponse.unitTests.unitTestCode;
+            }
+        }
+
+        // Clean up unit test content
+        if (unitTestContent) {
+            unitTestContent = unitTestContent.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```$/, '').trim();
+            
+            // Extract test class name and determine folder
+            const testClassMatch = unitTestContent.match(/public class (\w+)/);
+            const testClassName = testClassMatch ? testClassMatch[1] : `${className}ServiceTests`;
+            
+            let testFolder = "Services";
+            if (testClassName.includes("Controller")) {
+                testFolder = "Controllers";
+            } else if (testClassName.includes("Repository")) {
+                testFolder = "Repositories";
+            }
+            
+            addFileToStructure(`${testProjectName}/${testFolder}/${testClassName}.cs`, unitTestContent);
+            console.log(`✅ Unit test added: ${testProjectName}/${testFolder}/${testClassName}.cs`);
+        }
+
+        // Add Global Usings for test project
+        const testGlobalUsings = `global using Xunit;
+global using Moq;
+global using FluentAssertions;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.DependencyInjection;
+global using System;
+global using System.Collections.Generic;
+global using System.Linq;
+global using System.Threading.Tasks;
+global using ${projectName}.Models;
+global using ${projectName}.Services;
+global using ${projectName}.Repositories.Interfaces;
+global using ${projectName}.Data;`;
+
+        addFileToStructure(`${testProjectName}/GlobalUsings.cs`, testGlobalUsings);
+
+        // Add test configuration
+        const xunitConfig = `{
+  "appDomain": "denied",
+  "diagnosticMessages": true,
+  "failSkips": false,
+  "internalDiagnosticMessages": false,
+  "maxParallelThreads": -1,
+  "methodDisplay": "classAndMethod",
+  "methodDisplayOptions": "none",
+  "parallelizeAssembly": false,
+  "parallelizeTestCollections": true,
+  "preEnumerateTheories": true,
+  "shadowCopy": false,
+  "stopOnFail": false
+}`;
+        addFileToStructure(`${testProjectName}/xunit.runner.json`, xunitConfig);
+    }
+
+    // Add solution file
+    const solutionName = projectName.split('.')[0];
+    const generateGuid = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        }).toUpperCase();
+    };
+
+    const mainProjectGuid = generateGuid();
+    const testProjectGuid = includeTests && (unitTestsData || backendResponse.unitTests) ? generateGuid() : null;
+
+    const solutionContent = `Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "${projectName}", "${projectName}\\${projectName}.csproj", "{${mainProjectGuid}}"
+EndProject${testProjectGuid ? `
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "${projectName}.Tests", "${projectName}.Tests\\${projectName}.Tests.csproj", "{${testProjectGuid}}"
+EndProject` : ''}
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{${mainProjectGuid}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{${mainProjectGuid}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{${mainProjectGuid}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{${mainProjectGuid}}.Release|Any CPU.Build.0 = Release|Any CPU${testProjectGuid ? `
+		{${testProjectGuid}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{${testProjectGuid}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{${testProjectGuid}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{${testProjectGuid}}.Release|Any CPU.Build.0 = Release|Any CPU` : ''}
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {${generateGuid()}}
+	EndGlobalSection
+EndGlobal`;
+
+    addFileToStructure(`${solutionName}.sln`, solutionContent);
+
+
+    console.log("Generated structure:", structure);
+    console.log(`✅ Structure generated with ${Object.keys(structure.files).length} files`);
+    console.log(`📊 Test project included: ${includeTests && (unitTestsData || backendResponse.unitTests)}`);
+    
     return structure;
-  };
+};
+
+// Helper function to generate GUID-like strings for solution file
+function generateGuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16).toUpperCase();
+    });
+}
+
+// Example usage function
+function parseBackendResponse(backendData, includeTests = true) {
+    try {
+        // Handle both string JSON and object inputs
+        const parsedData = typeof backendData === 'string' ? JSON.parse(backendData) : backendData;
+        
+        // Validate the structure
+        if (!parsedData || typeof parsedData !== 'object') {
+            throw new Error('Invalid backend response format');
+        }
+        
+        // Extract status and check for success
+        if (parsedData.status && parsedData.status !== 'success') {
+            console.warn('Backend conversion may have issues:', parsedData.status);
+        }
+        
+        // Parse the structure
+        const projectStructure = parseCSharpStructure(parsedData, includeTests);
+        
+        // Log conversion notes and potential issues if available
+        if (parsedData.conversionNotes) {
+            console.log('Conversion Notes:', parsedData.conversionNotes);
+        }
+        
+        if (parsedData.potentialIssues && parsedData.potentialIssues.length > 0) {
+            console.warn('Potential Issues:', parsedData.potentialIssues);
+        }
+        
+        return projectStructure;
+        
+    } catch (error) {
+        console.error('Error parsing backend response:', error);
+        throw new Error(`Failed to parse backend response: ${error.message}`);
+    }
+}
+
+// Export functions for use
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        parseCSharpStructure,
+        parseBackendResponse,
+        generateGuid
+    };
+}
 
   const toggleFolder = (path) => {
     setExpandedFolders((prev) => ({

@@ -72,9 +72,9 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # Azure OpenAI Configuration
-AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT", "your-azure-openai-endpoint")
-AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY", "your-azure-openai-key")
-AZURE_OPENAI_DEPLOYMENT_NAME = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "your-deployment-name")
+AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT", "https://azure-openai-uk.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview")
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY", "NkHVD9xPtHLIvi2cgfcdfNdZnMdyZFpl02NvDHuW7fRf36cxrHerJQQJ99ALACmepeSXJ3w3AAABACOGrbaC")
+AZURE_OPENAI_DEPLOYMENT_NAME = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
 
 # Initialize OpenAI client
 client = AzureOpenAI(
@@ -619,43 +619,124 @@ def convert_code():
         # Add special instruction about database code
         prompt += f"\n\nIMPORTANT: Only include database initialization code if the source {source_language} code contains database or SQL operations. If the code is a simple algorithm (like sorting, calculation, etc.) without any database interaction, do NOT include any database setup code in the converted {target_language} code."
 
-        # Prepare conversion messages
-        conversion_messages = [
+        # Conditional conversation messages based on target language
+        if target_language.lower() in ['java', 'spring boot', 'springboot']:
+            # Java/Spring Boot specific conversation messages
+            conversion_messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        f"You are an expert Java/Spring Boot code converter assistant specializing in {source_language} to {target_language} migration. "
+                        f"You convert legacy code to modern, idiomatic Java Spring Boot applications while maintaining all business logic. "
+                        f"Only include database setup/initialization if the original code uses databases or SQL. "
+                        f"For simple algorithms or calculations without database operations, don't add any database code. "
+                        f"Generate a complete Spring Boot application structure with proper annotations, dependency injection, and best practices. "
+                        f"Include JPA entities, repositories, services, controllers, and configuration files as needed. "
+                        f"Return your response in JSON format always with the following structure:\n"
+                        "{\n"
+                        '  "convertedCode": {\n'
+                        '    "Entity": {"FileName": "User.java","Path": "src/main/java/com/example/entity/", "content": ""},\n'
+                        '    "Repository": {"FileName": "UserRepository.java","Path": "src/main/java/com/example/repository/", "content": ""},\n'
+                        '    "Service": {"FileName": "UserService.java","Path": "src/main/java/com/example/service/", "content": ""},\n'
+                        '    "Controller": {"FileName": "UserController.java","Path": "src/main/java/com/example/controller/", "content": ""},\n'
+                        '    "MainApplication": {"FileName": "Application.java","Path": "src/main/java/com/example/", "content": ""},\n'
+                        '    "ApplicationProperties": {"FileName": "application.properties","Path": "src/main/resources/", "content": ""},\n'
+                        '    "ApplicationYml": {"FileName": "application.yml","Path": "src/main/resources/", "content": ""},\n'
+                        '    "PomXml": {"FileName": "pom.xml","Path": "./", "content": ""},\n'
+                        '    "DatabaseConfig": {"FileName": "DatabaseConfig.java","Path": "src/main/java/com/example/config/", "content": ""},\n'
+                        '    "Dependencies": {"content": "Maven dependencies and Spring Boot starters needed"}\n'
+                        "  },\n"
+                        '  "databaseUsed": true/false,\n'
+                        "}\n"
+                        "IMPORTANT: Always return the response in this JSON format. Include proper Spring Boot annotations (@RestController, @Service, @Repository, @Entity, @Autowired, etc.). "
+                        "Use JPA/Hibernate for database operations. Follow Spring Boot best practices and naming conventions."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        elif target_language.lower() in ['c#', 'csharp', '.net', 'dotnet', 'asp.net', 'asp.net core']:
+            # C#/.NET specific conversation messages
+            conversion_messages = [
             {
                 "role": "system",
                 "content": (
-                    f"You are an expert code converter assistant specializing in {source_language} to {target_language} migration. "
-                    f"You convert legacy code to modern, idiomatic code while maintaining all business logic. "
+                    f"You are an expert C#/.NET code converter assistant specializing in {source_language} to {target_language} migration. "
+                    f"You convert legacy code to modern, idiomatic C# .NET applications while maintaining all business logic. "
                     f"Only include database setup/initialization if the original code uses databases or SQL. "
                     f"For simple algorithms or calculations without database operations, don't add any database code. "
+                    f"Generate a complete .NET application structure with proper design patterns, dependency injection, and best practices. "
+                    f"Include Entity Framework models, repositories, services, controllers, and configuration files as needed. "
+                    f"Please generate the database connection string for MySQL Server. Ensure the model definitions do not use precision attributes. "
+                    f"The code should be compatible with .NET 8, and all necessary dependencies should be included in the .csproj file. "
                     f"Return your response in JSON format always with the following structure:\n"
                     "{\n"
                     '  "convertedCode": {\n'
-                    '    "Entity": {"FileName": "", "content": ""},\n'
-                    '    "Repository": {"FileName": "", "content": ""},\n'
-                    '    "Service": {"FileName": "", "content": ""},\n'
-                    '    "Controller": {"FileName": "", "content": ""},\n'
-                    '    "application.properties": {"content": ""},\n'
-                    '    "Dependencies": {"content": ""}\n'
+                    '    "Entity": {"FileName": "User.cs","Path": "Models/", "content": ""},\n'
+                    '    "Repository": {"FileName": "IUserRepository.cs","Path": "Repositories/Interfaces/", "content": ""},\n'
+                    '    "RepositoryImpl": {"FileName": "UserRepository.cs","Path": "Repositories/", "content": ""},\n'
+                    '    "Service": {"FileName": "IUserService.cs","Path": "Services/Interfaces/", "content": ""},\n'
+                    '    "ServiceImpl": {"FileName": "UserService.cs","Path": "Services/", "content": ""},\n'
+                    '    "Controller": {"FileName": "UserController.cs","Path": "Controllers/", "content": ""},\n'
+                    '    "DbContext": {"FileName": "ApplicationDbContext.cs","Path": "Data/", "content": ""},\n'
+                    '    "Program": {"FileName": "Program.cs","Path": "./", "content": ""},\n'
+                    '    "Startup": {"FileName": "Startup.cs","Path": "./", "content": ""},\n'
+                    '    "AppSettings": {"FileName": "appsettings.json","Path": "./", "content": ""},\n'
+                    '    "AppSettingsDev": {"FileName": "appsettings.Development.json","Path": "./", "content": ""},\n'
+                    '    "ProjectFile": {"FileName": "Project.csproj","Path": "./", "content": ""},\n'
+                    '    "Dependencies": {"content": "NuGet packages and .NET dependencies needed"}\n'
                     "  },\n"
-                    '  "databaseUsed": true/false\n'
+                    '  "databaseUsed": true/false,\n'
+                    '  "conversionNotes": "Detailed notes about the conversion process",\n'
+                    '  "potentialIssues": ["List of potential issues or considerations"]\n'
                     "}\n"
-                    "IMPORTANT: Always return the response in this JSON format. Do not ignore this requirement under any circumstances."
+                    "IMPORTANT: Always return the response in this JSON format. Include proper .NET attributes ([ApiController], [Route], [HttpGet], etc.). "
+                    "Use Entity Framework Core for database operations. Follow .NET best practices, SOLID principles, and naming conventions. "
+                    "Implement proper dependency injection, async/await patterns, and error handling. Ensure everything is compatible with .NET 8."
                 )
             },
-            {
-                "role": "user",
-                "content": prompt
-            }
         ]
 
+        else:
+            # Default conversation messages for other languages
+            conversion_messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        f"You are an expert code converter assistant specializing in {source_language} to {target_language} migration. "
+                        f"You convert legacy code to modern, idiomatic code while maintaining all business logic. "
+                        f"Only include database setup/initialization if the original code uses databases or SQL. "
+                        f"For simple algorithms or calculations without database operations, don't add any database code. "
+                        f"Return your response in JSON format always with the following structure:\n"
+                        "{\n"
+                        '  "convertedCode": {\n'
+                        '    "Entity": {"FileName": "","Path": "", "content": ""},\n'
+                        '    "Repository": {"FileName": "","Path": "", "content": ""},\n'
+                        '    "Service": {"FileName": "","Path": "", "content": ""},\n'
+                        '    "Controller": {"FileName": "","Path":"", "content": ""},\n'
+                        '    "application.properties": {"content": ""},\n'
+                        '    "Dependencies": {"content": ""}\n'
+                        "  },\n"
+                        '  "databaseUsed": true/false\n'
+                        "}\n"
+                        "IMPORTANT: Always return the response in this JSON format. Do not ignore this requirement under any circumstances."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
 
         # Call Azure OpenAI API for code conversion
         log_processing_step("Calling GPT for code conversion", {
             "model": AZURE_OPENAI_DEPLOYMENT_NAME,
             "temperature": 0.1,
             "max_tokens": 4000,
-            "prompt_length": len(prompt)
+            "prompt_length": len(prompt),
+            "target_language": target_language
         }, 5)
 
         response = client.chat.completions.create(
@@ -905,6 +986,7 @@ def convert_code():
             "targetLanguage": target_language if 'target_language' in locals() else "",
             "databaseUsed": False
         }), 500
+
 
 @app.route("/cobo/languages", methods=["GET"])
 def get_languages():

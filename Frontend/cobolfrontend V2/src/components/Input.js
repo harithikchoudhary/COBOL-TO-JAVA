@@ -28,6 +28,7 @@ export default function Input({
   };
   const sourceCodeJson = getSourceCodeAsJson();
   useEffect(() => {
+    console.log("Setting sourceCodeJson:", sourceCodeJson);
     setSourceCodeJson(sourceCodeJson);
   }, [sourceCodeJson, setSourceCodeJson]);
 
@@ -44,6 +45,7 @@ export default function Input({
         'jcl': 'JCL',
         'cpy': 'Copybook',
         'copybook': 'Copybook',
+        'bms': 'BMS',
         'txt': 'Text'
       };
       return typeMap[extension] || 'Unknown';
@@ -136,7 +138,7 @@ export default function Input({
             type="file"
             className="d-none"
             onChange={handleFileUpload}
-            accept=".txt,.cob,.cobol,.cbl,.jcl,.cpy,.copybook"
+            accept=".txt,.cob,.cobol,.cbl,.jcl,.cpy,.copybook,.bms"
             multiple
           />
         </label>
@@ -277,7 +279,7 @@ export default function Input({
                 type="file"
                 className="d-none"
                 onChange={handleFileUpload}
-                accept=".txt,.cob,.cobol,.cbl,.jcl,.cpy,.copybook"
+                accept=".txt,.cob,.cobol,.cbl,.jcl,.cpy,.copybook,.bms"
                 multiple
               />
             </label>

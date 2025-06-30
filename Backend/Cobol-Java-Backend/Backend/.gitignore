@@ -76,3 +76,4 @@ Thumbs.db
 
 # Environment variables
 .env 
+/venv/

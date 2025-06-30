@@ -233,11 +233,13 @@ def create_csharp_specific_prompt(source_language, source_code, business_require
     src/
     ├── Controllers/
     ├── Services/
+    │   └── Interfaces/       # Service layer interfaces
     ├── Repositories/
+    │   └── Interfaces/       # Repository layer interfaces
     ├── Models/
     ├── DTOs/
-    ├── Extensions/
-    └── Infrastructure/
+              # (Optional) Global shared interfaces
+
     ```
     
     **C#-Specific Attributes:**
