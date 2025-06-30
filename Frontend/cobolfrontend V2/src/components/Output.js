@@ -172,8 +172,9 @@ export default function Output({
     
     // Extract the main conversion data
     const codeObj = backendResponse.convertedCode || backendResponse;
-    const unitTestsData = backendResponse.unitTestDetails || backendResponse.unitTests;
-    const functionalTestsData = backendResponse.functionalTests;
+    const unitTestsData =  unitTests;
+    console.log("backend response",backendResponse);
+    console.log("Unit Test cases",unitTestsData);
     
     // Extract class name dynamically from Entity or default to Employee
     let className = "Employee";
