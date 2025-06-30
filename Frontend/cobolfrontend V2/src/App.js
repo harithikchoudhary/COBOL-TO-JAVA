@@ -54,7 +54,7 @@ export default function App() {
                 </h1>
               </div>
               <p className="fs-4 text-secondary">
-                Transform COBOL code to Java or C# with AI precision
+                Transform COBOL code to C# with AI precision
               </p>
               {!isBackendAvailable && (
                 <Alert variant="warning" className="mt-2">

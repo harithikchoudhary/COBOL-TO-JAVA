@@ -1,7 +1,6 @@
 export const API_BASE_URL = "http://localhost:8010/cobo";
 
 export const targetLanguages = [
-  { name: "Java", icon: "☕" },
   { name: "C#", icon: "🔷" },
 ];
 

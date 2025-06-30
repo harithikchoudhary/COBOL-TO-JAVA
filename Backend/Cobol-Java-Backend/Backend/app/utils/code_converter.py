@@ -91,7 +91,7 @@ class CodeConverter:
 
 
     def convert_code_chunks(self, chunks: List[str], source_language: str, 
-                           target_language: str,vsam_definition: str, business_requirements: str,
+                           target_language: str, business_requirements: str,
                            technical_requirements: str, db_setup_template: str) -> Dict[str, Any]:
         """
         Convert each code chunk and merge the results.
@@ -119,7 +119,7 @@ class CodeConverter:
         # For a single chunk, convert directly
         if len(chunks) == 1:
             return self._convert_single_chunk(
-                chunks[0], source_language, target_language, vsam_definition,
+                chunks[0], source_language, target_language,
                 business_requirements, technical_requirements, db_setup_template
             )
         
@@ -159,7 +159,7 @@ class CodeConverter:
             """
             
             result = self._convert_single_chunk(
-                chunk, source_language, target_language, vsam_definition,
+                chunk, source_language, target_language,
                 business_requirements, technical_requirements, 
                 db_setup_template, additional_context=chunk_context
             )
@@ -467,7 +467,7 @@ class CodeConverter:
 
 
     def _convert_single_chunk(self, code_chunk: str, source_language: str,
-                            target_language: str,vsam_definition: str, business_requirements: str,
+                            target_language: str, business_requirements: str,
                             technical_requirements: str, db_setup_template: str,
                             additional_context: str = "") -> Dict[str, Any]:
         """
@@ -493,7 +493,6 @@ class CodeConverter:
             target_language,
             code_chunk,
             business_requirements,
-            vsam_definition,
             technical_requirements,
             db_setup_template
         )

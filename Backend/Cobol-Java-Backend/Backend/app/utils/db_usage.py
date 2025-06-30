@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def detect_database_usage(source_code, source_language="COBOL"):
 
     """
-    Detect if the source code contains database operations or embedded SQL.
+    Detect if source code contains database operations or embedded SQL.
     
     Args:
         source_code (str): The source code to analyze

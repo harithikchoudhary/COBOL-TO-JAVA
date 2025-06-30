@@ -5,7 +5,7 @@ import { RefreshCw, Download, ClipboardList } from "lucide-react";
 const API_BASE_URL = "http://localhost:8010/cobo";
 
 export default function Cobol({ children }) {
-  const [targetLanguage, setTargetLanguage] = useState("Java");
+  const [targetLanguage, setTargetLanguage] = useState("C#");
   const [convertedCode, setConvertedCode] = useState("");
   const [unitTests, setUnitTests] = useState("");
   const [functionalTests, setFunctionalTests] = useState("");
@@ -29,7 +29,6 @@ export default function Cobol({ children }) {
   const [sourceCodeJson, setSourceCodeJson] = useState(null);
 
   const targetLanguages = [
-    { name: "Java", icon: "☕" },
     { name: "C#", icon: "🔷" },
   ];
 
@@ -247,12 +246,7 @@ export default function Cobol({ children }) {
     try {
       if (!isBackendAvailable) {
         setTimeout(() => {
-          const simulatedCode = `// Simulated ${targetLanguage} code
-public class CobolConverter {
-    public static void main(String[] args) {
-        System.out.println("This is a simulated conversion");
-    }
-}`;
+          const simulatedCode = `// Simulated C# code\npublic class CobolConverter {\n    public static void Main(string[] args) {\n        Console.WriteLine(\"This is a simulated conversion\");\n    }\n}`;
           const simulatedUnitTests = `// Simulated Unit Tests
 @Test
 public void testConversion() {
@@ -375,15 +369,11 @@ Feature: Basic Functionality
     switch (activeOutputTab) {
       case "code":
         contentToDownload = convertedCode;
-        filename = `converted_${targetLanguage.toLowerCase()}_code.${
-          targetLanguage === "Java" ? "java" : "cs"
-        }`;
+        filename = `converted_${targetLanguage.toLowerCase()}_code.cs`;
         break;
       case "unit-tests":
         contentToDownload = unitTests;
-        filename = `unit_tests_${targetLanguage.toLowerCase()}.${
-          targetLanguage === "Java" ? "java" : "cs"
-        }`;
+        filename = `unit_tests_${targetLanguage.toLowerCase()}.cs`;
         break;
       case "functional-tests":
         contentToDownload = functionalTests;
@@ -391,9 +381,7 @@ Feature: Basic Functionality
         break;
       default:
         contentToDownload = convertedCode;
-        filename = `converted_${targetLanguage.toLowerCase()}_code.${
-          targetLanguage === "Java" ? "java" : "cs"
-        }`;
+        filename = `converted_${targetLanguage.toLowerCase()}_code.cs`;
     }
 
     if (!contentToDownload) return;

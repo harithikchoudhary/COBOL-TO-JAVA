@@ -149,11 +149,6 @@ export default function Output({
     if (!code) return {};
 
     if (
-      language.toLowerCase().includes("spring") ||
-      language.toLowerCase().includes("java")
-    ) {
-      return parseJavaSpringStructure(code, unitTests);
-    } else if (
       language.toLowerCase().includes("c#") ||
       language.toLowerCase().includes("csharp") ||
       language.toLowerCase().includes(".net")
@@ -172,481 +167,7 @@ export default function Output({
     }
   };
 
- const parseJavaSpringStructure = (codeObj, unitTests) => {
-    console.log("Parsing Java Spring structure", codeObj);
-    
-    const structure = {
-      name: "src",
-      isFolder: true,
-      children: ["main", "test"],
-      files: {},
-    };
-
-    // Helper function to get content from backend response
-    const getContent = (section) =>
-      codeObj[section] && codeObj[section].content
-        ? codeObj[section].content
-        : "";
-
-    // Helper function to get filename from backend response
-    const getFileName = (section, defaultName) =>
-      codeObj[section] && codeObj[section].FileName
-        ? codeObj[section].FileName
-        : defaultName;
-
-    // Extract class name for dynamic naming (fallback to User if not found)
-    let className = "User";
-    if (codeObj.Entity && codeObj.Entity.FileName) {
-      const match = codeObj.Entity.FileName.match(/(\w+)\.java$/);
-      if (match) {
-        className = match[1];
-      }
-    }
-
-    console.log("Extracted className:", className);
-
-    // Extract package structure from backend paths
-    let packagePath = "com/company/project";
-    if (codeObj.Entity && codeObj.Entity.Path) {
-      // Extract package path from Entity path: "src/main/java/com/company/project/model/"
-      const pathMatch = codeObj.Entity.Path.match(/src\/main\/java\/(.+)\/\w+\/$/);
-      if (pathMatch) {
-        packagePath = pathMatch[1];
-      }
-    }
-
-    console.log("Extracted packagePath:", packagePath);
-
-    // Set up expanded structure with correct package path
-    const packageParts = packagePath.split('/');
-    const expandedKeys = {
-      src: true,
-      "src/main": true,
-      "src/test": true,
-      "src/test/java": true,
-      "src/main/java": true,
-      "src/main/resources": true,
-      ".mvn": true,
-      ".mvn/wrapper": true,
-    };
-
-    // Add expanded keys for package structure
-    let currentPath = "src/main/java";
-    for (const part of packageParts) {
-      currentPath += `/${part}`;
-      expandedKeys[currentPath] = true;
-    }
-
-    // Add test package structure
-    let currentTestPath = "src/test/java";
-    for (const part of packageParts) {
-      currentTestPath += `/${part}`;
-      expandedKeys[currentTestPath] = true;
-    }
-
-    structure.expanded = expandedKeys;
-
-    // Populate files from backend response
-    structure.files = {};
-
-    // Add Entity (using exact path from backend)
-    if (codeObj.Entity) {
-      const entityPath = codeObj.Entity.Path ? 
-        `${codeObj.Entity.Path}${getFileName("Entity", `${className}.java`)}` :
-        `src/main/java/${packagePath}/model/${getFileName("Entity", `${className}.java`)}`;
-      structure.files[entityPath] = getContent("Entity");
-    }
-
-    // Add Repository (using exact path from backend)
-    if (codeObj.Repository) {
-      const repoPath = codeObj.Repository.Path ? 
-        `${codeObj.Repository.Path}${getFileName("Repository", `${className}Repository.java`)}` :
-        `src/main/java/${packagePath}/repository/${getFileName("Repository", `${className}Repository.java`)}`;
-      structure.files[repoPath] = getContent("Repository");
-    }
-
-    // Add Service (using exact path from backend)
-    if (codeObj.Service) {
-      const servicePath = codeObj.Service.Path ? 
-        `${codeObj.Service.Path}${getFileName("Service", `${className}Service.java`)}` :
-        `src/main/java/${packagePath}/service/${getFileName("Service", `${className}Service.java`)}`;
-      structure.files[servicePath] = getContent("Service");
-    }
-
-    // Add Controller (using exact path from backend)
-    if (codeObj.Controller) {
-      const controllerPath = codeObj.Controller.Path ? 
-        `${codeObj.Controller.Path}${getFileName("Controller", `${className}Controller.java`)}` :
-        `src/main/java/${packagePath}/controller/${getFileName("Controller", `${className}Controller.java`)}`;
-      structure.files[controllerPath] = getContent("Controller");
-    }
-
-    // Add Main Application (using exact path from backend)
-    if (codeObj.MainApplication) {
-      const mainAppPath = codeObj.MainApplication.Path ? 
-        `${codeObj.MainApplication.Path}${getFileName("MainApplication", "Application.java")}` :
-        `src/main/java/${packagePath}/${getFileName("MainApplication", "Application.java")}`;
-      structure.files[mainAppPath] = getContent("MainApplication");
-    }
-
-    // Add application.properties (using exact path from backend)
-    if (codeObj.ApplicationProperties) {
-      const propsPath = codeObj.ApplicationProperties.Path ? 
-        `${codeObj.ApplicationProperties.Path}${getFileName("ApplicationProperties", "application.properties")}` :
-        "src/main/resources/application.properties";
-      structure.files[propsPath] = getContent("ApplicationProperties");
-    }
-
-
-    // Add pom.xml (using exact path from backend)
-    if (codeObj.PomXml) {
-      structure.files["pom.xml"] = getContent("PomXml");
-    }
-
-    // Add DatabaseConfig if it exists and has content
-    if (codeObj.DatabaseConfig && getContent("DatabaseConfig")) {
-      const configPath = codeObj.DatabaseConfig.Path ? 
-        `${codeObj.DatabaseConfig.Path}${getFileName("DatabaseConfig", "DatabaseConfig.java")}` :
-        `src/main/java/${packagePath}/config/${getFileName("DatabaseConfig", "DatabaseConfig.java")}`;
-      structure.files[configPath] = getContent("DatabaseConfig");
-    }
-
-    // Add test files - prioritize unitTests parameter, then unitTestDetails, then fallback
-    let testContent = "";
-    let testFileName = `${className}ServiceTest.java`;
-    
-    if (unitTests) {
-      testContent = unitTests;
-    } else if (codeObj.unitTestDetails && codeObj.unitTestDetails.unitTestCode) {
-      testContent = codeObj.unitTestDetails.unitTestCode;
-    } else if (codeObj.unitTests) {
-      testContent = codeObj.unitTests;
-    } else {
-      // Default test placeholder
-      testContent = `package ${packagePath.replace(/\//g, '.')}.service;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-
-@SpringBootTest
-class ${className}ServiceTest {
-    
-    @Test
-    void contextLoads() {
-        // Test cases not generated
-    }
-}`;
-    }
-
-    structure.files[`src/test/java/${packagePath}/service/${testFileName}`] = testContent;
-
-    // Add .gitignore file
-    structure.files[".gitignore"] = `HELP.md
-target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
-.vscode/`;
-
-    // Add .gitattributes file
-    structure.files[".gitattributes"] = `# Set default behavior to automatically normalize line endings
-* text=auto
-
-# Explicitly declare text files you want to always be normalized and converted to native line endings on checkout
-*.java text
-*.xml text
-*.properties text
-*.md text
-
-# Declare files that will always have CRLF line endings on checkout
-*.bat text eol=crlf
-mvnw.cmd text eol=crlf
-
-# Declare files that will always have LF line endings on checkout
-*.sh text eol=lf
-mvnw text eol=lf
-
-# Denote all files that are truly binary and should not be modified
-*.jar binary
-*.png binary
-*.jpg binary`;
-
-    // Add mvnw script
-    structure.files["mvnw"] = `#!/bin/sh
-# ----------------------------------------------------------------------------
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#    https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-# ----------------------------------------------------------------------------
-
-# Maven wrapper script for Unix platforms
-# This script allows you to run Maven without having Maven installed
-# It will download Maven if needed and then run the specified Maven command
-
-set -e
-
-MAVEN_WRAPPER_JAR=".mvn/wrapper/maven-wrapper.jar"
-MAVEN_WRAPPER_PROPERTIES=".mvn/wrapper/maven-wrapper.properties"
-
-# Find Java
-if [ -n "$JAVA_HOME" ] ; then
-    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
-        JAVACMD="$JAVA_HOME/jre/sh/java"
-    else
-        JAVACMD="$JAVA_HOME/bin/java"
-    fi
-    if [ ! -x "$JAVACMD" ] ; then
-        echo "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME" >&2
-        exit 1
-    fi
-else
-    JAVACMD="java"
-    which java >/dev/null 2>&1 || { echo "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH." >&2; exit 1; }
-fi
-
-exec "$JAVACMD" \\
-    -classpath "$MAVEN_WRAPPER_JAR" \\
-    "-Dmaven.multiModuleProjectDirectory=$MAVEN_PROJECTBASEDIR" \\
-    org.apache.maven.wrapper.MavenWrapperMain "$@"`;
-
-    // Add mvnw.cmd script
-    structure.files["mvnw.cmd"] = `@REM ----------------------------------------------------------------------------
-@REM Licensed to the Apache Software Foundation (ASF) under one
-@REM or more contributor license agreements.  See the NOTICE file
-@REM distributed with this work for additional information
-@REM regarding copyright ownership.  The ASF licenses this file
-@REM to you under the Apache License, Version 2.0 (the
-@REM "License"); you may not use this file except in compliance
-@REM with the License.  You may obtain a copy of the License at
-@REM
-@REM    https://www.apache.org/licenses/LICENSE-2.0
-@REM
-@REM Unless required by applicable law or agreed to in writing,
-@REM software distributed under the License is distributed on an
-@REM "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-@REM KIND, either express or implied.  See the License for the
-@REM specific language governing permissions and limitations
-@REM under the License.
-@REM ----------------------------------------------------------------------------
-
-@REM Maven wrapper script for Windows
-@REM This script allows you to run Maven without having Maven installed
-@REM It will download Maven if needed and then run the specified Maven command
-
-@echo off
-set ERROR_CODE=0
-
-:init
-@REM Find java.exe
-if defined JAVA_HOME goto findJavaFromJavaHome
-
-set JAVA_EXE=java.exe
-%JAVA_EXE% -version >NUL 2>&1
-if "%ERRORLEVEL%" == "0" goto execute
-
-echo.
-echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
-echo.
-echo Please set the JAVA_HOME variable in your environment to match the
-echo location of your Java installation.
-
-goto error
-
-:findJavaFromJavaHome
-set JAVA_HOME=%JAVA_HOME:"=%
-set JAVA_EXE=%JAVA_HOME%/bin/java.exe
-
-if exist "%JAVA_EXE%" goto execute
-
-echo.
-echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME%
-echo.
-echo Please set the JAVA_HOME variable in your environment to match the
-echo location of your Java installation.
-
-goto error
-
-:execute
-@REM Execute Maven
-"%JAVA_EXE%" -classpath ".mvn/wrapper/maven-wrapper.jar" "-Dmaven.multiModuleProjectDirectory=%~dp0" org.apache.maven.wrapper.MavenWrapperMain %*
-if ERRORLEVEL 1 goto error
-goto end
-
-:error
-set ERROR_CODE=1
-
-:end
-@endlocal & set ERROR_CODE=%ERROR_CODE%
-
-if not "%MAVEN_SKIP_RC%" == "" goto skipRcPost
-@REM check for post script, once with legacy .bat ending and once with .cmd ending
-if exist "%HOME%\\mavenrc_post.bat" call "%HOME%\\mavenrc_post.bat"
-if exist "%HOME%\\mavenrc_post.cmd" call "%HOME%\\mavenrc_post.cmd"
-:skipRcPost
-
-@REM pause the script if MAVEN_BATCH_PAUSE is set to 'on'
-if "%MAVEN_BATCH_PAUSE%" == "on" pause
-
-if "%MAVEN_SKIP_RC%" == "" goto skipRcPre
-@REM check for pre script, once with legacy .bat ending and once with .cmd ending
-if exist "%HOME%\\mavenrc_pre.bat" call "%HOME%\\mavenrc_pre.bat"
-if exist "%HOME%\\mavenrc_pre.cmd" call "%HOME%\\mavenrc_pre.cmd"
-:skipRcPre
-
-exit /B %ERROR_CODE%`;
-
-    // Add .mvn/wrapper/maven-wrapper.properties
-    structure.files[".mvn/wrapper/maven-wrapper.properties"] = `# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-wrapperVersion=3.3.2
-distributionType=only-script
-distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip`;
-
-    // Add README.md
-    structure.files["README.md"] = `# ${className} Management System
-
-A Spring Boot application for managing ${className.toLowerCase()} data.
-
-## Features
-
-- User authentication and login functionality
-- RESTful API endpoints
-- MySQL database integration
-- JPA/Hibernate for data persistence
-- Maven build system
-- Lombok for reducing boilerplate code
-
-## Requirements
-
-- Java 8 or higher (Java 17+ recommended)
-- MySQL 8.0 or higher
-- Maven 3.6 or higher
-
-## Setup
-
-1. Clone the repository
-2. Configure your MySQL database connection in \`src/main/resources/application.properties\`
-3. Update the database name, username, and password according to your MySQL setup
-4. Run the application:
-   \`\`\`bash
-   ./mvnw spring-boot:run
-   \`\`\`
-
-## Database Configuration
-
-Make sure to update the following properties in \`application.properties\`:
-\`\`\`properties
-spring.datasource.url=jdbc:mysql://localhost:3306/yourDatabaseName
-spring.datasource.username=your_username
-spring.datasource.password=your_password
-\`\`\`
-
-## API Endpoints
-
-- POST /api/login - User login authentication
-  - Parameters: userId, userPassword
-  - Returns: "Login Successful" or "Login Failed"
-
-## Testing
-
-The project includes comprehensive unit tests. Run tests with:
-\`\`\`bash
-./mvnw test
-\`\`\`
-
-## Project Structure
-
-\`\`\`
-src/
-├── main/
-│   ├── java/
-│   │   └── com/company/project/
-│   │       ├── Application.java
-│   │       ├── controller/
-│   │       │   └── UserController.java
-│   │       ├── model/
-│   │       │   └── User.java
-│   │       ├── repository/
-│   │       │   └── UserRepository.java
-│   │       └── service/
-│   │           └── UserService.java
-│   └── resources/
-│       └── application.properties
-└── test/
-    └── java/
-        └── com/company/project/
-            └── service/
-                └── UserServiceTest.java
-\`\`\`
-
-## Technology Stack
-
-- Spring Boot 2.5.4
-- Spring Data JPA
-- MySQL Connector
-- Lombok
-- JUnit 5 & Mockito for testing
-`;
-
-    console.log("Final structure:", structure);
-    return structure;
-  };
-
-const parseCSharpStructure = (backendResponse, includeTests = true) => {
+  const parseCSharpStructure = (backendResponse, includeTests = true) => {
     console.log("Parsing C# structure from backend response", backendResponse);
     
     // Extract the main conversion data
@@ -961,13 +482,22 @@ app.Run();`;
     // Handle Unit Tests
     if (includeTests && (unitTestsData || backendResponse.unitTests)) {
         const testProjectName = `${projectName}.Tests`;
-        structure.children.push(testProjectName);
+        const testProjectNode = {
+            name: testProjectName,
+            isFolder: true,
+            children: [
+                { name: `${testProjectName}/Services`, isFolder: true, children: [] },
+                { name: `${testProjectName}/Controllers`, isFolder: true, children: [] },
+                { name: `${testProjectName}/Repositories`, isFolder: true, children: [] }
+            ]
+        };
+        structure.children.push(testProjectNode);
         structure.expanded[testProjectName] = true;
         structure.expanded[`${testProjectName}/Services`] = true;
         structure.expanded[`${testProjectName}/Controllers`] = true;
         structure.expanded[`${testProjectName}/Repositories`] = true;
 
-        // Add test project file
+        // Add test project file (updated for NUnit)
         const testProjectFile = `<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -979,16 +509,9 @@ app.Run();`;
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageReference Include="xunit" Version="2.6.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="coverlet.collector" Version="6.0.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="Moq" Version="4.20.69" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
@@ -1002,42 +525,73 @@ app.Run();`;
 </Project>`;
         addFileToStructure(`${testProjectName}/${testProjectName}.csproj`, testProjectFile);
 
-        // Extract and add unit test content
-        let unitTestContent = "";
-        
-        if (typeof unitTestsData === "string") {
-            unitTestContent = unitTestsData;
-        } else if (unitTestsData && unitTestsData.unitTestCode) {
-            unitTestContent = unitTestsData.unitTestCode;
-        } else if (backendResponse.unitTests) {
-            if (typeof backendResponse.unitTests === "string") {
-                unitTestContent = backendResponse.unitTests;
-            } else if (backendResponse.unitTests.unitTestCode) {
-                unitTestContent = backendResponse.unitTests.unitTestCode;
+        // Process unit tests
+        const processUnitTests = (tests, source = "unitTests") => {
+            if (!tests) return;
+            let testFiles = [];
+            if (typeof tests === "string") {
+                testFiles = [{ content: tests, metadata: {} }];
+            } else if (tests.unitTestCode) {
+                testFiles = [{
+                    content: tests.unitTestCode,
+                    metadata: {
+                        testDescription: tests.testDescription || "",
+                        coverage: tests.coverage || []
+                    }
+                }];
+            } else if (Array.isArray(tests)) {
+                testFiles = tests.map(test => ({
+                    content: test.content || test,
+                    metadata: test.metadata || {}
+                }));
+            } else if (typeof tests === "object") {
+                testFiles = Object.keys(tests).map(key => ({
+                    content: tests[key].content || tests[key],
+                    metadata: tests[key].metadata || {}
+                }));
             }
-        }
 
-        // Clean up unit test content
-        if (unitTestContent) {
-            unitTestContent = unitTestContent.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```$/, '').trim();
-            
-            // Extract test class name and determine folder
-            const testClassMatch = unitTestContent.match(/public class (\w+)/);
-            const testClassName = testClassMatch ? testClassMatch[1] : `${className}ServiceTests`;
-            
-            let testFolder = "Services";
-            if (testClassName.includes("Controller")) {
-                testFolder = "Controllers";
-            } else if (testClassName.includes("Repository")) {
-                testFolder = "Repositories";
-            }
-            
-            addFileToStructure(`${testProjectName}/${testFolder}/${testClassName}.cs`, unitTestContent);
-            console.log(`✅ Unit test added: ${testProjectName}/${testFolder}/${testClassName}.cs`);
-        }
+            testFiles.forEach((test, index) => {
+                let unitTestContent = test.content.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```$/, '').trim();
+                if (!unitTestContent) return;
+
+                // Extract namespace to determine folder
+                let testFolder = "Services";
+                let testClassName = `${className}ServiceTests`;
+                const namespaceMatch = unitTestContent.match(/namespace ([^\n\r{]+)/);
+                const testNamespace = namespaceMatch ? namespaceMatch[1].trim() : `${projectName}.Tests.Services`;
+                
+                if (testNamespace.includes(".Controllers")) {
+                    testFolder = "Controllers";
+                } else if (testNamespace.includes(".Repositories")) {
+                    testFolder = "Repositories";
+                }
+
+                const testClassMatch = unitTestContent.match(/public class (\w+)/);
+                if (testClassMatch) {
+                    testClassName = testClassMatch[1];
+                }
+
+                const filePath = `${testProjectName}/${testFolder}/${testClassName}.cs`;
+                addFileToStructure(filePath, unitTestContent, test.metadata);
+                console.log(`✅ Unit test added: ${filePath} (from ${source})`);
+
+                // Update children for frontend
+                const folderNode = testProjectNode.children.find(c => c.name === `${testProjectName}/${testFolder}`);
+                if (folderNode && !folderNode.children.some(c => c.name === filePath)) {
+                    folderNode.children.push({
+                        name: filePath,
+                        isFolder: false
+                    });
+                }
+            });
+        };
+
+        processUnitTests(unitTestsData, "unitTestDetails");
+        processUnitTests(backendResponse.unitTests, "unitTests");
 
         // Add Global Usings for test project
-        const testGlobalUsings = `global using Xunit;
+        const testGlobalUsings = `global using NUnit.Framework;
 global using Moq;
 global using FluentAssertions;
 global using Microsoft.EntityFrameworkCore;
@@ -1050,25 +604,16 @@ global using ${projectName}.Models;
 global using ${projectName}.Services;
 global using ${projectName}.Repositories.Interfaces;
 global using ${projectName}.Data;`;
-
         addFileToStructure(`${testProjectName}/GlobalUsings.cs`, testGlobalUsings);
 
-        // Add test configuration
-        const xunitConfig = `{
-  "appDomain": "denied",
-  "diagnosticMessages": true,
-  "failSkips": false,
-  "internalDiagnosticMessages": false,
-  "maxParallelThreads": -1,
-  "methodDisplay": "classAndMethod",
-  "methodDisplayOptions": "none",
-  "parallelizeAssembly": false,
-  "parallelizeTestCollections": true,
-  "preEnumerateTheories": true,
-  "shadowCopy": false,
-  "stopOnFail": false
-}`;
-        addFileToStructure(`${testProjectName}/xunit.runner.json`, xunitConfig);
+        // Add NUnit configuration
+        const nunitConfig = `<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+  </packageSources>
+</configuration>`;
+        addFileToStructure(`${testProjectName}/nuget.config`, nunitConfig);
     }
 
     // Add solution file
@@ -1329,36 +874,29 @@ if (typeof module !== 'undefined' && module.exports) {
     }
   };
 
-  const handleDownloadZip = async () => {
+  async function handleDownloadZip() {
     setIsGeneratingZip(true);
-
+  
     try {
       const zip = new JSZip();
-
+  
       // Add all files to the zip
       const files = fileStructure.files || {};
       Object.entries(files).forEach(([path, content]) => {
         zip.file(path, content);
       });
-
+  
       // Generate the zip file
       const zipBlob = await zip.generateAsync({ type: "blob" });
-
+  
       // Save the zip file
-      saveAs(
-        zipBlob,
-        `${
-          targetLanguage.toLowerCase().includes("java")
-            ? "spring-java"
-            : "csharp"
-        }-project.zip`
-      );
+      saveAs(zipBlob, "dotnet8-project.zip");
     } catch (error) {
       console.error("Error generating zip file:", error);
     } finally {
       setIsGeneratingZip(false);
     }
-  };
+  }
 
   const handleDoubleClick = (e) => {
     selectAllContent();
