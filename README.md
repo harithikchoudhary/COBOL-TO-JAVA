@@ -1,4 +1,4 @@
-# COBOL to Java (COBOL-TO-JAVA)
+# COBOL to Java
 
 A full-stack application for converting legacy COBOL code to modern C# (.NET 8) using AI. The project consists of a React frontend and a Flask backend integrated with Azure OpenAI for code analysis and conversion.
 
