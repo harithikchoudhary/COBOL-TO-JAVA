@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import {
   Upload,
+  FileArchive,
   ClipboardList,
   RefreshCw,
-  FileText,
   X,
-  Code,
 } from "lucide-react";
 
 export default function Input({
@@ -21,34 +20,31 @@ export default function Input({
   const [showDropdownTarget, setShowDropdownTarget] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [activeFileTab, setActiveFileTab] = useState(null);
+  const [standardsUploadStatus, setStandardsUploadStatus] = useState(null);
 
-  // Store JSON data for backend
-  const getSourceCodeAsJson = () => {
-    return JSON.stringify(uploadedFiles, null, 2);
-  };
+  // Build JSON payload for code‐analysis endpoints
+  const getSourceCodeAsJson = () => JSON.stringify(uploadedFiles, null, 2);
   const sourceCodeJson = getSourceCodeAsJson();
   useEffect(() => {
-    console.log("Setting sourceCodeJson:", sourceCodeJson);
     setSourceCodeJson(sourceCodeJson);
   }, [sourceCodeJson, setSourceCodeJson]);
 
+  // COBOL/JCL file upload
   const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files);
-
-    // Function to determine file type based on extension
     const getFileType = (fileName) => {
-      const extension = fileName.split('.').pop().toLowerCase();
-      const typeMap = {
-        'cob': 'COBOL',
-        'cobol': 'COBOL', 
-        'cbl': 'COBOL',
-        'jcl': 'JCL',
-        'cpy': 'Copybook',
-        'copybook': 'Copybook',
-        'bms': 'BMS',
-        'txt': 'Text'
+      const ext = fileName.split(".").pop().toLowerCase();
+      const map = {
+        cob: "COBOL",
+        cobol: "COBOL",
+        cbl: "COBOL",
+        jcl: "JCL",
+        cpy: "Copybook",
+        copybook: "Copybook",
+        bms: "BMS",
+        txt: "Text",
       };
-      return typeMap[extension] || 'Unknown';
+      return map[ext] || "Unknown";
     };
 
     const readFiles = await Promise.all(
@@ -56,15 +52,14 @@ export default function Input({
         (file) =>
           new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = (e) =>
               resolve({
                 fileName: file.name,
                 content: e.target.result,
                 size: file.size,
                 type: getFileType(file.name),
-                uploadDate: new Date().toISOString()
+                uploadDate: new Date().toISOString(),
               });
-            };
             reader.readAsText(file);
           })
       )
@@ -72,68 +67,73 @@ export default function Input({
 
     setUploadedFiles((prev) => {
       const updated = { ...prev };
-      readFiles.forEach((fileData) => {
-        updated[fileData.fileName] = fileData;
+      readFiles.forEach((f) => {
+        updated[f.fileName] = f;
       });
       return updated;
     });
 
-    // Set the first uploaded file as active if no active tab
-    if (!activeFileTab && readFiles.length > 0) {
+    if (!activeFileTab && readFiles.length) {
       setActiveFileTab(readFiles[0].fileName);
     }
-
-    // Clear input
     event.target.value = "";
+  };
+
+  // Standards docs upload
+  const handleStandardsUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+    const formData = new FormData();
+    files.forEach((f) => formData.append("files", f));
+
+    try {
+      const resp = await fetch("http://localhost:8010/cobo/upload-standards", {
+        method: "POST",
+        body: formData,
+      });
+      if (!resp.ok) throw new Error(`Status ${resp.status}`);
+      await resp.json();
+      setStandardsUploadStatus("success");
+    } catch (err) {
+      console.error("Standards upload error:", err);
+      setStandardsUploadStatus("error");
+    } finally {
+      event.target.value = null;
+      setTimeout(() => setStandardsUploadStatus(null), 3000);
+    }
   };
 
   const removeFile = (fileName) => {
     setUploadedFiles((prev) => {
-      const newFiles = { ...prev };
-      delete newFiles[fileName];
-      return newFiles;
+      const nxt = { ...prev };
+      delete nxt[fileName];
+      return nxt;
     });
-    
-    // Handle active tab when file is removed
-    const fileNames = Object.keys(uploadedFiles).filter(name => name !== fileName);
-    if (activeFileTab === fileName) {
-      setActiveFileTab(fileNames.length > 0 ? fileNames[0] : null);
-    }
+    const remaining = Object.keys(uploadedFiles).filter((n) => n !== fileName);
+    setActiveFileTab(remaining[0] || null);
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
-
-  const getFileTypeIcon = (type) => {
-    switch (type) {
-      case 'COBOL':
-        return '📄';
-      case 'JCL':
-        return '⚙️';
-      case 'Copybook':
-        return '📋';
-      default:
-        return '📄';
-    }
-  };
+  const getFileTypeIcon = (type) =>
+    type === "COBOL"
+      ? "📄"
+      : type === "JCL"
+      ? "⚙️"
+      : type === "Copybook"
+      ? "📋"
+      : "📄";
 
   const hasValidFiles = Object.keys(uploadedFiles).length > 0;
 
   return (
     <div className="d-flex flex-column gap-4">
-      {/* File Upload Section */}
+      {/* Upload Buttons */}
       <div className="d-flex align-items-center gap-2 flex-wrap">
         <label
-          className="d-flex align-items-center btn rounded px-3 py-2 cursor-pointer"
-          style={{ backgroundColor: "#0f766e", color: "white" }}
+          className="btn rounded px-3 py-2 text-white"
+          style={{ backgroundColor: "#0f766e" }}
         >
           <Upload size={16} className="me-2" />
-          <span>Upload Files</span>
+          Upload Files
           <input
             type="file"
             className="d-none"
@@ -143,43 +143,47 @@ export default function Input({
           />
         </label>
 
+        <label
+          className="btn rounded px-3 py-2 text-white"
+          style={{ backgroundColor: "#634d03" }}
+        >
+          <FileArchive size={16} className="me-2" />
+          Upload Standards
+          <input
+            type="file"
+            className="d-none"
+            onChange={handleStandardsUpload}
+            accept=".pdf,.docx,.pptx,.txt"
+            multiple
+          />
+        </label>
+
+        {/* Target‐language dropdown */}
         <div className="dropdown position-relative">
           <button
-            className="d-flex align-items-center gap-2 px-3 py-2 btn btn-outline-dark rounded"
-            onClick={() => setShowDropdownTarget(!showDropdownTarget)}
+            className="btn btn-outline-dark d-flex align-items-center px-3 py-2"
+            onClick={() => setShowDropdownTarget((s) => !s)}
           >
-            <span
-              className="d-flex align-items-center justify-content-center text-primary"
-              style={{ width: "1rem", height: "1rem" }}
-            >
-              {targetLanguages.find((lang) => lang.name === targetLanguage)
-                ?.icon || ""}
+            <span className="me-2">
+              {targetLanguages.find((l) => l.name === targetLanguage)?.icon}
             </span>
-            <span className="fw-medium">{targetLanguage}</span>
-            <span className="ms-2">▼</span>
+            {targetLanguage} ▼
           </button>
-
           {showDropdownTarget && (
             <div
-              className="position-absolute mt-1 dropdown-menu show border border-dark"
-              style={{ width: "12rem", zIndex: 10 }}
+              className="dropdown-menu show border border-dark"
+              style={{ zIndex: 10 }}
             >
               {targetLanguages.map((lang) => (
                 <button
                   key={lang.name}
-                  className="dropdown-item px-3 py-2"
+                  className="dropdown-item"
                   onClick={() => {
                     setTargetLanguage(lang.name);
                     setShowDropdownTarget(false);
                   }}
                 >
-                  <span
-                    className="d-inline-block text-center me-2"
-                    style={{ width: "1.25rem" }}
-                  >
-                    {lang.icon}
-                  </span>
-                  {lang.name}
+                  {lang.icon} {lang.name}
                 </button>
               ))}
             </div>
@@ -187,148 +191,89 @@ export default function Input({
         </div>
       </div>
 
-      {/* File Tabs and Content Display */}
+      {/* Standards upload feedback */}
+      {standardsUploadStatus === "success" && (
+        <div className="alert alert-success py-1">Standards uploaded.</div>
+      )}
+      {standardsUploadStatus === "error" && (
+        <div className="alert alert-danger py-1">
+          Standards upload failed.
+        </div>
+      )}
+
+      {/* File Tabs & Content */}
       {hasValidFiles && (
         <div className="bg-white rounded border">
-          {/* File Tabs */}
-          <div className="d-flex border-bottom bg-light rounded-top overflow-auto">
-            {Object.entries(uploadedFiles).map(([fileName, fileData]) => (
+          <div className="d-flex bg-light border-bottom overflow-auto">
+            {Object.entries(uploadedFiles).map(([name, f]) => (
               <div
-                key={fileName}
-                className={`d-flex align-items-center px-3 py-2 border-end cursor-pointer position-relative ${
-                  activeFileTab === fileName 
-                    ? 'bg-white border-bottom-0' 
-                    : 'bg-light'
-                }`}
-                style={{ 
-                  minWidth: "120px",
-                  borderBottom: activeFileTab === fileName ? '2px solid transparent' : '1px solid #dee2e6'
-                }}
-                onClick={() => setActiveFileTab(fileName)}
+                key={name}
+                className={
+                  "d-flex align-items-center px-3 py-2 border-end cursor-pointer " +
+                  (activeFileTab === name ? "bg-white" : "bg-light")
+                }
+                onClick={() => setActiveFileTab(name)}
               >
-                <span className="me-2">{getFileTypeIcon(fileData.type)}</span>
-                <div className="fw-medium text-truncate me-2" style={{ maxWidth: "80px" }}>
-                  {fileName}
+                <span className="me-2">{getFileTypeIcon(f.type)}</span>
+                <div className="text-truncate" style={{ maxWidth: "80px" }}>
+                  {name}
                 </div>
-                <button
-                  className="btn btn-sm p-1 ms-auto"
+                <X
+                  size={12}
+                  className="ms-2 text-danger"
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeFile(fileName);
+                    removeFile(name);
                   }}
-                  title="Remove file"
-                  style={{ width: "20px", height: "20px" }}
-                >
-                  <X size={12} className="text-danger" />
-                </button>
+                />
               </div>
             ))}
           </div>
-
-          {/* File Content Display */}
-          {activeFileTab && uploadedFiles[activeFileTab] && (
-            <div className="p-0">
-
-
-              {/* Code Content */}
-              <div
-                className="overflow-auto"
-                style={{
-                  maxHeight: "400px",
-                  backgroundColor: "#f8f9fa",
-                }}
-              >
-                <pre
-                  className="p-3 mb-0"
-                  style={{
-                    fontFamily: 'Consolas, "Courier New", monospace',
-                    fontSize: "14px",
-                    lineHeight: "1.5",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    margin: 0,
-                  }}
-                >
-                  {uploadedFiles[activeFileTab].content}
-                </pre>
-              </div>
-            </div>
+          {activeFileTab && (
+            <pre
+              className="p-3 mb-0"
+              style={{
+                maxHeight: "400px",
+                overflow: "auto",
+                backgroundColor: "#f8f9fa",
+                fontFamily: 'Consolas, "Courier New", monospace',
+              }}
+            >
+              {uploadedFiles[activeFileTab].content}
+            </pre>
           )}
         </div>
       )}
 
-      {/* Upload Section */}
+      {/* Placeholder when no files */}
       {!hasValidFiles && (
-        <div
-          className="bg-white rounded border border-dark d-flex flex-column align-items-center justify-content-center"
-          style={{ height: "24rem" }}
-        >
-          <div className="text-center">
-            <Upload size={64} className="text-secondary mb-3" />
-            <h5 className="text-dark mb-2">Upload Your Files</h5>
-            <p className="text-muted mb-4">
-              Upload COBOL, JCL, Copybook, or other related files
-            </p>
-            <label
-              className="btn btn-lg px-4 py-2 cursor-pointer"
-              style={{ backgroundColor: "#0f766e", color: "white" }}
-            >
-              <Upload size={20} className="me-2" />
-              Choose Files
-              <input
-                type="file"
-                className="d-none"
-                onChange={handleFileUpload}
-                accept=".txt,.cob,.cobol,.cbl,.jcl,.cpy,.copybook,.bms"
-                multiple
-              />
-            </label>
-          </div>
+        <div className="bg-white rounded border text-center py-5">
+          <Upload size={48} className="text-secondary mb-3" />
+          <div>No files uploaded yet.</div>
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* Actions */}
       <div className="d-flex justify-content-center gap-3">
         <button
-          className="btn btn-outline-dark fw-medium px-3 py-2 rounded"
+          className="btn btn-outline-dark px-3 py-2"
           onClick={() => {
             handleReset();
             setUploadedFiles({});
             setActiveFileTab(null);
           }}
         >
-          <div className="d-flex align-items-center">
-            <RefreshCw size={16} className="me-2 text-danger" />
-            Reset
-          </div>
+          <RefreshCw className="me-2" /> Reset
         </button>
 
         <button
-          className="btn text-white fw-medium px-3 py-2 rounded"
-          style={{
-            backgroundColor: "#0d9488",
-            minWidth: "10rem",
-          }}
-          onClick={() =>
-            handleGenerateRequirements(setActiveTab, getSourceCodeAsJson())
-          }
+          className="btn text-white px-4 py-2"
+          style={{ backgroundColor: "#0d9488" }}
+          onClick={() => handleGenerateRequirements(setActiveTab, sourceCodeJson)}
           disabled={isGeneratingRequirements || !hasValidFiles}
         >
-          {isGeneratingRequirements ? (
-            <div className="d-flex align-items-center justify-content-center">
-              <span
-                className="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Analyzing...
-            </div>
-          ) : (
-            <div className="d-flex align-items-center justify-content-center">
-              <ClipboardList size={16} className="me-2" />
-              Generate Requirements
-            </div>
-          )}
+          {isGeneratingRequirements ? "Analyzing..." : <ClipboardList className="me-2" />}
+          Generate Requirements
         </button>
       </div>
     </div>

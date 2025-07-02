@@ -92,18 +92,30 @@ export default function Cobol({ children }) {
         return;
       }
 
+      // 1) Push files JSON into uploads/
+      await fetch(`${API_BASE_URL}/upload-project-files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_data: sourceCodeJson })
+      });
+
+      // 2) Trigger Dual RAG + CICS analysis
+      await fetch(`${API_BASE_URL}/analyze-project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      // 3) Now run your existing GPT endpoint
       const response = await fetch(`${API_BASE_URL}/analyze-requirements`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceLanguage: "COBOL",
           targetLanguage,
-          file_data: sourceCodeJson,
-        }),
+          file_data: sourceCodeJson
+        })
       });
-
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Analysis failed");

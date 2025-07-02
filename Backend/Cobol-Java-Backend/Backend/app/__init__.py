@@ -1,19 +1,30 @@
 from flask import Flask
 from flask_cors import CORS
-from .config import setup_logging, logger, output_dir
+from .config import AZURE_OPENAI_DEPLOYMENT_NAME, AZURE_OPENAI_ENDPOINT, setup_logging, logger, output_dir
 import os
 from flask import request
 import traceback
 from flask import jsonify
 
-
 def create_app():
     app = Flask(__name__)
-    CORS(app)  # Enable CORS for all routes
+    CORS(app)
 
-    # Ensure output directory exists
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # --- Inject Azure config into Flask app.config ---
+    app.config["AZURE_OPENAI_ENDPOINT"] = AZURE_OPENAI_ENDPOINT
+    app.config["AZURE_OPENAI_DEPLOYMENT_NAME"] = AZURE_OPENAI_DEPLOYMENT_NAME
+
+    # Ensure all required directories exist
+    directories = [
+        output_dir,
+        "uploads",
+        "cics_analysis",
+        "documents",
+        "rag_storage"
+    ]
+    for directory in directories:
+        os.makedirs(directory, exist_ok=True)
+        logger.info(f"Ensured directory exists: {directory}")
 
     # Register blueprints
     from .routes import analysis, conversion, misc
@@ -21,19 +32,26 @@ def create_app():
     app.register_blueprint(conversion.bp)
     app.register_blueprint(misc.bp)
 
-    # Setup logging for requests and responses
+    # Initialize analysis components inside app context
+    with app.app_context():
+        try:
+            logger.info("Basic analysis components ready")
+            logger.info("Enhanced features will be available through route handlers")
+        except Exception as e:
+            logger.error(f"Failed to initialize analysis components: {e}")
+            logger.info("Application will continue with basic functionality")
+
     @app.before_request
     def log_request_info():
         logger.debug(f"Request: {request.method} {request.path}")
         logger.debug(f"Remote Address: {request.remote_addr}")
-        logger.debug(f"User Agent: {request.headers.get('User-Agent', 'Unknown')}")
+        logger.debug(f"User Agent: {request.headers.get('User-Agent','Unknown')}")
 
     @app.after_request
     def log_response_info(response):
         logger.debug(f"Response: {response.status_code} for {request.method} {request.path}")
         return response
 
-    # Error handlers
     @app.errorhandler(404)
     def not_found(error):
         logger.warning(f"404 Error: {request.url} not found")
@@ -41,8 +59,8 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_error(error):
-        logger.error(f"500 Error: {str(error)}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"500 Error: {error}")
+        logger.error(traceback.format_exc())
         return jsonify({"error": "Internal server error"}), 500
 
     return app
