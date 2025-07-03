@@ -34,76 +34,54 @@ def save_json_response(cobol_filename, json_obj):
     return output_path
 
 def get_enhanced_context_from_analysis():
-    """Get enhanced context from analysis results if available"""
+    """Enhanced context retrieval with comprehensive analysis integration"""
     enhanced_context = ""
     
     try:
-        # Try to get analysis manager from current app context
-        if hasattr(current_app, 'analysis_manager') and current_app.analysis_manager:
-            manager = current_app.analysis_manager
+        # Get analysis manager from current app context
+        if hasattr(current_app, 'comprehensive_analysis_data'):
+            analysis_data = current_app.comprehensive_analysis_data
+            analysis_manager = analysis_data.get('analysis_manager')
             
-            if hasattr(manager, 'analysis_results') and manager.analysis_results:
-                logger.info("🔗 Using analysis results to enhance conversion")
+            if analysis_manager and hasattr(analysis_manager, 'conversion_context') and analysis_manager.conversion_context:
+                logger.info("🔗 Using comprehensive analysis results for enhanced conversion")
                 
-                rag_results = manager.analysis_results.get("rag_results", {})
-                cics_results = manager.analysis_results.get("cics_results", {})
+                # Get conversion-ready context
+                enhanced_context = analysis_manager.get_conversion_context_for_code()
                 
-                # Build enhanced context from analysis
-                business_entities = rag_results.get('business_entities', [])
-                connections = rag_results.get('connections', {})
-                programs = cics_results.get('programs', {})
-                project_metadata = cics_results.get('project_metadata', {})
-                
-                # Calculate metrics
-                total_connections = sum(len(conn.get('depends_on', [])) for conn in connections.values())
-                total_cics_commands = sum(len(p.get('cics_commands', [])) for p in programs.values())
-                business_domain = project_metadata.get('business_domain', 'Unknown')
-                
-                enhanced_context = f"""
-
-ENHANCED CONVERSION CONTEXT FROM ANALYSIS:
-
-Business Domain: {business_domain}
-Business Entities Identified: {len(business_entities)}
-File Connections: {total_connections}
-CICS Commands Found: {total_cics_commands}
-
-Key Business Entities:
-{chr(10).join(f"- {entity.get('name', 'Unknown')} -> {entity.get('java_class_name', 'UnknownClass')}" for entity in business_entities[:5])}
-
-File Dependencies:
-{chr(10).join(f"- {filename}: depends on {', '.join(conn.get('depends_on', []))}" for filename, conn in list(connections.items())[:3] if conn.get('depends_on'))}
-
-CICS Transaction Patterns:
-{chr(10).join(f"- Program {prog_name}: {len(prog_data.get('cics_commands', []))} CICS commands" for prog_name, prog_data in list(programs.items())[:3])}
-
-Conversion Recommendations:
-- Focus on {business_domain.lower()} domain patterns
-- Implement proper entity relationships based on identified dependencies
-- Consider CICS to microservices patterns for transaction handling
-- Use identified business entities for domain-driven design
-
-Use this analysis to create more accurate and business-context-aware .NET code.
-"""
-                logger.info(f"✅ Enhanced context generated ({len(enhanced_context)} characters)")
-                
+                if enhanced_context:
+                    logger.info(f"✅ Enhanced context generated ({len(enhanced_context)} characters)")
+                else:
+                    logger.warning("⚠️ No enhanced context available despite analysis manager presence")
+                    
+            else:
+                logger.info("📋 No comprehensive analysis results available for enhancement")
         else:
-            logger.info("📋 No analysis results available for enhancement")
+            # Fallback: try to get from analysis manager directly
+            from ..routes.analysis import analysis_manager
             
+            if analysis_manager and hasattr(analysis_manager, 'conversion_context') and analysis_manager.conversion_context:
+                logger.info("🔗 Using fallback analysis manager for enhanced conversion")
+                enhanced_context = analysis_manager.get_conversion_context_for_code()
+                
+                if enhanced_context:
+                    logger.info(f"✅ Fallback enhanced context generated ({len(enhanced_context)} characters)")
+                
     except Exception as e:
-        logger.warning(f"⚠️ Could not retrieve analysis context: {e}")
+        logger.warning(f"⚠️ Could not retrieve comprehensive analysis context: {e}")
         enhanced_context = ""
     
     return enhanced_context
 
+
 @bp.route("/convert", methods=["POST"])
 def convert_code():
-    """Enhanced endpoint to convert COBOL code to .NET 8 using analysis results"""
+    """Enhanced endpoint to convert COBOL code to .NET 8 using comprehensive analysis results"""
     
     conversion_start_time = time.time()
     conversion_logger = logging.getLogger('conversion')
     conversion_logger.info("="*80)
-    conversion_logger.info(" ENHANCED CODE CONVERSION PROCESS STARTED")
+    conversion_logger.info("🚀 ENHANCED CODE CONVERSION WITH COMPREHENSIVE ANALYSIS STARTED")
     conversion_logger.info("="*80)
 
     try:
@@ -159,9 +137,9 @@ def convert_code():
                 "databaseUsed": False
             }), 400
 
-        # NEW: Get enhanced context from analysis results
-        log_processing_step("Retrieving enhanced context from analysis", {
-            "has_analysis_manager": hasattr(current_app, 'analysis_manager')
+        # NEW: Get comprehensive enhanced context from analysis results
+        log_processing_step("Retrieving comprehensive analysis context", {
+            "has_analysis_manager": True
         }, 2)
         
         enhanced_context = get_enhanced_context_from_analysis()
@@ -182,14 +160,14 @@ def convert_code():
         
         # Only get DB template if database operations are detected
         if has_database:
-            logger.info(f"Database operations detected in COBOL code. Including DB setup in conversion.")
+            logger.info(f"📊 Database operations detected in COBOL code. Including DB setup in conversion.")
             db_setup_template = get_db_template("C#")
             log_processing_step("Database template retrieved", {
                 "target_language": "C#",
                 "template_length": len(db_setup_template)
             })
         else:
-            logger.info(f"No database operations detected in COBOL code. Skipping DB setup.")
+            logger.info(f"📋 No database operations detected in COBOL code. Skipping DB setup.")
             db_setup_template = ""
         
         # Create a code converter instance
@@ -208,28 +186,46 @@ def convert_code():
             business_requirements, technical_requirements, db_setup_template
         )
 
-        # NEW: Add enhanced context from analysis
+        # NEW: Add comprehensive enhanced context from analysis
+        analysis_instructions = ""
         if enhanced_context:
-            prompt += enhanced_context
+            analysis_instructions = f"""
+            
+CRITICAL: Use the comprehensive analysis context below to generate more accurate .NET code:
 
-        # Add special instruction about database code
+{enhanced_context}
+
+Based on this comprehensive analysis:
+1. Implement the recommended architecture patterns and clean architecture principles
+2. Use the identified business entities with proper namespaces and domain modeling
+3. Apply the CICS-to-microservices patterns for modern service architecture
+4. Follow the technology stack recommendations for optimal .NET implementation
+5. Ensure proper domain-driven design based on the identified business domain
+6. Implement the suggested caching, messaging, and security patterns
+7. Use Entity Framework Core configurations based on data analysis
+8. Apply the architectural recommendations for scalable, maintainable code
+"""
+
+        # Add enhanced instruction about database code
         prompt += f"\n\nIMPORTANT: Only include database initialization code if the source COBOL code contains database or SQL operations. If the code is a simple algorithm (like sorting, calculation, etc.) without any database interaction, do NOT include any database setup code in the converted .NET 8 code."
 
-        # Enhanced conversion messages for COBOL to .NET 8
+        # Enhanced conversion messages for COBOL to .NET 8 with comprehensive analysis
         conversion_messages = [
             {
                 "role": "system",
                 "content": (
-                    f"You are an expert COBOL to .NET 8 code converter assistant with enhanced analysis capabilities. "
-                    f"You convert legacy COBOL code to modern, idiomatic .NET 8 applications while maintaining all business logic. "
-                    f"You have access to comprehensive analysis results including business entities, file dependencies, and CICS patterns. "
+                    f"You are an expert COBOL to .NET 8 code converter with comprehensive analysis capabilities. "
+                    f"You have access to detailed business analysis, CICS patterns, RAG-enhanced context, and architectural recommendations. "
+                    f"You convert legacy COBOL code to modern, domain-aware .NET 8 applications while maintaining all business logic. "
                     f"Only include database setup/initialization if the original COBOL code uses databases or SQL. "
                     f"For simple algorithms or calculations without database operations, do NOT add any database code. "
-                    f"Generate a complete .NET 8 application structure with proper design patterns, dependency injection, and best practices. "
+                    f"Generate a complete .NET 8 application structure following clean architecture, DDD principles, and best practices. "
                     f"Include Entity Framework Core models, repositories, services, controllers, and configuration files as needed. "
                     f"Please generate the database connection string for MySQL Server. Ensure the model definitions do not use precision attributes. "
                     f"The code should be compatible with .NET 8, and all necessary dependencies should be included in the .csproj file. "
-                    f"Use the provided analysis context to create more accurate entity relationships and business logic. "
+                    f"Use the provided comprehensive analysis context to create more accurate entity relationships and service boundaries. "
+                    f"Implement the recommended microservices patterns and technology stack from the analysis. "
+                    f"Follow the architectural recommendations to ensure scalable, maintainable code. "
                     f"Return your response in JSON format always with the following structure:\n"
                     "{\n"
                     '  "convertedCode": {\n'
@@ -248,25 +244,28 @@ def convert_code():
                     '    "Dependencies": {"content": "NuGet packages and .NET dependencies needed"}\n'
                     "  },\n"
                     '  "databaseUsed": true/false,\n'
-                    '  "conversionNotes": "Detailed notes about the conversion process including analysis insights",\n'
+                    '  "conversionNotes": "Detailed notes about the conversion process including comprehensive analysis insights",\n'
                     '  "potentialIssues": ["List of potential issues or considerations"],\n'
-                    '  "analysisEnhanced": true/false\n'
+                    '  "analysisEnhanced": true/false,\n'
+                    '  "architectureRecommendations": ["List of implemented architecture patterns"],\n'
+                    '  "technologyStack": {"database": "", "caching": "", "messaging": ""}\n'
                     "}\n"
                     "IMPORTANT: Always return the response in this JSON format. Include proper .NET attributes ([ApiController], [Route], [HttpGet], etc.). "
                     "Use Entity Framework Core for database operations. Follow .NET best practices, SOLID principles, and naming conventions. "
                     "Implement proper dependency injection, async/await patterns, and error handling. Ensure everything is compatible with .NET 8. "
-                    "Leverage the provided analysis context to create more accurate business domain models and relationships."
+                    "Leverage the provided comprehensive analysis context to create more accurate business domain models and relationships. "
+                    "Implement the recommended microservices patterns, caching strategies, and security measures from the analysis."
                 )
             },
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt + analysis_instructions}
         ]
 
         # Call Azure OpenAI API for enhanced code conversion
-        log_processing_step("Calling GPT for enhanced code conversion", {
+        log_processing_step("Calling GPT for enhanced code conversion with comprehensive analysis", {
             "model": AZURE_OPENAI_DEPLOYMENT_NAME,
             "temperature": 0.1,
             "max_tokens": 4000,
-            "prompt_length": len(prompt),
+            "prompt_length": len(prompt + analysis_instructions),
             "target_language": "C#",
             "analysis_enhanced": bool(enhanced_context)
         }, 6)
@@ -279,7 +278,7 @@ def convert_code():
             response_format={"type": "json_object"}
         )
 
-        log_gpt_interaction("Enhanced Code Conversion", AZURE_OPENAI_DEPLOYMENT_NAME, 
+        log_gpt_interaction("Enhanced Code Conversion with Comprehensive Analysis", AZURE_OPENAI_DEPLOYMENT_NAME, 
                           conversion_messages, response, 6)
 
         # Parse the JSON response
@@ -290,9 +289,9 @@ def convert_code():
         conversion_content = response.choices[0].message.content.strip()
         try:
             conversion_json = json.loads(conversion_content)
-            logger.info("Enhanced code conversion JSON parsed successfully")
+            logger.info("✅ Enhanced code conversion JSON parsed successfully")
         except json.JSONDecodeError:
-            logger.warning("Failed to parse enhanced code conversion JSON directly")
+            logger.warning("⚠️ Failed to parse enhanced code conversion JSON directly")
             conversion_json = extract_json_from_response(conversion_content)
         
         # Extract conversion results
@@ -301,6 +300,8 @@ def convert_code():
         potential_issues = conversion_json.get("potentialIssues", [])
         database_used = conversion_json.get("databaseUsed", False)
         analysis_enhanced = conversion_json.get("analysisEnhanced", bool(enhanced_context))
+        architecture_recommendations = conversion_json.get("architectureRecommendations", [])
+        technology_stack = conversion_json.get("technologyStack", {})
 
         # Save converted code to file (if original filename is provided)
         cobol_filename = data.get("cobolFilename") or data.get("sourceFilename") or ""
@@ -310,10 +311,11 @@ def convert_code():
             "conversion_notes_length": len(conversion_notes),
             "potential_issues_count": len(potential_issues),
             "database_used": database_used,
-            "analysis_enhanced": analysis_enhanced
+            "analysis_enhanced": analysis_enhanced,
+            "architecture_recommendations_count": len(architecture_recommendations)
         }, 8)
         
-        # Generate unit test cases
+        # Generate unit test cases with enhanced context
         log_processing_step("Creating enhanced unit test prompt", {
             "target_language": "C#",
             "code_length": len(str(converted_code))
@@ -326,17 +328,23 @@ def convert_code():
             technical_requirements
         )
         
+        # Add analysis context to unit test prompt
+        if enhanced_context:
+            unit_test_prompt += f"\n\nAdditional Context from Analysis:\n{enhanced_context[:1000]}..."
+        
         # Prepare unit test messages
         unit_test_messages = [
             {
                 "role": "system",
-                "content": f"You are an expert test engineer specializing in writing unit tests for .NET 8 applications. "
-                          f"You create comprehensive unit tests that verify all business logic and edge cases. "
+                "content": f"You are an expert test engineer specializing in writing comprehensive unit tests for .NET 8 applications. "
+                          f"You create unit tests that verify all business logic, edge cases, and domain rules. "
+                          f"Use the provided analysis context to create more accurate and business-aware tests. "
                           f"Return your response in JSON format with the following structure:\n"
                           f"{{\n"
                           f'  "unitTestCode": "The complete unit test code here",\n'
                           f'  "testDescription": "Description of the test strategy",\n'
-                          f'  "coverage": ["List of functionalities covered by the tests"]\n'
+                          f'  "coverage": ["List of functionalities covered by the tests"],\n'
+                          f'  "businessRuleTests": ["List of business rules being tested"]\n'
                           f"}}"
             },
             {"role": "user", "content": unit_test_prompt}
@@ -368,9 +376,9 @@ def convert_code():
         unit_test_content = unit_test_response.choices[0].message.content.strip()
         try:
             unit_test_json = json.loads(unit_test_content)
-            logger.info("Enhanced unit test JSON parsed successfully")
+            logger.info("✅ Enhanced unit test JSON parsed successfully")
         except json.JSONDecodeError:
-            logger.warning("Failed to parse enhanced unit test JSON directly")
+            logger.warning("⚠️ Failed to parse enhanced unit test JSON directly")
             unit_test_json = extract_json_from_response(unit_test_content)
         
         unit_test_code_raw = unit_test_json.get("unitTestCode", "")
@@ -379,10 +387,11 @@ def convert_code():
         log_processing_step("Enhanced unit test generation completed", {
             "unit_test_code_length": len(unit_test_code),
             "test_description": unit_test_json.get("testDescription", "")[:100] + "..." if len(unit_test_json.get("testDescription", "")) > 100 else unit_test_json.get("testDescription", ""),
-            "coverage_items": len(unit_test_json.get("coverage", []))
+            "coverage_items": len(unit_test_json.get("coverage", [])),
+            "business_rule_tests": len(unit_test_json.get("businessRuleTests", []))
         }, 11)
         
-        # Generate functional test cases
+        # Generate functional test cases with enhanced context
         log_processing_step("Creating enhanced functional test prompt", {
             "target_language": "C#",
             "business_requirements_available": bool(business_requirements)
@@ -394,20 +403,26 @@ def convert_code():
             business_requirements
         )
         
+        # Add analysis context to functional test prompt
+        if enhanced_context:
+            functional_test_prompt += f"\n\nBusiness Domain Context from Analysis:\n{enhanced_context[:1000]}..."
+        
         # Prepare functional test messages
         functional_test_messages = [
             {
                 "role": "system",
                 "content": f"You are an expert QA engineer specializing in creating functional tests for .NET 8 applications. "
                           f"You create comprehensive test scenarios that verify the application meets all business requirements. "
-                          f"Focus on user journey tests and acceptance criteria. "
+                          f"Focus on user journey tests, acceptance criteria, and business domain validation. "
+                          f"Use the provided analysis context to create domain-aware functional tests. "
                           f"Return your response in JSON format with the following structure:\n"
                           f"{{\n"
                           f'  "functionalTests": [\n'
-                          f'    {{"id": "FT1", "title": "Test scenario title", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome"}},\n'
-                          f'    {{"id": "FT2", "title": "Another test scenario", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome"}}\n'
+                          f'    {{"id": "FT1", "title": "Test scenario title", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"}},\n'
+                          f'    {{"id": "FT2", "title": "Another test scenario", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"}}\n'
                           f'  ],\n'
-                          f'  "testStrategy": "Description of the overall testing approach"\n'
+                          f'  "testStrategy": "Description of the overall testing approach",\n'
+                          f'  "domainCoverage": ["List of business domain areas covered"]\n'
                           f"}}"
             },
             {"role": "user", "content": functional_test_prompt}
@@ -439,14 +454,15 @@ def convert_code():
         functional_test_content = functional_test_response.choices[0].message.content.strip()
         try:
             functional_test_json = json.loads(functional_test_content)
-            logger.info("Enhanced functional test JSON parsed successfully")
+            logger.info("✅ Enhanced functional test JSON parsed successfully")
         except json.JSONDecodeError:
-            logger.warning("Failed to parse enhanced functional test JSON directly")
+            logger.warning("⚠️ Failed to parse enhanced functional test JSON directly")
             functional_test_json = extract_json_from_response(functional_test_content)
         
         log_processing_step("Enhanced functional test generation completed", {
             "functional_tests_count": len(functional_test_json.get("functionalTests", [])),
-            "test_strategy_length": len(functional_test_json.get("testStrategy", ""))
+            "test_strategy_length": len(functional_test_json.get("testStrategy", "")),
+            "domain_coverage": len(functional_test_json.get("domainCoverage", []))
         }, 14)
         
         # Build the enhanced response
@@ -473,29 +489,33 @@ def convert_code():
             "sourceLanguage": source_language,
             "targetLanguage": "C#",
             "databaseUsed": database_used,
-            "analysisEnhanced": analysis_enhanced,  # NEW
-            "enhancementContext": {  # NEW
+            "analysisEnhanced": analysis_enhanced,
+            "architectureRecommendations": architecture_recommendations,
+            "technologyStack": technology_stack,
+            "enhancementContext": {
                 "enhanced_context_used": bool(enhanced_context),
                 "context_length": len(enhanced_context),
-                "analysis_available": hasattr(current_app, 'analysis_manager')
+                "analysis_available": True,
+                "comprehensive_analysis": True
             }
         }
         
         # Save the full JSON response to output directory
         try:
             json_output_path = save_json_response(cobol_filename, result)
-            logger.info(f"Enhanced JSON response saved to: {json_output_path}")
+            logger.info(f"💾 Enhanced JSON response saved to: {json_output_path}")
         except Exception as save_json_exc:
-            logger.warning(f"Failed to save enhanced JSON response: {save_json_exc}")
+            logger.warning(f"⚠️ Failed to save enhanced JSON response: {save_json_exc}")
         
         conversion_logger.info("="*80)
-        conversion_logger.info("✅ ENHANCED CODE CONVERSION PROCESS COMPLETED SUCCESSFULLY")
+        conversion_logger.info("✅ ENHANCED CODE CONVERSION WITH COMPREHENSIVE ANALYSIS COMPLETED SUCCESSFULLY")
         conversion_logger.info(f"⏱️ Total Processing Time: {total_time:.2f} seconds")
         conversion_logger.info(f"📝 Converted Code Length: {len(str(converted_code))} characters")
         conversion_logger.info(f"🧪 Unit Tests Generated: {len(unit_test_code)} characters")
         conversion_logger.info(f"🔍 Functional Tests: {len(functional_test_json.get('functionalTests', []))} scenarios")
         conversion_logger.info(f"💾 Database Usage: {database_used}")
         conversion_logger.info(f"🚀 Analysis Enhanced: {analysis_enhanced}")
+        conversion_logger.info(f"🏗️ Architecture Recommendations: {len(architecture_recommendations)}")
         conversion_logger.info("="*80)
         
         logger.info("=== ENHANCED CODE CONVERSION REQUEST COMPLETED SUCCESSFULLY ===")
@@ -505,8 +525,8 @@ def convert_code():
         conversion_end_time = time.time()
         total_time = conversion_end_time - conversion_start_time
         
-        logger.error(f"Error in enhanced code conversion or test generation: {str(e)}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"❌ Error in enhanced code conversion or test generation: {str(e)}")
+        logger.error(f"🔍 Traceback: {traceback.format_exc()}")
         
         conversion_logger.error("="*80)
         conversion_logger.error("❌ ENHANCED CODE CONVERSION PROCESS FAILED")
