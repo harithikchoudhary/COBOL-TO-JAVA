@@ -17,7 +17,7 @@ import traceback
 
 bp = Blueprint('conversion', __name__, url_prefix='/cobo')
 
-# Initialize OpenAI client
+# Initialize OpenAI.
 client = AzureOpenAI(
     api_key=AZURE_OPENAI_API_KEY,
     api_version="2023-05-15",
