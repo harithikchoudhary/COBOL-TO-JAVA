@@ -1,0 +1,849 @@
+{
+  "programs": {
+    "cobol_code.cbl": {
+      "description": "COBOL CICS program",
+      "program_id": "DBCONNECT",
+      "copybooks": [],
+      "control_includes": [],
+      "file_descriptors": [],
+      "cics_commands": [],
+      "sql_blocks": [
+        {
+          "original_sql": "EXEC SQL\n\nINCLUDE SQLCA\n\nEND-EXEC.",
+          "line_number": 53,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nINCLUDE SQLCA\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL BEGIN DECLARE SECTION END-EXEC.\n\n\n\n01 HV-EMP-ID                   PIC 9(5).\n\n01 HV-EMP-FIRST-NAME           PIC X(20).\n\n01 HV-EMP-LAST-NAME            PIC X(20).\n\n01 HV-EMP-DEPT                 PIC X(15).\n\n01 HV-EMP-POSITION             PIC X(20).\n\n01 HV-EMP-SALARY               PIC 9(7)V99.\n\n01 HV-EMP-HIRE-DATE            PIC X(10).\n\n01 HV-DB-USER                  PIC X(20).\n\n01 HV-DB-PASSWORD              PIC X(20).\n\n01 HV-SEARCH-DEPT              PIC X(15).\n\n01 HV-MIN-SALARY               PIC 9(7)V99.\n\n\n\nEXEC SQL END DECLARE SECTION END-EXEC.",
+          "line_number": 195,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL BEGIN DECLARE SECTION END-EXEC.\n\n\n\n01 HV-EMP-ID                   PIC 9(5).\n\n01 HV-EMP-FIRST-NAME           PIC X(20).\n\n01 HV-EMP-LAST-NAME            PIC X(20).\n\n01 HV-EMP-DEPT                 PIC X(15).\n\n01 HV-EMP-POSITION             PIC X(20).\n\n01 HV-EMP-SALARY               PIC 9(7)V99.\n\n01 HV-EMP-HIRE-DATE            PIC X(10).\n\n01 HV-DB-USER                  PIC X(20).\n\n01 HV-DB-PASSWORD              PIC X(20).\n\n01 HV-SEARCH-DEPT              PIC X(15).\n\n01 HV-MIN-SALARY               PIC 9(7)V99.\n\n\n\nEXEC SQL END DECLARE SECTION END-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL END DECLARE SECTION END-EXEC.\n\n\n\n*-----------------------------------------------------------------\n\n* Cursor Declarations\n\n*-----------------------------------------------------------------\n\nEXEC SQL\n\nDECLARE EMP_CURSOR CURSOR FOR\n\nSELECT EMP_ID, FIRST_NAME, LAST_NAME, DEPARTMENT,\n\nPOSITION, SALARY, HIRE_DATE\n\nFROM EMPLOYEES\n\nORDER BY EMP_ID\n\nEND-EXEC.",
+          "line_number": 217,
+          "sql_type": "CURSOR",
+          "dotnet_equivalent": "var results = await _context.EntitySet.ToListAsync();",
+          "entity_framework_hint": "LINQ Query with projection",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nDECLARE DEPT_CURSOR CURSOR FOR\n\nSELECT EMP_ID, FIRST_NAME, LAST_NAME, DEPARTMENT,\n\nPOSITION, SALARY, HIRE_DATE\n\nFROM EMPLOYEES\n\nWHERE DEPARTMENT = :HV-SEARCH-DEPT\n\nAND SALARY >= :HV-MIN-SALARY\n\nORDER BY SALARY DESC\n\nEND-EXEC.",
+          "line_number": 237,
+          "sql_type": "CURSOR",
+          "dotnet_equivalent": "var results = await _context.EntitySet.ToListAsync();",
+          "entity_framework_hint": "LINQ Query with projection",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCONNECT TO :WS-DB-NAME\n\nUSER :HV-DB-USER\n\nUSING :HV-DB-PASSWORD\n\nEND-EXEC.",
+          "line_number": 335,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCONNECT TO :WS-DB-NAME\n\nUSER :HV-DB-USER\n\nUSING :HV-DB-PASSWORD\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nOPEN EMP_CURSOR\n\nEND-EXEC.",
+          "line_number": 479,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nOPEN EMP_CURSOR\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCLOSE EMP_CURSOR\n\nEND-EXEC",
+          "line_number": 511,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCLOSE EMP_CURSOR\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nFETCH EMP_CURSOR INTO\n\n:HV-EMP-ID,\n\n:HV-EMP-FIRST-NAME,\n\n:HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT,\n\n:HV-EMP-POSITION,\n\n:HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE\n\nEND-EXEC.",
+          "line_number": 543,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nFETCH EMP_CURSOR INTO\n\n:HV-EMP-ID,\n\n:HV-EMP-FIRST-NAME,\n\n:HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT,\n\n:HV-EMP-POSITION,\n\n:HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nOPEN DEPT_CURSOR\n\nEND-EXEC.",
+          "line_number": 629,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nOPEN DEPT_CURSOR\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCLOSE DEPT_CURSOR\n\nEND-EXEC",
+          "line_number": 661,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCLOSE DEPT_CURSOR\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nFETCH DEPT_CURSOR INTO\n\n:HV-EMP-ID,\n\n:HV-EMP-FIRST-NAME,\n\n:HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT,\n\n:HV-EMP-POSITION,\n\n:HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE\n\nEND-EXEC.",
+          "line_number": 693,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nFETCH DEPT_CURSOR INTO\n\n:HV-EMP-ID,\n\n:HV-EMP-FIRST-NAME,\n\n:HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT,\n\n:HV-EMP-POSITION,\n\n:HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nINSERT INTO EMPLOYEES\n\n(EMP_ID, FIRST_NAME, LAST_NAME, DEPARTMENT,\n\nPOSITION, SALARY, HIRE_DATE)\n\nVALUES\n\n(:HV-EMP-ID, :HV-EMP-FIRST-NAME, :HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT, :HV-EMP-POSITION, :HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE)\n\nEND-EXEC.",
+          "line_number": 825,
+          "sql_type": "INSERT",
+          "dotnet_equivalent": "await _context.EntitySet.AddAsync(entity); await _context.SaveChangesAsync();",
+          "entity_framework_hint": "Add + SaveChanges pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "line_number": 847,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "line_number": 855,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nSELECT FIRST_NAME, LAST_NAME, DEPARTMENT,\n\nPOSITION, SALARY, HIRE_DATE\n\nINTO :HV-EMP-FIRST-NAME, :HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT, :HV-EMP-POSITION,\n\n:HV-EMP-SALARY, :HV-EMP-HIRE-DATE\n\nFROM EMPLOYEES\n\nWHERE EMP_ID = :HV-EMP-ID\n\nEND-EXEC.",
+          "line_number": 903,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "var results = await _context.EntitySet.ToListAsync();",
+          "entity_framework_hint": "LINQ Query with projection",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nUPDATE EMPLOYEES\n\nSET DEPARTMENT = :HV-EMP-DEPT,\n\nPOSITION = :HV-EMP-POSITION,\n\nSALARY = :HV-EMP-SALARY\n\nWHERE EMP_ID = :HV-EMP-ID\n\nEND-EXEC",
+          "line_number": 1005,
+          "sql_type": "UPDATE",
+          "dotnet_equivalent": "_context.EntitySet.Update(entity); await _context.SaveChangesAsync();",
+          "entity_framework_hint": "Update + SaveChanges pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "line_number": 1027,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "line_number": 1035,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nSELECT FIRST_NAME, LAST_NAME\n\nINTO :HV-EMP-FIRST-NAME, :HV-EMP-LAST-NAME\n\nFROM EMPLOYEES\n\nWHERE EMP_ID = :HV-EMP-ID\n\nEND-EXEC.",
+          "line_number": 1091,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "var results = await _context.EntitySet.ToListAsync();",
+          "entity_framework_hint": "LINQ Query with projection",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nDELETE FROM EMPLOYEES\n\nWHERE EMP_ID = :HV-EMP-ID\n\nEND-EXEC",
+          "line_number": 1123,
+          "sql_type": "DELETE",
+          "dotnet_equivalent": "_context.EntitySet.Remove(entity); await _context.SaveChangesAsync();",
+          "entity_framework_hint": "Remove + SaveChanges pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "line_number": 1145,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "line_number": 1153,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nDISCONNECT CURRENT\n\nEND-EXEC",
+          "line_number": 1225,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nDISCONNECT CURRENT\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        }
+      ],
+      "business_logic": [],
+      "procedures": [
+        {
+          "name": "1000-INITIALIZE",
+          "line": 259,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 1000InitializeAsync()"
+        },
+        {
+          "name": "2000-PROCESS-USER-CHOICE",
+          "line": 265,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 2000ProcessUserChoiceAsync()"
+        },
+        {
+          "name": "9000-TERMINATE",
+          "line": 273,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 9000TerminateAsync()"
+        },
+        {
+          "name": "1100-CONNECT-TO-DB",
+          "line": 303,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 1100ConnectToDbAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 339,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "2100-DISPLAY-MENU",
+          "line": 369,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 2100DisplayMenuAsync()"
+        },
+        {
+          "name": "3000-RETRIEVE-ALL-EMPLOYEES",
+          "line": 379,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 3000RetrieveAllEmployeesAsync()"
+        },
+        {
+          "name": "3100-RETRIEVE-BY-CRITERIA",
+          "line": 383,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 3100RetrieveByCriteriaAsync()"
+        },
+        {
+          "name": "4000-INSERT-EMPLOYEE",
+          "line": 387,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 4000InsertEmployeeAsync()"
+        },
+        {
+          "name": "5000-UPDATE-EMPLOYEE",
+          "line": 391,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 5000UpdateEmployeeAsync()"
+        },
+        {
+          "name": "6000-DELETE-EMPLOYEE",
+          "line": 395,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 6000DeleteEmployeeAsync()"
+        },
+        {
+          "name": "ANOTHER",
+          "line": 413,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task AnotherAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 483,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "3050-FETCH-EMPLOYEE-RECORD",
+          "line": 495,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 3050FetchEmployeeRecordAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 577,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 633,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "3150-FETCH-DEPT-RECORD",
+          "line": 645,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 3150FetchDeptRecordAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 727,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 829,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 907,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1009,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1047,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1095,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1127,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1171,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1229,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        }
+      ],
+      "data_movements": [
+        {
+          "line": 297,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 299,
+          "statement": "MOVE \"N\" TO WS-DB-CONNECTED.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 321,
+          "statement": "MOVE WS-DB-USER TO HV-DB-USER.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 323,
+          "statement": "MOVE WS-DB-PASSWORD TO HV-DB-PASSWORD.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 345,
+          "statement": "MOVE \"Y\" TO WS-DB-CONNECTED",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 399,
+          "statement": "MOVE \"N\" TO WS-CONTINUE-CHOICE",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 471,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 553,
+          "statement": "MOVE HV-EMP-SALARY TO WS-FORMATTED-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 573,
+          "statement": "MOVE \"Y\" TO WS-END-OF-DATA",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 613,
+          "statement": "MOVE WS-SEARCH-DEPT TO HV-SEARCH-DEPT.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 615,
+          "statement": "MOVE WS-SEARCH-MIN-SALARY TO HV-MIN-SALARY.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 621,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 703,
+          "statement": "MOVE HV-EMP-SALARY TO WS-FORMATTED-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 723,
+          "statement": "MOVE \"Y\" TO WS-END-OF-DATA",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 793,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 795,
+          "statement": "MOVE WS-EMP-FIRST-NAME TO HV-EMP-FIRST-NAME.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 797,
+          "statement": "MOVE WS-EMP-LAST-NAME TO HV-EMP-LAST-NAME.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 799,
+          "statement": "MOVE WS-EMP-DEPT TO HV-EMP-DEPT.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 801,
+          "statement": "MOVE WS-EMP-POSITION TO HV-EMP-POSITION.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 803,
+          "statement": "MOVE WS-EMP-SALARY TO HV-EMP-SALARY.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 805,
+          "statement": "MOVE WS-EMP-HIRE-DATE TO HV-EMP-HIRE-DATE.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 883,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 913,
+          "statement": "MOVE HV-EMP-FIRST-NAME TO WS-EMP-FIRST-NAME",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 915,
+          "statement": "MOVE HV-EMP-LAST-NAME TO WS-EMP-LAST-NAME",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 917,
+          "statement": "MOVE HV-EMP-DEPT TO WS-EMP-DEPT",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 919,
+          "statement": "MOVE HV-EMP-POSITION TO WS-EMP-POSITION",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 921,
+          "statement": "MOVE HV-EMP-SALARY TO WS-EMP-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 923,
+          "statement": "MOVE HV-EMP-HIRE-DATE TO WS-EMP-HIRE-DATE",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 955,
+          "statement": "MOVE HV-EMP-DEPT TO WS-EMP-DEPT",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 967,
+          "statement": "MOVE HV-EMP-POSITION TO WS-EMP-POSITION",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 979,
+          "statement": "MOVE HV-EMP-SALARY TO WS-EMP-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 985,
+          "statement": "MOVE WS-EMP-DEPT TO HV-EMP-DEPT",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 987,
+          "statement": "MOVE WS-EMP-POSITION TO HV-EMP-POSITION",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 989,
+          "statement": "MOVE WS-EMP-SALARY TO HV-EMP-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 1077,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 1187,
+          "statement": "MOVE SQLCODE TO WS-SQL-STATUS.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 1189,
+          "statement": "MOVE SQLERRMC TO WS-SQL-MSG.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        }
+      ],
+      "conditional_logic": [
+        {
+          "condition": "DB-CONNECTED",
+          "line": 263,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 343,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CONTINUE-CHOICE NOT = \"N\" AND WS-OPERATION-CHOICE NOT = 9",
+          "line": 409,
+          "complexity": "medium"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 487,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 547,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 100",
+          "line": 571,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 637,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 697,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 100",
+          "line": 721,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 833,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 911,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-EMP-DEPT = SPACES",
+          "line": 953,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-EMP-POSITION = SPACES",
+          "line": 965,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-EMP-SALARY = ZEROES",
+          "line": 977,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 1013,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 100",
+          "line": 1041,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 1099,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CONTINUE-CHOICE = \"Y\" OR WS-CONTINUE-CHOICE = \"Y\"",
+          "line": 1115,
+          "complexity": "medium"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 1131,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 100",
+          "line": 1165,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE < 0",
+          "line": 1193,
+          "complexity": "low"
+        },
+        {
+          "condition": "DB-CONNECTED",
+          "line": 1219,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 1233,
+          "complexity": "low"
+        }
+      ],
+      "state_mechanisms": {
+        "TSQ_queues": [],
+        "TDQ_queues": [],
+        "COMMAREAs": [],
+        "CHANNELS": [],
+        "CONTAINERS": [],
+        "MAPSETS": [],
+        "TRANSIDS": []
+      },
+      "performance_indicators": {
+        "file_operations": 0,
+        "database_operations": 23,
+        "network_operations": 0,
+        "loops": 26,
+        "conditions": 23
+      },
+      "error_handling": [
+        {
+          "line": 123,
+          "type": "error_handling",
+          "statement": "01 WS-ERROR-HANDLING."
+        },
+        {
+          "line": 129,
+          "type": "error_handling",
+          "statement": "05 WS-ERROR-MSG             PIC X(100)."
+        },
+        {
+          "line": 293,
+          "type": "error_handling",
+          "statement": "WS-ERROR-HANDLING."
+        },
+        {
+          "line": 353,
+          "type": "error_handling",
+          "statement": "DISPLAY \"SQL Error Code: \" SQLCODE"
+        },
+        {
+          "line": 355,
+          "type": "error_handling",
+          "statement": "DISPLAY \"SQL Error Message: \" SQLERRMC"
+        },
+        {
+          "line": 1195,
+          "type": "error_handling",
+          "statement": "STRING \"SQL ERROR: \" DELIMITED BY SIZE"
+        },
+        {
+          "line": 1203,
+          "type": "error_handling",
+          "statement": "INTO WS-ERROR-MSG"
+        },
+        {
+          "line": 1205,
+          "type": "error_handling",
+          "statement": "DISPLAY WS-ERROR-MSG"
+        },
+        {
+          "line": 1239,
+          "type": "error_handling",
+          "statement": "DISPLAY \"Error during database disconnect.\""
+        }
+      ],
+      "security_aspects": [],
+      "metadata": {
+        "total_lines": 0,
+        "cics_commands_count": 0,
+        "sql_blocks_count": 23,
+        "business_logic_statements": 0,
+        "procedures_count": 26,
+        "complexity_score": 46,
+        "modernization_score": 1
+      },
+      "dotnet_suggestions": {
+        "service_name": "DbconnectService",
+        "controller_name": "DbconnectController",
+        "required_services": [],
+        "suggested_patterns": [
+          "Strategy or Template Method"
+        ],
+        "performance_considerations": [
+          "Batch operations instead of loops",
+          "Use EF Change Tracking wisely"
+        ],
+        "security_recommendations": [
+          "Use HTTPS for all endpoints",
+          "Implement authentication & authorization",
+          "Log sensitive operations"
+        ]
+      }
+    }
+  },
+  "copybooks": {},
+  "control_includes": {},
+  "jcl_files": {},
+  "bms_maps": {},
+  "summary": {
+    "total_programs": 1,
+    "total_copybooks": 0,
+    "total_control_includes": 0,
+    "total_jcl_files": 0,
+    "total_bms_maps": 0
+  },
+  "project_metadata": {
+    "analysis_timestamp": "2025-07-04T13:20:07.984551",
+    "total_files": 1,
+    "business_domain": "RETAIL",
+    "cics_transaction_flow": [],
+    "data_flow_analysis": {},
+    "integration_points": []
+  },
+  "cross_references": {
+    "program_to_copybook": {
+      "cobol_code.cbl": []
+    },
+    "program_to_program": {},
+    "data_dependencies": []
+  },
+  "transaction_flows": [
+    {
+      "program": "cobol_code.cbl",
+      "entry_point": "DBCONNECT",
+      "cics_operations": 0,
+      "data_operations": 23,
+      "complexity": 46
+    }
+  ],
+  "ai_insights": {
+    "business_domain": "RETAIL",
+    "integration_patterns": [
+      "Database Integration",
+      "Batch Processing"
+    ],
+    "data_flows": [
+      {
+        "source": "cobol_code.cbl",
+        "destination": "Database",
+        "operations": "SQL",
+        "count": 23
+      }
+    ],
+    "modernization_recommendations": [
+      "Consider migrating COBOL programs to a modern language like Java or C# to improve maintainability.",
+      "Implement API-based integration for real-time data access and processing.",
+      "Evaluate cloud-based database solutions for scalability and cost-effectiveness."
+    ],
+    "risk_assessment": {
+      "legacy_code_dependency": "High",
+      "database_integration_risk": "Medium",
+      "modernization_complexity": "High"
+    }
+  },
+  "enhancement_timestamp": "2025-07-04T13:20:11.022873"
+}

@@ -1,0 +1,1594 @@
+{
+  "files": {
+    "cobol_code.cbl": {
+      "filename": "cobol_code.cbl",
+      "file_type": "cobol_program",
+      "size": 23797,
+      "lines": 626,
+      "program_id": "DBCONNECT",
+      "divisions": [
+        {
+          "name": "IDENTIFICATION",
+          "line": 9
+        },
+        {
+          "name": "ENVIRONMENT",
+          "line": 12
+        },
+        {
+          "name": "DATA",
+          "line": 17
+        },
+        {
+          "name": "PROCEDURE",
+          "line": 121
+        }
+      ],
+      "data_items": [
+        {
+          "name": "WS-EMPLOYEE-RECORD",
+          "line": 32,
+          "pic": null,
+          "java_type": "String"
+        },
+        {
+          "name": "WS-DB-CONNECTION",
+          "line": 44,
+          "pic": null,
+          "java_type": "String"
+        },
+        {
+          "name": "WS-FLAGS",
+          "line": 50,
+          "pic": null,
+          "java_type": "String"
+        },
+        {
+          "name": "WS-COUNTERS",
+          "line": 56,
+          "pic": null,
+          "java_type": "String"
+        },
+        {
+          "name": "WS-ERROR-HANDLING",
+          "line": 62,
+          "pic": null,
+          "java_type": "String"
+        },
+        {
+          "name": "WS-SEARCH-CRITERIA",
+          "line": 67,
+          "pic": null,
+          "java_type": "String"
+        },
+        {
+          "name": "WS-USER-INPUT",
+          "line": 71,
+          "pic": null,
+          "java_type": "String"
+        },
+        {
+          "name": "WS-DISPLAY-VARIABLES",
+          "line": 75,
+          "pic": null,
+          "java_type": "String"
+        },
+        {
+          "name": "HV-EMP-ID",
+          "line": 86,
+          "pic": "9(",
+          "java_type": "Integer"
+        },
+        {
+          "name": "HV-EMP-FIRST-NAME",
+          "line": 87,
+          "pic": "X(",
+          "java_type": "String"
+        },
+        {
+          "name": "HV-EMP-LAST-NAME",
+          "line": 88,
+          "pic": "X(",
+          "java_type": "String"
+        },
+        {
+          "name": "HV-EMP-DEPT",
+          "line": 89,
+          "pic": "X(",
+          "java_type": "String"
+        },
+        {
+          "name": "HV-EMP-POSITION",
+          "line": 90,
+          "pic": "X(",
+          "java_type": "String"
+        },
+        {
+          "name": "HV-EMP-SALARY",
+          "line": 91,
+          "pic": "9(",
+          "java_type": "Integer"
+        },
+        {
+          "name": "HV-EMP-HIRE-DATE",
+          "line": 92,
+          "pic": "X(",
+          "java_type": "String"
+        },
+        {
+          "name": "HV-DB-USER",
+          "line": 93,
+          "pic": "X(",
+          "java_type": "String"
+        },
+        {
+          "name": "HV-DB-PASSWORD",
+          "line": 94,
+          "pic": "X(",
+          "java_type": "String"
+        },
+        {
+          "name": "HV-SEARCH-DEPT",
+          "line": 95,
+          "pic": "X(",
+          "java_type": "String"
+        },
+        {
+          "name": "HV-MIN-SALARY",
+          "line": 96,
+          "pic": "9(",
+          "java_type": "Integer"
+        }
+      ],
+      "dependencies": {
+        "copy_books": [],
+        "called_programs": [],
+        "file_references": [
+          "EMP",
+          "EMP",
+          "FIRST",
+          "FIRST"
+        ],
+        "vsam_files": [],
+        "jcl_references": []
+      },
+      "business_logic": [
+        {
+          "line": 9,
+          "statement": "IDENTIFICATION DIVISION.",
+          "type": "OTHER"
+        },
+        {
+          "line": 14,
+          "statement": "SOURCE-COMPUTER. IBM-PC.",
+          "type": "OTHER"
+        },
+        {
+          "line": 15,
+          "statement": "OBJECT-COMPUTER. IBM-PC.",
+          "type": "OTHER"
+        },
+        {
+          "line": 130,
+          "statement": "PERFORM 1000-INITIALIZE.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 132,
+          "statement": "IF DB-CONNECTED",
+          "type": "IF"
+        },
+        {
+          "line": 133,
+          "statement": "PERFORM 2000-PROCESS-USER-CHOICE",
+          "type": "PERFORM"
+        },
+        {
+          "line": 135,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 137,
+          "statement": "PERFORM 9000-TERMINATE.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 149,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE"
+        },
+        {
+          "line": 150,
+          "statement": "MOVE \"N\" TO WS-DB-CONNECTED.",
+          "type": "MOVE"
+        },
+        {
+          "line": 152,
+          "statement": "PERFORM 1100-CONNECT-TO-DB.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 161,
+          "statement": "MOVE WS-DB-USER TO HV-DB-USER.",
+          "type": "MOVE"
+        },
+        {
+          "line": 162,
+          "statement": "MOVE WS-DB-PASSWORD TO HV-DB-PASSWORD.",
+          "type": "MOVE"
+        },
+        {
+          "line": 170,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 172,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 173,
+          "statement": "MOVE \"Y\" TO WS-DB-CONNECTED",
+          "type": "MOVE"
+        },
+        {
+          "line": 179,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 185,
+          "statement": "PERFORM 2100-DISPLAY-MENU.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 190,
+          "statement": "PERFORM 3000-RETRIEVE-ALL-EMPLOYEES",
+          "type": "PERFORM"
+        },
+        {
+          "line": 192,
+          "statement": "PERFORM 3100-RETRIEVE-BY-CRITERIA",
+          "type": "PERFORM"
+        },
+        {
+          "line": 194,
+          "statement": "PERFORM 4000-INSERT-EMPLOYEE",
+          "type": "PERFORM"
+        },
+        {
+          "line": 196,
+          "statement": "PERFORM 5000-UPDATE-EMPLOYEE",
+          "type": "PERFORM"
+        },
+        {
+          "line": 198,
+          "statement": "PERFORM 6000-DELETE-EMPLOYEE",
+          "type": "PERFORM"
+        },
+        {
+          "line": 200,
+          "statement": "MOVE \"N\" TO WS-CONTINUE-CHOICE",
+          "type": "MOVE"
+        },
+        {
+          "line": 205,
+          "statement": "IF WS-CONTINUE-CHOICE NOT = \"N\" AND WS-OPERATION-CHOICE NOT = 9",
+          "type": "IF"
+        },
+        {
+          "line": 207,
+          "statement": "DISPLAY \"Do you want to perform another operation? (Y/N)\"",
+          "type": "OTHER"
+        },
+        {
+          "line": 209,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 236,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE"
+        },
+        {
+          "line": 242,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 244,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 248,
+          "statement": "PERFORM 3050-FETCH-EMPLOYEE-RECORD",
+          "type": "PERFORM"
+        },
+        {
+          "line": 257,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 274,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 277,
+          "statement": "MOVE HV-EMP-SALARY TO WS-FORMATTED-SALARY",
+          "type": "MOVE"
+        },
+        {
+          "line": 286,
+          "statement": "IF SQLCODE = 100",
+          "type": "IF"
+        },
+        {
+          "line": 287,
+          "statement": "MOVE \"Y\" TO WS-END-OF-DATA",
+          "type": "MOVE"
+        },
+        {
+          "line": 289,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS",
+          "type": "PERFORM"
+        },
+        {
+          "line": 290,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 291,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 307,
+          "statement": "MOVE WS-SEARCH-DEPT TO HV-SEARCH-DEPT.",
+          "type": "MOVE"
+        },
+        {
+          "line": 308,
+          "statement": "MOVE WS-SEARCH-MIN-SALARY TO HV-MIN-SALARY.",
+          "type": "MOVE"
+        },
+        {
+          "line": 311,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE"
+        },
+        {
+          "line": 317,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 319,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 323,
+          "statement": "PERFORM 3150-FETCH-DEPT-RECORD",
+          "type": "PERFORM"
+        },
+        {
+          "line": 332,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 349,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 352,
+          "statement": "MOVE HV-EMP-SALARY TO WS-FORMATTED-SALARY",
+          "type": "MOVE"
+        },
+        {
+          "line": 361,
+          "statement": "IF SQLCODE = 100",
+          "type": "IF"
+        },
+        {
+          "line": 362,
+          "statement": "MOVE \"Y\" TO WS-END-OF-DATA",
+          "type": "MOVE"
+        },
+        {
+          "line": 364,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS",
+          "type": "PERFORM"
+        },
+        {
+          "line": 365,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 366,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 397,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE"
+        },
+        {
+          "line": 398,
+          "statement": "MOVE WS-EMP-FIRST-NAME TO HV-EMP-FIRST-NAME.",
+          "type": "MOVE"
+        },
+        {
+          "line": 399,
+          "statement": "MOVE WS-EMP-LAST-NAME TO HV-EMP-LAST-NAME.",
+          "type": "MOVE"
+        },
+        {
+          "line": 400,
+          "statement": "MOVE WS-EMP-DEPT TO HV-EMP-DEPT.",
+          "type": "MOVE"
+        },
+        {
+          "line": 401,
+          "statement": "MOVE WS-EMP-POSITION TO HV-EMP-POSITION.",
+          "type": "MOVE"
+        },
+        {
+          "line": 402,
+          "statement": "MOVE WS-EMP-SALARY TO HV-EMP-SALARY.",
+          "type": "MOVE"
+        },
+        {
+          "line": 403,
+          "statement": "MOVE WS-EMP-HIRE-DATE TO HV-EMP-HIRE-DATE.",
+          "type": "MOVE"
+        },
+        {
+          "line": 415,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 417,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 429,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 442,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE"
+        },
+        {
+          "line": 454,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 456,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 457,
+          "statement": "MOVE HV-EMP-FIRST-NAME TO WS-EMP-FIRST-NAME",
+          "type": "MOVE"
+        },
+        {
+          "line": 458,
+          "statement": "MOVE HV-EMP-LAST-NAME TO WS-EMP-LAST-NAME",
+          "type": "MOVE"
+        },
+        {
+          "line": 459,
+          "statement": "MOVE HV-EMP-DEPT TO WS-EMP-DEPT",
+          "type": "MOVE"
+        },
+        {
+          "line": 460,
+          "statement": "MOVE HV-EMP-POSITION TO WS-EMP-POSITION",
+          "type": "MOVE"
+        },
+        {
+          "line": 461,
+          "statement": "MOVE HV-EMP-SALARY TO WS-EMP-SALARY",
+          "type": "MOVE"
+        },
+        {
+          "line": 462,
+          "statement": "MOVE HV-EMP-HIRE-DATE TO WS-EMP-HIRE-DATE",
+          "type": "MOVE"
+        },
+        {
+          "line": 477,
+          "statement": "IF WS-EMP-DEPT = SPACES",
+          "type": "IF"
+        },
+        {
+          "line": 478,
+          "statement": "MOVE HV-EMP-DEPT TO WS-EMP-DEPT",
+          "type": "MOVE"
+        },
+        {
+          "line": 479,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 483,
+          "statement": "IF WS-EMP-POSITION = SPACES",
+          "type": "IF"
+        },
+        {
+          "line": 484,
+          "statement": "MOVE HV-EMP-POSITION TO WS-EMP-POSITION",
+          "type": "MOVE"
+        },
+        {
+          "line": 485,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 489,
+          "statement": "IF WS-EMP-SALARY = ZEROES",
+          "type": "IF"
+        },
+        {
+          "line": 490,
+          "statement": "MOVE HV-EMP-SALARY TO WS-EMP-SALARY",
+          "type": "MOVE"
+        },
+        {
+          "line": 491,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 493,
+          "statement": "MOVE WS-EMP-DEPT TO HV-EMP-DEPT",
+          "type": "MOVE"
+        },
+        {
+          "line": 494,
+          "statement": "MOVE WS-EMP-POSITION TO HV-EMP-POSITION",
+          "type": "MOVE"
+        },
+        {
+          "line": 495,
+          "statement": "MOVE WS-EMP-SALARY TO HV-EMP-SALARY",
+          "type": "MOVE"
+        },
+        {
+          "line": 505,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS",
+          "type": "PERFORM"
+        },
+        {
+          "line": 507,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 519,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 521,
+          "statement": "IF SQLCODE = 100",
+          "type": "IF"
+        },
+        {
+          "line": 524,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS",
+          "type": "PERFORM"
+        },
+        {
+          "line": 525,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 526,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 539,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE"
+        },
+        {
+          "line": 548,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS.",
+          "type": "PERFORM"
+        },
+        {
+          "line": 550,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 558,
+          "statement": "IF WS-CONTINUE-CHOICE = \"Y\" OR WS-CONTINUE-CHOICE = \"y\"",
+          "type": "IF"
+        },
+        {
+          "line": 564,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS",
+          "type": "PERFORM"
+        },
+        {
+          "line": 566,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 578,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 581,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 583,
+          "statement": "IF SQLCODE = 100",
+          "type": "IF"
+        },
+        {
+          "line": 586,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS",
+          "type": "PERFORM"
+        },
+        {
+          "line": 587,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 588,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 594,
+          "statement": "MOVE SQLCODE TO WS-SQL-STATUS.",
+          "type": "MOVE"
+        },
+        {
+          "line": 595,
+          "statement": "MOVE SQLERRMC TO WS-SQL-MSG.",
+          "type": "MOVE"
+        },
+        {
+          "line": 597,
+          "statement": "IF SQLCODE < 0",
+          "type": "IF"
+        },
+        {
+          "line": 604,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        },
+        {
+          "line": 610,
+          "statement": "IF DB-CONNECTED",
+          "type": "IF"
+        },
+        {
+          "line": 615,
+          "statement": "PERFORM 8000-CHECK-SQL-STATUS",
+          "type": "PERFORM"
+        },
+        {
+          "line": 617,
+          "statement": "IF SQLCODE = 0",
+          "type": "IF"
+        },
+        {
+          "line": 621,
+          "statement": "END-IF",
+          "type": "OTHER"
+        },
+        {
+          "line": 622,
+          "statement": "END-IF.",
+          "type": "OTHER"
+        }
+      ],
+      "sql_statements": [
+        {
+          "line": 25,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 84,
+          "statement": "EXEC SQL BEGIN DECLARE SECTION END-EXEC."
+        },
+        {
+          "line": 98,
+          "statement": "EXEC SQL END DECLARE SECTION END-EXEC."
+        },
+        {
+          "line": 103,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 111,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 164,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 238,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 254,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 263,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 313,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 329,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 338,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 405,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 422,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 426,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 444,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 497,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 512,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 516,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 541,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 559,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 571,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 575,
+          "statement": "EXEC SQL"
+        },
+        {
+          "line": 611,
+          "statement": "EXEC SQL"
+        }
+      ]
+    }
+  },
+  "connections": {
+    "cobol_code.cbl": {
+      "depends_on": [],
+      "used_by": [],
+      "connection_type": []
+    }
+  },
+  "dependencies": {},
+  "field_mappings": {
+    "WS-EMPLOYEE-RECORD": {
+      "cobol_name": "WS-EMPLOYEE-RECORD",
+      "java_name": "wsEmployeeRecord",
+      "java_type": "String",
+      "pic_clause": null
+    },
+    "WS-DB-CONNECTION": {
+      "cobol_name": "WS-DB-CONNECTION",
+      "java_name": "wsDbConnection",
+      "java_type": "String",
+      "pic_clause": null
+    },
+    "WS-FLAGS": {
+      "cobol_name": "WS-FLAGS",
+      "java_name": "wsFlags",
+      "java_type": "String",
+      "pic_clause": null
+    },
+    "WS-COUNTERS": {
+      "cobol_name": "WS-COUNTERS",
+      "java_name": "wsCounters",
+      "java_type": "String",
+      "pic_clause": null
+    },
+    "WS-ERROR-HANDLING": {
+      "cobol_name": "WS-ERROR-HANDLING",
+      "java_name": "wsErrorHandling",
+      "java_type": "String",
+      "pic_clause": null
+    },
+    "WS-SEARCH-CRITERIA": {
+      "cobol_name": "WS-SEARCH-CRITERIA",
+      "java_name": "wsSearchCriteria",
+      "java_type": "String",
+      "pic_clause": null
+    },
+    "WS-USER-INPUT": {
+      "cobol_name": "WS-USER-INPUT",
+      "java_name": "wsUserInput",
+      "java_type": "String",
+      "pic_clause": null
+    },
+    "WS-DISPLAY-VARIABLES": {
+      "cobol_name": "WS-DISPLAY-VARIABLES",
+      "java_name": "wsDisplayVariables",
+      "java_type": "String",
+      "pic_clause": null
+    },
+    "HV-EMP-ID": {
+      "cobol_name": "HV-EMP-ID",
+      "java_name": "hvEmpId",
+      "java_type": "Integer",
+      "pic_clause": "9("
+    },
+    "HV-EMP-FIRST-NAME": {
+      "cobol_name": "HV-EMP-FIRST-NAME",
+      "java_name": "hvEmpFirstName",
+      "java_type": "String",
+      "pic_clause": "X("
+    },
+    "HV-EMP-LAST-NAME": {
+      "cobol_name": "HV-EMP-LAST-NAME",
+      "java_name": "hvEmpLastName",
+      "java_type": "String",
+      "pic_clause": "X("
+    },
+    "HV-EMP-DEPT": {
+      "cobol_name": "HV-EMP-DEPT",
+      "java_name": "hvEmpDept",
+      "java_type": "String",
+      "pic_clause": "X("
+    },
+    "HV-EMP-POSITION": {
+      "cobol_name": "HV-EMP-POSITION",
+      "java_name": "hvEmpPosition",
+      "java_type": "String",
+      "pic_clause": "X("
+    },
+    "HV-EMP-SALARY": {
+      "cobol_name": "HV-EMP-SALARY",
+      "java_name": "hvEmpSalary",
+      "java_type": "Integer",
+      "pic_clause": "9("
+    },
+    "HV-EMP-HIRE-DATE": {
+      "cobol_name": "HV-EMP-HIRE-DATE",
+      "java_name": "hvEmpHireDate",
+      "java_type": "String",
+      "pic_clause": "X("
+    },
+    "HV-DB-USER": {
+      "cobol_name": "HV-DB-USER",
+      "java_name": "hvDbUser",
+      "java_type": "String",
+      "pic_clause": "X("
+    },
+    "HV-DB-PASSWORD": {
+      "cobol_name": "HV-DB-PASSWORD",
+      "java_name": "hvDbPassword",
+      "java_type": "String",
+      "pic_clause": "X("
+    },
+    "HV-SEARCH-DEPT": {
+      "cobol_name": "HV-SEARCH-DEPT",
+      "java_name": "hvSearchDept",
+      "java_type": "String",
+      "pic_clause": "X("
+    },
+    "HV-MIN-SALARY": {
+      "cobol_name": "HV-MIN-SALARY",
+      "java_name": "hvMinSalary",
+      "java_type": "Integer",
+      "pic_clause": "9("
+    }
+  },
+  "business_entities": [
+    {
+      "name": "WS-EMPLOYEE-RECORD",
+      "source_file": "cobol_code.cbl",
+      "line": 32,
+      "java_class_name": "WsEmployeeRecord",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "WS-DB-CONNECTION",
+      "source_file": "cobol_code.cbl",
+      "line": 44,
+      "java_class_name": "WsDbConnection",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "WS-FLAGS",
+      "source_file": "cobol_code.cbl",
+      "line": 50,
+      "java_class_name": "WsFlags",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "WS-COUNTERS",
+      "source_file": "cobol_code.cbl",
+      "line": 56,
+      "java_class_name": "WsCounters",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "WS-ERROR-HANDLING",
+      "source_file": "cobol_code.cbl",
+      "line": 62,
+      "java_class_name": "WsErrorHandling",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "WS-SEARCH-CRITERIA",
+      "source_file": "cobol_code.cbl",
+      "line": 67,
+      "java_class_name": "WsSearchCriteria",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "WS-USER-INPUT",
+      "source_file": "cobol_code.cbl",
+      "line": 71,
+      "java_class_name": "WsUserInput",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "WS-DISPLAY-VARIABLES",
+      "source_file": "cobol_code.cbl",
+      "line": 75,
+      "java_class_name": "WsDisplayVariables",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-EMP-ID",
+      "source_file": "cobol_code.cbl",
+      "line": 86,
+      "java_class_name": "HvEmpId",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-EMP-FIRST-NAME",
+      "source_file": "cobol_code.cbl",
+      "line": 87,
+      "java_class_name": "HvEmpFirstName",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-EMP-LAST-NAME",
+      "source_file": "cobol_code.cbl",
+      "line": 88,
+      "java_class_name": "HvEmpLastName",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-EMP-DEPT",
+      "source_file": "cobol_code.cbl",
+      "line": 89,
+      "java_class_name": "HvEmpDept",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-EMP-POSITION",
+      "source_file": "cobol_code.cbl",
+      "line": 90,
+      "java_class_name": "HvEmpPosition",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-EMP-SALARY",
+      "source_file": "cobol_code.cbl",
+      "line": 91,
+      "java_class_name": "HvEmpSalary",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-EMP-HIRE-DATE",
+      "source_file": "cobol_code.cbl",
+      "line": 92,
+      "java_class_name": "HvEmpHireDate",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-DB-USER",
+      "source_file": "cobol_code.cbl",
+      "line": 93,
+      "java_class_name": "HvDbUser",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-DB-PASSWORD",
+      "source_file": "cobol_code.cbl",
+      "line": 94,
+      "java_class_name": "HvDbPassword",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-SEARCH-DEPT",
+      "source_file": "cobol_code.cbl",
+      "line": 95,
+      "java_class_name": "HvSearchDept",
+      "fields": [],
+      "estimated_complexity": "medium"
+    },
+    {
+      "name": "HV-MIN-SALARY",
+      "source_file": "cobol_code.cbl",
+      "line": 96,
+      "java_class_name": "HvMinSalary",
+      "fields": [],
+      "estimated_complexity": "medium"
+    }
+  ],
+  "conversion_patterns": [
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 WS-EMPLOYEE-RECORD",
+      "java_equivalent": "public class WsEmployeeRecord",
+      "context": "Convert COBOL record WS-EMPLOYEE-RECORD to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 WS-DB-CONNECTION",
+      "java_equivalent": "public class WsDbConnection",
+      "context": "Convert COBOL record WS-DB-CONNECTION to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 WS-FLAGS",
+      "java_equivalent": "public class WsFlags",
+      "context": "Convert COBOL record WS-FLAGS to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 WS-COUNTERS",
+      "java_equivalent": "public class WsCounters",
+      "context": "Convert COBOL record WS-COUNTERS to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 WS-ERROR-HANDLING",
+      "java_equivalent": "public class WsErrorHandling",
+      "context": "Convert COBOL record WS-ERROR-HANDLING to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 WS-SEARCH-CRITERIA",
+      "java_equivalent": "public class WsSearchCriteria",
+      "context": "Convert COBOL record WS-SEARCH-CRITERIA to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 WS-USER-INPUT",
+      "java_equivalent": "public class WsUserInput",
+      "context": "Convert COBOL record WS-USER-INPUT to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 WS-DISPLAY-VARIABLES",
+      "java_equivalent": "public class WsDisplayVariables",
+      "context": "Convert COBOL record WS-DISPLAY-VARIABLES to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-EMP-ID",
+      "java_equivalent": "public class HvEmpId",
+      "context": "Convert COBOL record HV-EMP-ID to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-EMP-FIRST-NAME",
+      "java_equivalent": "public class HvEmpFirstName",
+      "context": "Convert COBOL record HV-EMP-FIRST-NAME to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-EMP-LAST-NAME",
+      "java_equivalent": "public class HvEmpLastName",
+      "context": "Convert COBOL record HV-EMP-LAST-NAME to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-EMP-DEPT",
+      "java_equivalent": "public class HvEmpDept",
+      "context": "Convert COBOL record HV-EMP-DEPT to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-EMP-POSITION",
+      "java_equivalent": "public class HvEmpPosition",
+      "context": "Convert COBOL record HV-EMP-POSITION to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-EMP-SALARY",
+      "java_equivalent": "public class HvEmpSalary",
+      "context": "Convert COBOL record HV-EMP-SALARY to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-EMP-HIRE-DATE",
+      "java_equivalent": "public class HvEmpHireDate",
+      "context": "Convert COBOL record HV-EMP-HIRE-DATE to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-DB-USER",
+      "java_equivalent": "public class HvDbUser",
+      "context": "Convert COBOL record HV-DB-USER to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-DB-PASSWORD",
+      "java_equivalent": "public class HvDbPassword",
+      "context": "Convert COBOL record HV-DB-PASSWORD to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-SEARCH-DEPT",
+      "java_equivalent": "public class HvSearchDept",
+      "context": "Convert COBOL record HV-SEARCH-DEPT to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "data_structure",
+      "cobol_pattern": "01 HV-MIN-SALARY",
+      "java_equivalent": "public class HvMinSalary",
+      "context": "Convert COBOL record HV-MIN-SALARY to Java class",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "file_operation",
+      "cobol_pattern": "FD EMP",
+      "java_equivalent": "// Repository pattern for EMP",
+      "context": "Convert file operations to repository pattern",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "file_operation",
+      "cobol_pattern": "FD EMP",
+      "java_equivalent": "// Repository pattern for EMP",
+      "context": "Convert file operations to repository pattern",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "file_operation",
+      "cobol_pattern": "FD FIRST",
+      "java_equivalent": "// Repository pattern for FIRST",
+      "context": "Convert file operations to repository pattern",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "file_operation",
+      "cobol_pattern": "FD FIRST",
+      "java_equivalent": "// Repository pattern for FIRST",
+      "context": "Convert file operations to repository pattern",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 1000-INITIALIZE.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF DB-CONNECTED",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 2000-PROCESS-USER-CHOICE",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 9000-TERMINATE.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 1100-CONNECT-TO-DB.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 2100-DISPLAY-MENU.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 3000-RETRIEVE-ALL-EMPLOYEES",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 3100-RETRIEVE-BY-CRITERIA",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 4000-INSERT-EMPLOYEE",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 5000-UPDATE-EMPLOYEE",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 6000-DELETE-EMPLOYEE",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF WS-CONTINUE-CHOICE NOT = \"N\" AND WS-OPERATION-CHOICE NOT = 9",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 3050-FETCH-EMPLOYEE-RECORD",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 100",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 3150-FETCH-DEPT-RECORD",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 100",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF WS-EMP-DEPT = SPACES",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF WS-EMP-POSITION = SPACES",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF WS-EMP-SALARY = ZEROES",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 100",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS.",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF WS-CONTINUE-CHOICE = \"Y\" OR WS-CONTINUE-CHOICE = \"y\"",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 100",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE < 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF DB-CONNECTED",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "PERFORM 8000-CHECK-SQL-STATUS",
+      "java_equivalent": "// PERFORM converted to Java",
+      "context": "Convert PERFORM statement to Java",
+      "source_file": "cobol_code.cbl"
+    },
+    {
+      "pattern_type": "business_logic",
+      "cobol_pattern": "IF SQLCODE = 0",
+      "java_equivalent": "// IF converted to Java",
+      "context": "Convert IF statement to Java",
+      "source_file": "cobol_code.cbl"
+    }
+  ]
+}
