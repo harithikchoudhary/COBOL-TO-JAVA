@@ -22,10 +22,15 @@ export default function Input({
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [activeFileTab, setActiveFileTab] = useState(null);
 
-  // Store JSON data for backend
+  // Store JSON data for backend (send filename-to-content mapping)
   const getSourceCodeAsJson = () => {
-    return JSON.stringify(uploadedFiles, null, 2);
+    const fileData = {};
+    Object.entries(uploadedFiles).forEach(([fileName, fileObj]) => {
+      fileData[fileName] = fileObj.content;
+    });
+    return fileData;
   };
+
   const sourceCodeJson = getSourceCodeAsJson();
   useEffect(() => {
     console.log("Setting sourceCodeJson:", sourceCodeJson);
@@ -40,7 +45,7 @@ export default function Input({
       const extension = fileName.split('.').pop().toLowerCase();
       const typeMap = {
         'cob': 'COBOL',
-        'cobol': 'COBOL', 
+        'cobol': 'COBOL',
         'cbl': 'COBOL',
         'jcl': 'JCL',
         'cpy': 'Copybook',
@@ -93,7 +98,7 @@ export default function Input({
       delete newFiles[fileName];
       return newFiles;
     });
-    
+
     // Handle active tab when file is removed
     const fileNames = Object.keys(uploadedFiles).filter(name => name !== fileName);
     if (activeFileTab === fileName) {
@@ -195,12 +200,11 @@ export default function Input({
             {Object.entries(uploadedFiles).map(([fileName, fileData]) => (
               <div
                 key={fileName}
-                className={`d-flex align-items-center px-3 py-2 border-end cursor-pointer position-relative ${
-                  activeFileTab === fileName 
-                    ? 'bg-white border-bottom-0' 
-                    : 'bg-light'
-                }`}
-                style={{ 
+                className={`d-flex align-items-center px-3 py-2 border-end cursor-pointer position-relative ${activeFileTab === fileName
+                  ? 'bg-white border-bottom-0'
+                  : 'bg-light'
+                  }`}
+                style={{
                   minWidth: "120px",
                   borderBottom: activeFileTab === fileName ? '2px solid transparent' : '1px solid #dee2e6'
                 }}
@@ -228,8 +232,6 @@ export default function Input({
           {/* File Content Display */}
           {activeFileTab && uploadedFiles[activeFileTab] && (
             <div className="p-0">
-
-
               {/* Code Content */}
               <div
                 className="overflow-auto"
@@ -310,7 +312,7 @@ export default function Input({
             minWidth: "10rem",
           }}
           onClick={() =>
-            handleGenerateRequirements(setActiveTab, getSourceCodeAsJson())
+            handleGenerateRequirements(setActiveTab, sourceCodeJson)
           }
           disabled={isGeneratingRequirements || !hasValidFiles}
         >

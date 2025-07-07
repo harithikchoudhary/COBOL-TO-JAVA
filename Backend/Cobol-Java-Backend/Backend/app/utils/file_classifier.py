@@ -1,7 +1,7 @@
 from ..config import logger
 
 def classify_uploaded_files(file_json):
-    """Classify uploaded files by type"""
+    """Classify uploaded files by type. Accepts a mapping of filename to content (string)."""
     logger.info("=== FILE CLASSIFICATION STARTED ===")
     logger.info(f"Number of files to classify: {len(file_json)}")
     
@@ -28,9 +28,8 @@ def classify_uploaded_files(file_json):
         "Unknown": []
     }
 
-    # Iterate over uploaded files
-    for file_info in file_json.values():
-        file_name = file_info["fileName"]
+    # Iterate over uploaded files (filename: content)
+    for file_name, content in file_json.items():
         lower_name = file_name.lower()
         matched_type = None
 
@@ -38,6 +37,8 @@ def classify_uploaded_files(file_json):
             if lower_name.endswith(ext):
                 matched_type = type_name
                 break
+
+        file_info = {"fileName": file_name, "content": content}
 
         if matched_type:
             classified[matched_type].append(file_info)

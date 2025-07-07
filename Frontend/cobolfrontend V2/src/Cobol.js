@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-
 import { RefreshCw, Download, ClipboardList } from "lucide-react";
 
 const API_BASE_URL = "http://localhost:8010/cobo";
@@ -12,17 +11,13 @@ export default function Cobol({ children }) {
   const [businessRequirements, setBusinessRequirements] = useState("");
   const [technicalRequirements, setTechnicalRequirements] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingRequirements, setIsGeneratingRequirements] =
-    useState(false);
+  const [isGeneratingRequirements, setIsGeneratingRequirements] = useState(false);
   const [copyStatus, setCopyStatus] = useState(false);
   const [error, setError] = useState("");
   const [isBackendAvailable, setIsBackendAvailable] = useState(true);
-  const [activeRequirementsTab, setActiveRequirementsTab] =
-    useState("business");
+  const [activeRequirementsTab, setActiveRequirementsTab] = useState("business");
   const [activeOutputTab, setActiveOutputTab] = useState("code");
-  const [technicalRequirementsList, setTechnicalRequirementsList] = useState(
-    []
-  );
+  const [technicalRequirementsList, setTechnicalRequirementsList] = useState([]);
   const [editingRequirementIndex, setEditingRequirementIndex] = useState(null);
   const [editingRequirementText, setEditingRequirementText] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState({});
@@ -61,6 +56,16 @@ export default function Cobol({ children }) {
       return;
     }
 
+    // Validate sourceCodeJson
+    if (typeof sourceCodeJson !== "object" || sourceCodeJson === null) {
+      setError("Invalid source code format: expected a dictionary of filename to content");
+      return;
+    }
+    if (Object.keys(sourceCodeJson).length === 0) {
+      setError("No source code files provided");
+      return;
+    }
+
     setIsGeneratingRequirements(true);
 
     try {
@@ -83,9 +88,7 @@ export default function Cobol({ children }) {
 
           setBusinessRequirements(simulatedBusinessReqs);
           setTechnicalRequirements(simulatedTechReqs);
-          setTechnicalRequirementsList(
-            parseRequirementsList(simulatedTechReqs)
-          );
+          setTechnicalRequirementsList(parseRequirementsList(simulatedTechReqs));
           setIsGeneratingRequirements(false);
           setActiveTab("requirements");
         }, 1500);
@@ -110,6 +113,12 @@ export default function Cobol({ children }) {
       }
 
       const data = await response.json();
+      if (data.error) {
+        setError(data.error);
+        setIsGeneratingRequirements(false);
+        return;
+      }
+
       let formattedBusinessReqs = "# Business Requirements\n\n";
       if (data.businessRequirements) {
         if (typeof data.businessRequirements === "string") {
@@ -179,15 +188,23 @@ export default function Cobol({ children }) {
         if (typeof data.technicalRequirements === "string") {
           formattedTechReqs = data.technicalRequirements;
         } else if (Array.isArray(data.technicalRequirements)) {
-          data.technicalRequirements.forEach((req, index) => {
-            formattedTechReqs += `${index + 1}. ${req.description}\n`;
-          });
+          if (typeof data.technicalRequirements[0] === "object" && data.technicalRequirements[0] !== null) {
+            data.technicalRequirements.forEach((req, index) => {
+              formattedTechReqs += `${index + 1}. ${req.description}\n`;
+            });
+          } else {
+            formattedTechReqs += data.technicalRequirements.join("\n");
+          }
         } else if (data.technicalRequirements.technicalRequirements) {
           const techReqs = data.technicalRequirements.technicalRequirements;
           if (Array.isArray(techReqs)) {
-            techReqs.forEach((req, index) => {
-              formattedTechReqs += `${index + 1}. ${req.description}\n`;
-            });
+            if (typeof techReqs[0] === "object" && techReqs[0] !== null) {
+              techReqs.forEach((req, index) => {
+                formattedTechReqs += `${index + 1}. ${req.description}\n`;
+              });
+            } else {
+              formattedTechReqs += techReqs.join("\n");
+            }
           }
         } else {
           formattedTechReqs +=
@@ -241,6 +258,16 @@ export default function Cobol({ children }) {
       return;
     }
 
+    // Validate sourceCodeJson for conversion
+    if (typeof sourceCodeJson !== "object" || sourceCodeJson === null) {
+      setError("Invalid source code format for conversion: expected a dictionary of filename to content");
+      return;
+    }
+    if (Object.keys(sourceCodeJson).length === 0) {
+      setError("No source code files provided for conversion");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -276,7 +303,7 @@ Feature: Basic Functionality
         body: JSON.stringify({
           sourceLanguage: "COBOL",
           targetLanguage,
-          sourceCode: sourceCodeJson,
+          sourceCode: Object.values(sourceCodeJson).join("\n"),
           businessRequirements,
           technicalRequirements,
         }),
@@ -288,7 +315,16 @@ Feature: Basic Functionality
       }
 
       const data = await response.json();
-      setConvertedCode(data.convertedCode || "");
+
+      // Handle the new structure with .csproj files and project structure
+      if (data.convertedCode && typeof data.convertedCode === 'object') {
+        // The backend now returns a structured object with multiple files
+        setConvertedCode(data.convertedCode);
+      } else {
+        // Fallback for old format
+        setConvertedCode(data.convertedCode || "");
+      }
+
       setUnitTests(data.unitTests || "");
       setFunctionalTests(data.functionalTests || "");
       setActiveTab("output");
@@ -309,6 +345,7 @@ Feature: Basic Functionality
     setTechnicalRequirementsList([]);
     setError("");
     setUploadedFiles({});
+    setSourceCodeJson(null);
   };
 
   const handleCopyRequirements = () => {

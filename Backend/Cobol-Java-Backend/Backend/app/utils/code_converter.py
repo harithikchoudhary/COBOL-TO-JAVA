@@ -9,6 +9,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
 logger = logging.getLogger(__name__)
 
 class CodeConverter:
@@ -28,8 +29,6 @@ class CodeConverter:
         self.client = client
         self.model_name = model_name
     
-
-
     def get_language_enum(self, language_name: str) -> Optional[Language]:
         """
         Convert a language name string to a LangChain Language enum value.
@@ -47,7 +46,6 @@ class CodeConverter:
             logger.warning(f"Language '{language_name}' is not supported by langchain_text_splitters. Using generic splitter.")
             return None
     
-
     def chunk_code(self, source_code: str, source_language: str, 
                 chunk_size: int = 23500, chunk_overlap: int = 1000) -> List[str]:
         """
@@ -82,17 +80,11 @@ class CodeConverter:
         chunks = splitter.split_text(source_code)
         logger.info(f"Split code into {len(chunks)} chunks")
         return chunks
-
     
-
-
-
-
-
-
     def convert_code_chunks(self, chunks: List[str], source_language: str, 
                            target_language: str, business_requirements: str,
-                           technical_requirements: str, db_setup_template: str) -> Dict[str, Any]:
+                           technical_requirements: str, db_setup_template: str,
+                           project_name: str = "TaskManagementSystem") -> Dict[str, Any]:
         """
         Convert each code chunk and merge the results.
         
@@ -103,6 +95,7 @@ class CodeConverter:
             business_requirements: Business requirements to consider during conversion
             technical_requirements: Technical requirements to consider during conversion
             db_setup_template: Database setup template if needed
+            project_name: The name of the solution/project
             
         Returns:
             Dictionary containing the converted code and related information
@@ -127,7 +120,6 @@ class CodeConverter:
         logger.info(f"Converting {len(chunks)} code chunks using a two-phase approach")
         
         # Phase 1: Generate a high-level structure of the target code
-        # This helps maintain consistency across chunks
         structure_prompt = self._create_structure_prompt(chunks, source_language, target_language)
         structure_result = self._get_code_structure(structure_prompt, target_language)
         
@@ -136,7 +128,6 @@ class CodeConverter:
         for i, chunk in enumerate(chunks):
             logger.info(f"Converting chunk {i+1}/{len(chunks)}")
             
-            # Enhanced context includes the code structure and chunk position
             chunk_context = f"""
             This is chunk {i+1} of {len(chunks)} from the complete source code.
             
@@ -144,13 +135,14 @@ class CodeConverter:
             {structure_result.get('structure', 'No structure available')}
             
             When converting this chunk:
-            1. Follow the above structure for consistent class/method names
+            1. Follow the Onion Architecture structure (Domain, Application, Infrastructure, Presentation)
             2. Include complete exception handling blocks
             3. Properly close all resources in finally blocks
             4. Ensure all methods have proper signatures and return types
             5. Define all methods and classes completely - don't leave implementation gaps
             6. Avoid duplicating code that would be defined in other chunks
             7. Ensure all imports are included for this chunk
+            8. Maintain dependency inversion: Domain has no dependencies, Application depends on Domain, etc.
             
             If you see incomplete code:
             - Complete class definitions even if they appear partial
@@ -167,14 +159,12 @@ class CodeConverter:
             conversion_results.append(result)
         
         # Use the structure-aware merge to create the final code
-        return self._merge_conversion_results(conversion_results, target_language, structure_result)
+        return self._merge_conversion_results(conversion_results, target_language, structure_result, project_name)
     
-
-
     def _create_structure_prompt(self, chunks: List[str], source_language: str, target_language: str) -> str:
         """
         Create a prompt to get the overall structure of the code before detailed conversion.
-        Enhanced for COBOL to Java/C# migration with data structure mapping.
+        Enhanced for COBOL to C# migration with Onion Architecture.
         
         Args:
             chunks: List of code chunks
@@ -184,12 +174,9 @@ class CodeConverter:
         Returns:
             A prompt for the model
         """
-        # Join all chunks to provide a complete overview
         complete_code = "\n\n".join(chunks)
         
-        # For very long code, use a summarized version to avoid exceeding token limits
         if len(complete_code) > 30000:
-            # Extract a representative sample from the beginning, middle, and end
             begin = complete_code[:10000]
             middle_start = len(complete_code) // 2 - 5000
             middle_end = len(complete_code) // 2 + 5000
@@ -198,146 +185,112 @@ class CodeConverter:
             
             complete_code = f"{begin}\n\n... [code truncated for brevity] ...\n\n{middle}\n\n... [code truncated for brevity] ...\n\n{end}"
         
-        # Target language specific instructions
-        language_specific = ""
-        if target_language == "Java":
-            language_specific = """
-            For Java output, please include:
-            
-            1. PROPER PACKAGE STRUCTURE - Organize code with appropriate packages
-            - Identify logical components and group related classes
-            - Use standard Java package naming conventions (e.g., com.company.module)
-            
-            2. CLASS HIERARCHY - Design an object-oriented structure
-            - Define appropriate class hierarchies with inheritance
-            - Use interfaces for common behavior
-            - Apply design patterns where appropriate
-            
-            3. ACCESS MODIFIERS - Apply correct encapsulation
-            - Use private for fields with getters/setters
-            - Protect internal implementation details
-            - Expose only necessary public methods
-            
-            4. FIELD DEFINITIONS - Proper variable declarations
-            - Include appropriate data types for all fields
-            - Apply final modifier where variables shouldn't change
-            - Initialize all fields with appropriate defaults
-            
-            5. EXCEPTION HANDLING - Use Java exception hierarchy
-            - Define application-specific exceptions if needed
-            - Use checked exceptions for recoverable conditions
-            - Use unchecked exceptions for programming errors
-            
-            6. JAVA CONVENTIONS - Follow standard Java practices
-            - Use camelCase for variables and methods
-            - Use PascalCase for class names
-            - Use ALL_CAPS for constants
-            """
-        elif target_language == "C#":
-            language_specific = """
-            For C# output, please include:
-            
-            1. NAMESPACE STRUCTURE - Organize code with appropriate namespaces
-            - Identify logical components and group related classes
-            - Use standard C# namespace conventions (e.g., Company.Module)
-            
-            2. CLASS HIERARCHY - Design an object-oriented structure
-            - Define appropriate class hierarchies with inheritance
-            - Use interfaces for common behavior
-            - Apply design patterns where appropriate
-            
-            3. ACCESS MODIFIERS - Apply correct encapsulation
-            - Use private for fields with properties
-            - Protect internal implementation details
-            - Expose only necessary public methods
-            
-            4. FIELD DEFINITIONS - Proper variable declarations
-            - Include appropriate data types for all fields
-            - Use properties with getters/setters
-            - Initialize all fields with appropriate defaults
-            
-            5. EXCEPTION HANDLING - Use .NET exception hierarchy
-            - Define application-specific exceptions if needed
-            - Use try-catch-finally blocks consistently
-            - Include appropriate exception handling strategies
-            
-            6. C# CONVENTIONS - Follow standard C# practices
-            - Use camelCase for private fields (with _ prefix)
-            - Use PascalCase for properties, methods, and class names
-            - Use PascalCase for public fields (rarely used)
-            """
+        language_specific = """
+        For C# output using Onion Architecture, please include:
         
-        # COBOL-specific instructions for structure analysis
-        cobol_specific = ""
-        if source_language == "COBOL":
-            cobol_specific = """
-            For COBOL to Java/C# migration, please also provide:
-            
-            1. DATA DIVISION mapping - Map all COBOL records/structures to appropriate classes
-            - Identify all WORKING-STORAGE SECTION items and how they should be represented
-            - Map FILE SECTION records to appropriate data models
-            - Determine which COBOL fields should become class fields vs. local variables
-            - Handle COBOL PICTURE clauses with appropriate data types and precision
-            - Handle REDEFINES with appropriate object patterns (e.g., inheritance, interfaces)
-            
-            2. PROCEDURE DIVISION mapping - Map all COBOL paragraphs/sections to methods
-            - Identify main program flow and control structures
-            - Map PERFORM statements to appropriate method calls 
-            - Create structured methods with single responsibility
-            - Determine how to handle GOTO statements and eliminate spaghetti code
-            - Convert COBOL-style control flow to modern OO structured programming
-            
-            3. Database integration - Identify any database or file access
-            - Map COBOL file operations to JDBC/ADO.NET
-            - Convert COBOL file I/O to appropriate database operations
-            - Handle indexed files with proper key management 
-            - Convert any embedded SQL to prepared statements and proper connection handling
-            
-            4. Error handling - Map COBOL error handling to exception-based approach
-            - Convert status code checks to try-catch blocks
-            - Identify ON ERROR and similar constructs
-            - Create appropriate custom exception classes when needed
-            - Implement proper resource cleanup in finally blocks
-            
-            5. Numeric/decimal handling - Identify precision requirements
-            - Use BigDecimal/decimal for financial calculations
-            - Handle implicit decimal points properly (PIC 9(7)V99)
-            - Apply proper rounding modes where needed
-            - Ensure numeric formatting follows business requirements
-            
-            6. MODULE ORGANIZATION - Properly organize the application
-            - Separate business logic from data access
-            - Create service layers for main functionality
-            - Implement proper dependency management
-            - Follow modern OO design principles (SOLID)
-            """
+        1. NAMESPACE STRUCTURE - Organize code with appropriate namespaces
+        - Use Company.Project.[Layer] (e.g., Company.Project.Domain, Company.Project.Application)
+        - Group related classes by layer (Domain, Application, Infrastructure, Presentation)
+        
+        2. LAYER ORGANIZATION - Design according to Onion Architecture
+        - Domain Layer: Entities, interfaces, exceptions (no dependencies)
+        - Application Layer: Application services, DTOs (depends on Domain)
+        - Infrastructure Layer: Repositories, DbContext (implements Application interfaces)
+        - Presentation Layer: Controllers (depends on Application)
+        
+        3. ACCESS MODIFIERS - Apply correct encapsulation
+        - Use private for fields with properties
+        - Protect internal implementation details
+        - Expose only necessary public methods
+        
+        4. FIELD DEFINITIONS - Proper variable declarations
+        - Include appropriate data types for all fields
+        - Use properties with getters/setters
+        - Initialize all fields with appropriate defaults
+        
+        5. EXCEPTION HANDLING - Use .NET exception hierarchy
+        - Define application-specific exceptions in Domain/Exceptions
+        - Use try-catch-finally blocks consistently
+        - Include appropriate exception handling strategies
+        
+        6. C# CONVENTIONS - Follow standard C# practices
+        - Use camelCase for private fields (with _ prefix)
+        - Use PascalCase for properties, methods, and class names
+        - Use PascalCase for public fields (rarely used)
+        """
+        
+        cobol_specific = """
+        For COBOL to C# migration, please also provide:
+        
+        1. DATA DIVISION mapping - Map all COBOL records/structures to Domain entities
+        - Identify all WORKING-STORAGE SECTION items and how they should be represented
+        - Map FILE SECTION records to Domain entities
+        - Determine which COBOL fields should become class fields vs. local variables
+        - Handle COBOL PICTURE clauses with appropriate data types and precision
+        - Handle REDEFINES with appropriate object patterns (e.g., inheritance, interfaces)
+        
+        2. PROCEDURE DIVISION mapping - Map all COBOL paragraphs/sections to Application services
+        - Identify main program flow and control structures
+        - Map PERFORM statements to appropriate method calls 
+        - Create structured methods with single responsibility
+        - Determine how to handle GOTO statements and eliminate spaghetti code
+        - Convert COBOL-style control flow to modern OO structured programming
+        
+        3. Database integration - Identify any database or file access
+        - Map COBOL file operations to Entity Framework Core in Infrastructure layer
+        - Convert COBOL file I/O to appropriate database operations
+        - Handle indexed files with proper key management 
+        - Convert any embedded SQL to prepared statements and proper connection handling
+        
+        4. Error handling - Map COBOL error handling to exception-based approach
+        - Convert status code checks to try-catch blocks
+        - Identify ON ERROR and similar constructs
+        - Create appropriate custom exception classes in Domain/Exceptions
+        - Implement proper resource cleanup in finally blocks
+        
+        5. Numeric/decimal handling - Identify precision requirements
+        - Use decimal for financial calculations
+        - Handle implicit decimal points properly (PIC 9(7)V99)
+        - Apply proper rounding modes where needed
+        - Ensure numeric formatting follows business requirements
+        
+        6. MODULE ORGANIZATION - Properly organize the application
+        - Separate business logic into Domain and Application layers
+        - Implement repositories in Infrastructure layer
+        - Create controllers in Presentation layer
+        - Follow Onion Architecture dependency rules
+        """
         
         return f"""
-        I need to convert {source_language} code to {target_language}, but first I need a detailed high-level structure to ensure consistency, quality and maintainability.
+        I need to convert {source_language} code to {target_language} using Onion Architecture, but first I need a detailed high-level structure to ensure consistency, quality, and maintainability.
         
         Please analyze this code and provide a DETAILED architectural blueprint including:
         
-        1. COMPLETE CLASS STRUCTURE with:
-        - All necessary classes, interfaces, and enums
+        1. COMPLETE LAYER STRUCTURE with:
+        - Domain Layer: Entities, interfaces, exceptions
+        - Application Layer: Application services, DTOs, interfaces
+        - Infrastructure Layer: Repositories, DbContext
+        - Presentation Layer: Controllers
         - Clear inheritance hierarchies and relationships
         - Fields with their types and access modifiers
         - Complete method signatures (return types, parameters, exceptions)
         
-        2. PACKAGE/NAMESPACE ORGANIZATION:
-        - Logical grouping of related classes
-        - Proper naming following {target_language} conventions
+        2. NAMESPACE ORGANIZATION:
+        - Logical grouping of related classes by layer
+        - Proper naming following C# conventions (Company.Project.[Layer])
         
         3. DATABASE ACCESS (if present):
-        - Connection management approach
+        - Connection management approach in Infrastructure layer
         - Transaction handling
         - Resource cleanup strategy
         
         4. DESIGN PATTERNS to implement:
-        - Identify appropriate patterns for clean code structure
-        - How to eliminate procedural code and make it object-oriented
+        - Repository pattern for data access
+        - Service pattern for business logic
+        - Dependency injection for loose coupling
         
         5. ERROR HANDLING STRATEGY:
-        - Exception hierarchy
+        - Exception hierarchy in Domain/Exceptions
         - Resource cleanup approach
         - Logging strategy
         
@@ -345,7 +298,7 @@ class CodeConverter:
         
         {cobol_specific}
         
-        DO NOT convert the code in detail yet. Provide ONLY a comprehensive structural blueprint focusing on architecture, relationships, and ensuring clean, maintainable code that follows all {target_language} best practices.
+        DO NOT convert the code in detail yet. Provide ONLY a comprehensive structural blueprint focusing on architecture, relationships, and ensuring clean, maintainable code that follows all {target_language} best practices and Onion Architecture principles.
         
         Here's the {source_language} code to analyze:
         
@@ -353,9 +306,7 @@ class CodeConverter:
         {complete_code}
         ```
         """
-
     
-
     def _get_code_structure(self, structure_prompt: str, target_language: str) -> Dict[str, Any]:
         """
         Get the overall structure of the code to guide the conversion process.
@@ -373,10 +324,10 @@ class CodeConverter:
                 messages=[
                     {
                         "role": "system",
-                        "content": f"You are an expert software architect specializing in {target_language} and modern object-oriented design. "
+                        "content": f"You are an expert software architect specializing in {target_language} and Onion Architecture. "
                                 f"Your task is to analyze legacy code and provide a detailed architectural blueprint for modern, clean, "
                                 f"maintainable {target_language} code. You excel at creating well-structured object-oriented designs that "
-                                f"follow best practices and design patterns."
+                                f"follow Onion Architecture principles and dependency inversion."
                     },
                     {"role": "user", "content": structure_prompt}
                 ],
@@ -386,54 +337,36 @@ class CodeConverter:
             
             structure_content = response.choices[0].message.content.strip()
             
-            # Extract important structure information
             structure_info = {
                 "structure": structure_content,
                 "classes": [],
-                "package": None,
+                "namespace": None,
                 "interfaces": [],
                 "database_access": False,
                 "exception_strategy": "standard",
                 "patterns": []
             }
             
-            # Extract class names
             class_matches = re.findall(r'class\s+([A-Za-z0-9_]+)', structure_content)
-            structure_info["classes"] = list(set(class_matches))  # Remove duplicates
+            structure_info["classes"] = list(set(class_matches))
             
-            # Extract package/namespace
-            if target_language == "Java":
-                package_match = re.search(r'package\s+([a-z0-9_.]+)', structure_content, re.IGNORECASE)
-                if package_match:
-                    structure_info["package"] = package_match.group(1)
-            else:  # C#
-                namespace_match = re.search(r'namespace\s+([A-Za-z0-9_.]+)', structure_content, re.IGNORECASE)
-                if namespace_match:
-                    structure_info["package"] = namespace_match.group(1)
+            namespace_match = re.search(r'namespace\s+([A-Za-z0-9_.]+)', structure_content, re.IGNORECASE)
+            if namespace_match:
+                structure_info["namespace"] = namespace_match.group(1)
             
-            # Extract interfaces
             interface_matches = re.findall(r'interface\s+([A-Za-z0-9_]+)', structure_content)
-            structure_info["interfaces"] = list(set(interface_matches))  # Remove duplicates
+            structure_info["interfaces"] = list(set(interface_matches))
             
-            # Check for database access
-            db_keywords = ['JDBC', 'Connection', 'PreparedStatement', 'ResultSet', 
-                        'SqlConnection', 'SqlCommand', 'DataReader', 'EntityFramework',
-                        'JPA', 'Repository', 'DataSource']
+            db_keywords = ['Connection', 'SqlCommand', 'DataReader', 'EntityFramework',
+                        'Repository', 'DataSource', 'DbContext']
             for keyword in db_keywords:
                 if keyword in structure_content:
                     structure_info["database_access"] = True
                     break
             
-            # Identify design patterns
             pattern_keywords = {
-                "Factory": ["Factory", "getInstance", "createInstance"],
-                "Singleton": ["Singleton", "getInstance", "private constructor"],
-                "Builder": ["Builder", "build()", ".build()"],
-                "Strategy": ["Strategy", "algorithm", "behavior"],
-                "Observer": ["Observer", "Observable", "notify", "subscribe"],
-                "Repository": ["Repository", "DAO", "Data Access"],
-                "Service": ["Service", "Manager", "Processor"],
-                "MVC": ["Model", "View", "Controller"],
+                "Repository": ["Repository", "IRepository"],
+                "Service": ["Service", "AppService"],
                 "DTO": ["DTO", "Data Transfer Object"]
             }
             
@@ -443,9 +376,8 @@ class CodeConverter:
                         structure_info["patterns"].append(pattern)
                         break
             
-            structure_info["patterns"] = list(set(structure_info["patterns"]))  # Remove duplicates
+            structure_info["patterns"] = list(set(structure_info["patterns"]))
             
-            # Get exception handling strategy
             if "custom exception" in structure_content.lower() or "applicationexception" in structure_content.lower():
                 structure_info["exception_strategy"] = "custom"
             
@@ -456,16 +388,13 @@ class CodeConverter:
             return {
                 "structure": "Could not determine code structure",
                 "classes": [],
-                "package": None,
+                "namespace": None,
                 "interfaces": [],
                 "database_access": False,
                 "exception_strategy": "standard",
                 "patterns": []
             }
     
-    
-
-
     def _convert_single_chunk(self, code_chunk: str, source_language: str,
                             target_language: str, business_requirements: str,
                             technical_requirements: str, db_setup_template: str,
@@ -487,7 +416,6 @@ class CodeConverter:
         """
         from prompts import create_code_conversion_prompt
         
-        # Create prompt for this chunk
         prompt = create_code_conversion_prompt(
             source_language,
             target_language,
@@ -497,44 +425,43 @@ class CodeConverter:
             db_setup_template
         )
         
-        # Add COBOL-specific instructions for Java/C# conversion
-        if source_language == "COBOL" and target_language in ["Java", "C#"]:
+        if source_language == "COBOL" and target_language in ["C#"]:
             prompt += """
             
-            CRITICAL INSTRUCTIONS FOR COBOL TO JAVA/C# CONVERSION:
+            CRITICAL INSTRUCTIONS FOR COBOL TO C# CONVERSION:
             
             1. DATA STRUCTURE MAPPING:
-            - Convert COBOL records (01 level items) to classes
+            - Convert COBOL records (01 level items) to Domain entities
             - Map COBOL group items (05-49 level) to nested classes or complex properties
             - Map elementary items (PIC clauses) to appropriate data types:
                 * PIC 9(n) -> int, long, or BigInteger depending on size
-                * PIC 9(n)V9(m) -> double or BigDecimal (use BigDecimal for financial calculations)
+                * PIC 9(n)V9(m) -> decimal (use decimal for financial calculations)
                 * PIC X(n) -> String (with proper length)
                 * PIC A(n) -> String (with proper length)
-                * COMP-3 fields -> appropriate numeric type with scaling
+                * COMP-3 fields -> decimal with scaling
             - Handle REDEFINES with appropriate conversion strategy (e.g., inheritance or multiple properties)
-            - Convert COBOL tables (OCCURS clause) to arrays or Collections
+            - Convert COBOL tables (OCCURS clause) to arrays or Lists
             
             2. PROCEDURE CONVERSION:
-            - Convert COBOL paragraphs to methods
+            - Convert COBOL paragraphs to Application service methods
             - Convert PERFORM statements to method calls
             - Replace GOTO statements with structured alternatives (loops, conditionals)
             - Convert in-line PERFORM with appropriate loop structure
             - Handle COBOL specific control flow (EVALUATE, etc.)
             
             3. FILE HANDLING CONVERSION:
-            - Convert COBOL file operations (OPEN, READ, WRITE) to appropriate Java/C# I/O
-            - For indexed files, use appropriate database or file-based index solution
+            - Convert COBOL file operations (OPEN, READ, WRITE) to Infrastructure repository methods
+            - For indexed files, use Entity Framework Core with appropriate key management
             - For sequential files, use appropriate stream-based I/O
             - Handle record locking mechanisms appropriately
             
             4. ERROR HANDLING:
-            - Convert COBOL ON SIZE ERROR to appropriate exception handling
+            - Convert COBOL ON SIZE ERROR to Domain exceptions
             - Convert FILE STATUS checks to try-catch blocks
             - Implement appropriate logging and error reporting
             
             5. NUMERIC PROCESSING:
-            - Preserve exact decimal calculations where needed (BigDecimal in Java, decimal in C#)
+            - Preserve exact decimal calculations using decimal type
             - Handle implicit decimal points from COBOL PIC clauses
             - Preserve COBOL numeric editing behavior when formatting output
             
@@ -543,74 +470,80 @@ class CodeConverter:
             - Add appropriate constructors to classes
             - Implement appropriate access modifiers (public, private, etc.)
             - Add appropriate getters and setters for class properties
-            - Add appropriate package/namespace organization
+            - Add appropriate namespace organization following Onion Architecture
             """
         
-        # Enhanced instructions for Java/C# conversion
-        if target_language in ["Java", "C#"]:
+        if target_language == "C#":
             prompt += """
             
-            CRITICAL INSTRUCTIONS FOR CLEAN CODE GENERATION:
+            CRITICAL INSTRUCTIONS FOR ONION ARCHITECTURE:
             
-            1. COMPLETE ALL CODE BLOCKS - Never leave any block incomplete
-            - Every opening brace must have a closing brace
-            - Every if/for/while must have a complete body
-            - Every try must have catch and finally blocks
-            - Every method must have a return type and complete implementation
+            1. LAYER SEPARATION:
+            - Domain: Entities, interfaces, exceptions (no external dependencies)
+            - Application: Services, DTOs (depends on Domain)
+            - Infrastructure: Repositories, DbContext (implements Application interfaces)
+            - Presentation: Controllers (depends on Application)
             
-            2. EXCEPTION HANDLING - Implement proper exception handling
+            2. DEPENDENCY INVERSION:
+            - Define service interfaces in Domain and Application layers
+            - Implement interfaces in Application and Infrastructure layers
+            - Use dependency injection in Program.cs
+            
+            3. EXCEPTION HANDLING:
+            - Define custom exceptions in Domain/Exceptions
             - All catch blocks must have actual code handling the exception
-            - Don't leave catch blocks empty or with placeholder comments
             - Use try-with-resources where appropriate
             - Add specific exception types when possible
             
-            3. DATABASE CODE - Ensure proper connection management
-            - Always close connections, statements, and result sets in finally blocks
-            - Use try-with-resources for database resources
+            4. DATABASE CODE:
+            - Implement in Infrastructure layer using Entity Framework Core
+            - Always close connections in finally blocks
             - Implement proper transaction management
             
-            4. METHOD SIGNATURES - Use complete and proper method signatures
-            - Include all method modifiers (public/private/static/etc.)
-            - Specify return types for all methods
-            - Include parameter types for all parameters
-            - Add throws declarations when needed
-            
-            5. CLASS STRUCTURE - Make sure classes are properly formatted
+            5. CLASS STRUCTURE:
             - Include all necessary imports at the top
             - Declare all fields with proper access modifiers
             - Include necessary constructors
             - Implement interfaces and extend classes as needed
             
-            6. AVOID DUPLICATIONS - Avoid duplicating code unnecessarily
-            
-            7. COMPLETENESS - Make sure the generated code is complete and runnable
+            6. COMPLETENESS:
             - No undefined variables or methods
             - No placeholder comments where code should be
             """
         
-        # Add chunk-specific context if provided
         if additional_context:
             prompt += f"\n\n{additional_context}"
         
-
         try:
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": f"You are an expert code converter specializing in {source_language} to {target_language} migration. "
+                        "content": f"You are an expert code converter specializing in {source_language} to {target_language} migration using Onion Architecture. "
                                 f"You convert legacy code to modern, idiomatic code while maintaining all business logic. "
-                                f"Your code must be complete, well-structured, and follow best practices. "
                                 f"Ensure that all syntax is correct, with matching brackets and proper statement terminations. "
-                                f"Only include database setup/initialization if the original code uses databases or SQL. "
+                                f"Only include database setup/initialization in the Infrastructure layer if the original code uses databases or SQL. "
                                 f"For simple algorithms or calculations without database operations, don't add any database code. "
                                 f"Return your response in JSON format always with the following structure:\n"
                                 f"{{\n"
-                                f'  \"convertedCode\": \"The complete converted code here\",\n'
-                                f'  \"conversionNotes\": \"Notes about the conversion process\",\n'
-                                f'  \"potentialIssues\": [\"List of any potential issues or limitations\"],\n'
-                                f'  \"databaseUsed\": true/false\n'
+                                f'  "DomainEntity": {{"FileName": "EntityName.cs", "Path": "Domain/Entities/", "content": ""}},\n'
+                                f'  "DomainInterface": {{"FileName": "IEntityNameService.cs", "Path": "Domain/Interfaces/", "content": ""}},\n'
+                                f'  "DomainExceptions": {{"FileName": "EntityNameException.cs", "Path": "Domain/Exceptions/", "content": ""}},\n'
+                                f'  "ApplicationServiceInterface": {{"FileName": "IEntityNameAppService.cs", "Path": "Application/Interfaces/", "content": ""}},\n'
+                                f'  "ApplicationService": {{"FileName": "EntityNameAppService.cs", "Path": "Application/Services/", "content": ""}},\n'
+                                f'  "ApplicationDTO": {{"FileName": "EntityNameDTO.cs", "Path": "Application/DTOs/", "content": ""}},\n'
+                                f'  "InfrastructureRepository": {{"FileName": "EntityNameRepository.cs", "Path": "Infrastructure/Repositories/", "content": ""}},\n'
+                                f'  "InfrastructureDbContext": {{"FileName": "ApplicationDbContext.cs", "Path": "Infrastructure/Data/", "content": ""}},\n'
+                                f'  "PresentationController": {{"FileName": "EntityNameController.cs", "Path": "Presentation/Controllers/", "content": ""}},\n'
+                                f'  "Program": {{"FileName": "Program.cs", "Path": "Presentation/", "content": ""}},\n'
+                                f'  "AppSettings": {{"FileName": "appsettings.json", "Path": "Presentation/", "content": ""}},\n'
+                                f'  "DomainProject": {{"FileName": "Domain.csproj", "Path": "Domain/", "content": ""}},\n'
+                                f'  "ApplicationProject": {{"FileName": "Application.csproj", "Path": "Application/", "content": ""}},\n'
+                                f'  "InfrastructureProject": {{"FileName": "Infrastructure.csproj", "Path": "Infrastructure/", "content": ""}},\n'
+                                f'  "PresentationProject": {{"FileName": "Presentation.csproj", "Path": "Presentation/", "content": ""}},\n'
+                                f'  "SolutionFile": {{"FileName": "TaskManagementSystem.sln", "Path": "./", "content": ""}},\n'
+                                f'  "Dependencies": {{"content": "NuGet packages and .NET dependencies needed"}}\n'
                                 f"}}"
                     },
                     {"role": "user", "content": prompt}
@@ -620,15 +553,12 @@ class CodeConverter:
                 response_format={"type": "json_object"}
             )
             
-            # Parse the JSON response
             conversion_content = response.choices[0].message.content.strip()
             
             try:
-                # Attempt to parse the JSON response
                 conversion_json = json.loads(conversion_content)
                 
-                # Validate the converted code
-                if target_language in ["Java", "C#"]:
+                if target_language == "C#":
                     self._validate_code(conversion_json, target_language)
                     
                 return conversion_json
@@ -637,9 +567,7 @@ class CodeConverter:
                 logger.error(f"Error parsing JSON response: {str(json_err)}")
                 logger.debug(f"Problematic response content: {conversion_content}")
                 
-                # Attempt to extract JSON from the response
                 try:
-                    # Use regex to find JSON-like content
                     json_pattern = r'(\{[\s\S]*\})'
                     match = re.search(json_pattern, conversion_content)
                     if match:
@@ -647,17 +575,15 @@ class CodeConverter:
                         conversion_json = json.loads(potential_json)
                         logger.info("Successfully extracted JSON from response using regex")
                         
-                        # Validate the converted code
-                        if target_language in ["Java", "C#"]:
+                        if target_language == "C#":
                             self._validate_code(conversion_json, target_language)
                             
                         return conversion_json
                 except Exception as extract_err:
                     logger.error(f"Failed to extract JSON using regex: {str(extract_err)}")
                 
-                # Return a fallback response
                 return {
-                    "convertedCode": "// Error: Invalid response format received from server",
+                    "convertedCode": "",
                     "conversionNotes": f"Error processing response: {str(json_err)}",
                     "potentialIssues": ["Failed to process model response", "Response was not valid JSON"],
                     "databaseUsed": False
@@ -672,83 +598,73 @@ class CodeConverter:
                 "databaseUsed": False
             }
     
-
     def _validate_code(self, conversion_result: Dict[str, Any], target_language: str) -> None:
         """
-        Validate the converted code for common issues and try to fix them.
+        Validate the converted code for common issues and Onion Architecture compliance.
         
         Args:
             conversion_result: The conversion result dictionary
             target_language: The target programming language
         """
-        code = conversion_result.get("convertedCode")
-        if code is None:
-            logger.warning("Converted code is None, skipping validation")
+        converted_code = conversion_result.get("convertedCode", {})
+        if not converted_code:
+            logger.warning("Converted code is empty, skipping validation")
             return
-        if not isinstance(code, str):
-            logger.warning(f"Converted code is not a string, but {type(code)}, skipping validation")
-            return
-            
-        # Proceed with validation only if code is a string
+        
         issues = []
         
-        # Check for mismatched braces
-        opening_braces = code.count("{")
-        closing_braces = code.count("}")
-        if opening_braces != closing_braces:
-            issues.append(f"Mismatched braces: {opening_braces} opening vs {closing_braces} closing")
-        
-        # Check for incomplete try-catch blocks
-        try_count = len(re.findall(r'\btry\s*{', code))
-        catch_count = len(re.findall(r'\bcatch\s*\(', code))
-        if try_count > catch_count:
-            issues.append(f"Incomplete exception handling: {try_count} try blocks but only {catch_count} catch blocks")
-        
-        # Check for empty catch blocks
-        empty_catches = len(re.findall(r'catch\s*\([^)]*\)\s*{\s*}', code))
-        if empty_catches > 0:
-            issues.append(f"Found {empty_catches} empty catch blocks")
-        
-        # Java/C# specific validations
-        if target_language in ["Java", "C#"]:
-            # Check for semicolons at the end of statements
-            lines = code.split('\n')
-            missing_semicolons = 0
-            for line in lines:
-                line = line.strip()
-                # Check if line ends with a statement that should have a semicolon but doesn't
-                if (line and not line.endswith(";") and not line.endswith("{") and not line.endswith("}") 
-                    and not line.endswith("*/") and not line.startswith("//") 
-                    and not line.startswith("import ") and not line.startswith("package ")
-                    and not line.startswith("using ") and not line.startswith("namespace ")
-                    and not re.match(r'^[a-zA-Z0-9_]+:', line)  # Avoid matching labels in C#
-                    and not re.match(r'^(public|private|protected)\s+(class|interface|enum)', line)):
-                    missing_semicolons += 1
+        # Validate each file's content
+        for section in ["DomainEntity", "DomainInterface", "ApplicationServiceInterface",
+                       "ApplicationService", "ApplicationDTO", "InfrastructureRepository",
+                       "InfrastructureDbContext", "PresentationController"]:
+            code = converted_code.get(section, {}).get("content", "")
+            if not code:
+                issues.append(f"Missing or empty content for {section}")
+                continue
             
-            if missing_semicolons > 0:
-                issues.append(f"Potentially missing semicolons in {missing_semicolons} statements")
+            # Check for mismatched braces
+            opening_braces = code.count("{")
+            closing_braces = code.count("}")
+            if opening_braces != closing_braces:
+                issues.append(f"Mismatched braces in {section}: {opening_braces} opening vs {closing_braces} closing")
             
-            # Check for missing/malformed method signatures
-            malformed_methods = len(re.findall(r'[a-zA-Z0-9_]+\s*\([^)]*\)\s*{', code))
-            if malformed_methods > 0:
-                issues.append(f"Found {malformed_methods} methods with potentially missing return types or access modifiers")
+            # Check for incomplete try-catch blocks
+            try_count = len(re.findall(r'\btry\s*{', code))
+            catch_count = len(re.findall(r'\bcatch\s*\(', code))
+            if try_count > catch_count:
+                issues.append(f"Incomplete exception handling in {section}: {try_count} try blocks but only {catch_count} catch blocks")
             
-            # Check for uninitialized variables (only basic check)
-            if target_language == "Java":
-                uninit_variables = len(re.findall(r'(int|double|float|long|boolean|char|byte|short)\s+[a-zA-Z0-9_]+\s*;', code))
-                if uninit_variables > 0:
-                    issues.append(f"Found {uninit_variables} potentially uninitialized primitive variables")
+            # Check for empty catch blocks
+            empty_catches = len(re.findall(r'catch\s*\([^)]*\)\s*{\s*}', code))
+            if empty_catches > 0:
+                issues.append(f"Found {empty_catches} empty catch blocks in {section}")
         
-        # Add validation issues to the potential issues list
+        # Onion Architecture-specific validations
+        if target_language == "C#":
+            # Check Domain layer for external dependencies
+            domain_code = converted_code.get("DomainEntity", {}).get("content", "") + \
+                         converted_code.get("DomainInterface", {}).get("content", "")
+            if "Microsoft.EntityFrameworkCore" in domain_code or "System.Data" in domain_code:
+                issues.append("Domain layer contains infrastructure dependencies")
+            
+            # Check Application layer dependencies
+            app_service_code = converted_code.get("ApplicationService", {}).get("content", "")
+            if "DbContext" in app_service_code or "Repository" in app_service_code:
+                issues.append("Application layer contains direct references to Infrastructure layer")
+            
+            # Check dependency injection in Program.cs
+            program_code = converted_code.get("Program", {}).get("content", "")
+            if "AddScoped" not in program_code and "AddSingleton" not in program_code:
+                issues.append("Program.cs missing dependency injection setup")
+        
         if issues:
             existing_issues = conversion_result.get("potentialIssues", [])
             conversion_result["potentialIssues"] = existing_issues + issues
-
-
     
     def _merge_conversion_results(self, results: List[Dict[str, Any]], 
                                 target_language: str,
-                                structure_info: Dict[str, Any] = None) -> Dict[str, Any]:
+                                structure_info: Dict[str, Any] = None,
+                                project_name: str = "TaskManagementSystem") -> Dict[str, Any]:
         """
         Merge multiple conversion results into a single result.
         
@@ -756,6 +672,7 @@ class CodeConverter:
             results: List of conversion results to merge
             target_language: The target programming language
             structure_info: Information about the code structure
+            project_name: The name of the solution/project
             
         Returns:
             Merged conversion result
@@ -768,43 +685,57 @@ class CodeConverter:
                 "databaseUsed": False
             }
         
-        # Initialize with defaults
-        merged_code = ""
         all_notes = []
         all_issues = []
         database_used = any(result.get("databaseUsed", False) for result in results)
+        merged_code = {}
         
-        # Special handling for Java and C# to properly merge class definitions
-        if target_language in ["Java", "C#"]:
-            try:
-                merged_code = self._merge_oop_code(results, target_language, structure_info)
-            except Exception as e:
-                logger.error(f"Error in OOP code merging: {str(e)}")
-                merged_code = self._fallback_merge(results)
-                all_issues.append(f"Error during intelligent code merging: {str(e)}. Used fallback merge method.")
-        else:
-            # For other languages, use a simpler merging approach
-            merged_code = self._fallback_merge(results)
+        # Initialize merged code structure
+        sections = [
+            "DomainEntity", "DomainInterface", "DomainExceptions", "ApplicationServiceInterface",
+            "ApplicationService", "ApplicationDTO", "InfrastructureRepository",
+            "InfrastructureDbContext", "PresentationController", "Program",
+            "AppSettings", "DomainProject", "ApplicationProject", "InfrastructureProject", 
+            "PresentationProject", "SolutionFile", "Dependencies"
+        ]
+        for section in sections:
+            merged_code[section] = {"FileName": "", "Path": "", "content": ""}
         
-        # Polish the merged code for Java and C#
-        if target_language in ["Java", "C#"]:
-            merged_code = self._polish_code(merged_code, target_language)
-        
-        # Merge notes and issues
-        for i, result in enumerate(results):
+        # Merge each section
+        for result in results:
+            converted_code = result.get("convertedCode", {})
+            for section in sections:
+                if section in converted_code and converted_code[section].get("content"):
+                    if not merged_code[section]["content"]:
+                        merged_code[section] = converted_code[section]
+                    else:
+                        # Append content for non-unique sections (e.g., multiple entities)
+                        merged_code[section]["content"] += "\n\n" + converted_code[section]["content"]
+            
             notes = result.get("conversionNotes", "")
             if notes:
-                all_notes.append(f"Chunk {i+1}: {notes}")
+                all_notes.append(notes)
                 
             issues = result.get("potentialIssues", [])
             if issues:
-                all_issues.extend([f"Chunk {i+1}: {issue}" for issue in issues])
+                all_issues.extend(issues)
         
-        # Add a note about the chunking process
+        # Polish the merged code
+        if target_language == "C#":
+            for section in sections:
+                if merged_code[section]["content"]:
+                    merged_code[section]["content"] = self._polish_code(merged_code[section]["content"], target_language)
+        
+        # Generate project files for C# Onion Architecture
+        if target_language == "C#":
+            project_files = self._generate_project_files(project_name)
+            # Merge project files with existing code
+            for key, value in project_files.items():
+                merged_code[key] = value
+        
         all_notes.insert(0, f"The original code was processed in {len(results)} chunks due to its size and merged into a single codebase.")
         
-        # Perform final validation on the merged code
-        if target_language in ["Java", "C#"]:
+        if target_language == "C#":
             validation_result = self._validate_merged_code(merged_code, target_language)
             if validation_result:
                 all_issues.extend(validation_result)
@@ -815,12 +746,10 @@ class CodeConverter:
             "potentialIssues": all_issues,
             "databaseUsed": database_used
         }
-
-
     
     def _polish_code(self, code: str, target_language: str) -> str:
         """
-        Polish the merged code to fix any syntax errors or incomplete blocks.
+        Polish the merged code to fix any syntax errors or incomplete blocks, ensuring Onion Architecture compliance.
         
         Args:
             code: The merged code to polish
@@ -833,25 +762,23 @@ class CodeConverter:
             logger.warning("Empty code provided for polishing")
             return code
             
-        # First attempt automatic fixes for common issues
         polished = code
         
         # Fix mismatched braces
         open_count = polished.count('{')
         close_count = polished.count('}')
         if open_count > close_count:
-            # Add missing closing braces
             polished += '\n' + '}' * (open_count - close_count)
         
-        # Ensure all catch blocks have content
+        # Fix empty catch blocks
         empty_catch_pattern = r'catch\s*\(([^)]*)\)\s*{\s*}'
-        polished = re.sub(empty_catch_pattern, 
-                        r'catch (\1) {\n    // Error handling\n    System.err.println("Error caught: " + \1.getMessage());\n}' 
-                        if target_language == "Java" else 
-                        r'catch (\1) {\n    // Error handling\n    Console.WriteLine("Error caught: " + \1.Message);\n}',
-                        polished)
+        polished = re.sub(
+            empty_catch_pattern, 
+            r'catch (\1) {\n    // Error handling\n    Console.WriteLine("Error caught: " + \1.Message);\n}',
+            polished
+        )
         
-        # Ensure all class and method blocks are properly indented
+        # Ensure consistent indentation
         lines = polished.split('\n')
         indented_lines = []
         indent_level = 0
@@ -859,33 +786,43 @@ class CodeConverter:
         for line in lines:
             stripped = line.strip()
             
-            # Adjust indent level based on braces
             if stripped.endswith('{'):
                 indented_lines.append('    ' * indent_level + stripped)
                 indent_level += 1
             elif stripped.startswith('}'):
-                indent_level = max(0, indent_level - 1)  # Prevent negative indent
+                indent_level = max(0, indent_level - 1)
                 indented_lines.append('    ' * indent_level + stripped)
             else:
                 indented_lines.append('    ' * indent_level + stripped)
         
         polished = '\n'.join(indented_lines)
         
-        # Now use the model to further polish the code
+        # Ensure Onion Architecture compliance and proper namespace organization
         prompt = f"""
-        Below is a {target_language} code that was generated by converting from another language. It may have syntax errors or style issues.
-        Please fix the following types of issues to make it valid and well-structured {target_language} code:
+        Below is a {target_language} code that was generated by converting from another language. It may have syntax errors, style issues, or violations of Onion Architecture principles.
+        Please fix the following types of issues to make it valid and well-structured {target_language} code following Onion Architecture:
         
         1. Fix any syntax errors (missing semicolons, mismatched braces, etc.)
         2. Ensure proper class structure with correct access modifiers
         3. Fix method signatures (return types, parameter types)
         4. Ensure proper variable initialization
         5. Add appropriate exception handling in try-catch blocks
-        6. Fix any import statements if needed
-        7. Follow standard {target_language} naming conventions
-        8. Ensure consistent indentation and formatting
-        9. Remove any redundant or duplicate code
-        10. Add necessary comments for complex logic
+        6. Fix import statements to align with Onion Architecture:
+           - Domain layer: No external dependencies (e.g., no Microsoft.EntityFrameworkCore)
+           - Application layer: Only depends on Domain
+           - Infrastructure layer: Implements Application interfaces, includes EF Core
+           - Presentation layer: Depends on Application
+        7. Ensure proper namespace organization:
+           - Domain: Company.Project.Domain
+           - Application: Company.Project.Application
+           - Infrastructure: Company.Project.Infrastructure
+           - Presentation: Company.Project.Presentation
+        8. Follow standard {target_language} naming conventions
+        9. Ensure consistent indentation and formatting
+        10. Remove any redundant or duplicate code
+        11. Add necessary comments for complex logic
+        12. Remove any database-related code from Domain and Application layers
+        13. Ensure dependency injection is properly set up in Program.cs
         
         Here is the code to fix:
         
@@ -895,14 +832,14 @@ class CodeConverter:
         
         Please provide ONLY the corrected code without any explanations. Keep ALL functionality intact.
         """
-
+        
         try:
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": f"You are an expert {target_language} developer specializing in code quality, syntax correction, and formatting. Your task is to fix code issues while preserving all functionality."
+                        "content": f"You are an expert {target_language} developer specializing in code quality, syntax correction, and Onion Architecture. Your task is to fix code issues while preserving all functionality and ensuring compliance with Onion Architecture principles."
                     },
                     {"role": "user", "content": prompt}
                 ],
@@ -911,99 +848,108 @@ class CodeConverter:
             )
             
             polished_code = response.choices[0].message.content.strip()
-            
-            # Extract the code from the response, in case it's wrapped in markdown
-            code_match = re.search(r'```(?:' + target_language.lower() + r')?\n([\s\S]*?)\n```', polished_code)
-            if code_match:
-                polished_code = code_match.group(1).strip()
-            else:
-                # If no markdown, assume the entire content is the code
-                # But check if it seems like valid code (contains class or package/namespace)
-                if not re.search(r'(class|package|namespace)\s+', polished_code):
-                    logger.warning("Polished code doesn't look like valid Java/C# code, using original polish")
-                    return polished
-            
-            # Make a final validation on the polished code
-            validation_issues = self._quick_validate(polished_code, target_language)
-            if validation_issues:
-                logger.warning(f"Polished code still has issues: {validation_issues}")
-                # If the model's polishing made things worse, fall back to our basic polishing
-                if len(validation_issues) >= 3:  # Arbitrary threshold for "made things worse"
-                    logger.warning("Model polishing degraded code quality, falling back to basic polish")
-                    return polished
-                    
+            polished_code = re.sub(r'```(?:' + target_language.lower() + r')?\n([\s\S]*?)\n```', r'\1', polished_code)
             return polished_code
-
         except Exception as e:
             logger.error(f"Error polishing code: {str(e)}")
-            return polished  # Return our basic polished code if model polish fails
-            
-    def _quick_validate(self, code: str, target_language: str) -> List[str]:
-        """Quick validation to check if polishing introduced new issues"""
-        issues = []
-        
-        # Check for mismatched braces
-        opening_braces = code.count("{")
-        closing_braces = code.count("}")
-        if opening_braces != closing_braces:
-            issues.append(f"Mismatched braces: {opening_braces} opening vs {closing_braces} closing")
-        
-        # Check for empty catch blocks
-        empty_catches = len(re.findall(r'catch\s*\([^)]*\)\s*{\s*}', code))
-        if empty_catches > 0:
-            issues.append(f"Found {empty_catches} empty catch blocks")
-            
-        return issues
+            return polished  # Return original if polishing fails
     
-
-    def _validate_merged_code(self, merged_code: str, target_language: str) -> List[str]:
+    def _validate_merged_code(self, merged_code: Dict[str, Any], target_language: str) -> List[str]:
         """
-        Validate the merged code for common issues.
+        Validate the merged code for Onion Architecture compliance and common issues.
         
         Args:
-            merged_code: The merged code to validate
+            merged_code: The merged code dictionary
             target_language: The target programming language
             
         Returns:
             List of validation issues
         """
-        if merged_code is None:
-            logger.warning("Merged code is None, skipping validation")
-            return ["Merged code is None"]
-        if not isinstance(merged_code, str):
-            logger.warning(f"Merged code is not a string, but {type(merged_code)}, skipping validation")
-            return [f"Merged code is not a string, but {type(merged_code)}"]
-        
         issues = []
         
-        # Check for mismatched braces
-        opening_braces = merged_code.count("{")
-        closing_braces = merged_code.count("}")
-        if opening_braces != closing_braces:
-            issues.append(f"Mismatched braces in merged code: {opening_braces} opening vs {closing_braces} closing")
+        if target_language != "C#":
+            return issues
         
-        # Check for incomplete try-catch blocks
-        try_count = len(re.findall(r'\btry\s*{', merged_code))
-        catch_count = len(re.findall(r'\bcatch\s*\(', merged_code))
-        if try_count > catch_count:
-            issues.append(f"Incomplete exception handling in merged code: {try_count} try blocks but only {catch_count} catch blocks")
+        # Validate folder structure
+        expected_paths = {
+            "DomainEntity": "Domain/Entities/",
+            "DomainInterface": "Domain/Interfaces/",
+            "ApplicationServiceInterface": "Application/Interfaces/",
+            "ApplicationService": "Application/Services/",
+            "ApplicationDTO": "Application/DTOs/",
+            "InfrastructureRepository": "Infrastructure/Repositories/",
+            "InfrastructureDbContext": "Infrastructure/Data/",
+            "PresentationController": "Presentation/Controllers/",
+            "Program": "./",
+            "AppSettings": "./",
+            "ProjectFile": "./"
+        }
         
-        # Check for empty catch blocks
-        empty_catches = len(re.findall(r'catch\s*\([^)]*\)\s*{\s*}', merged_code))
-        if empty_catches > 0:
-            issues.append(f"Found {empty_catches} empty catch blocks in merged code")
+        for section, expected_path in expected_paths.items():
+            if section in merged_code:
+                actual_path = merged_code[section].get("Path", "")
+                if actual_path != expected_path:
+                    issues.append(f"Incorrect path for {section}: expected {expected_path}, got {actual_path}")
+                
+                if not merged_code[section].get("FileName"):
+                    issues.append(f"Missing FileName for {section}")
+                
+                if not merged_code[section].get("content"):
+                    issues.append(f"Empty content for {section}")
         
-        # Check for incomplete class definitions
-        if target_language == "Java":
-            class_starts = len(re.findall(r'(public|private|protected|)\s*(class|interface|enum)\s+\w+', merged_code))
-            class_ends = len(re.findall(r'}\s*(\/\/.*)?$', merged_code, re.MULTILINE))
-            if class_starts > class_ends:
-                issues.append(f"Potentially incomplete class definitions: {class_starts} class starts but only {class_ends} endings")
+        # Check for Onion Architecture compliance
+        domain_code = merged_code.get("DomainEntity", {}).get("content", "") + \
+                     merged_code.get("DomainInterface", {}).get("content", "")
+        
+        # Check for forbidden dependencies in Domain layer
+        forbidden_imports = [
+            "Microsoft.EntityFrameworkCore",
+            "System.Data",
+            "Microsoft.AspNetCore",
+            "Infrastructure",
+            "Application"
+        ]
+        for forbidden in forbidden_imports:
+            if forbidden in domain_code:
+                issues.append(f"Domain layer contains forbidden dependency: {forbidden}")
+        
+        # Check Application layer dependencies
+        app_service_code = merged_code.get("ApplicationService", {}).get("content", "")
+        if "DbContext" in app_service_code or "Repository" in app_service_code:
+            issues.append("Application layer contains direct references to Infrastructure layer")
+        
+        # Check dependency injection setup
+        program_code = merged_code.get("Program", {}).get("content", "")
+        if "AddScoped" not in program_code and "AddSingleton" not in program_code:
+            issues.append("Program.cs missing dependency injection setup")
+        
+        # Check for proper namespace organization
+        for section in ["DomainEntity", "DomainInterface", "ApplicationService", 
+                       "ApplicationServiceInterface", "ApplicationDTO", 
+                       "InfrastructureRepository", "InfrastructureDbContext", 
+                       "PresentationController"]:
+            code = merged_code.get(section, {}).get("content", "")
+            namespace_match = re.search(r'namespace\s+([A-Za-z0-9_.]+)', code)
+            if code and not namespace_match:
+                issues.append(f"Missing namespace declaration in {section}")
+            elif namespace_match:
+                namespace = namespace_match.group(1)
+                expected_namespace = f"Company.Project.{section.split('Service')[0].split('DTO')[0]}"
+                if not namespace.startswith("Company.Project"):
+                    issues.append(f"Invalid namespace in {section}: expected {expected_namespace}, got {namespace}")
+        
+        # Check for proper DbContext in Infrastructure layer
+        db_context = merged_code.get("InfrastructureDbContext", {}).get("content", "")
+        if db_context and "DbContext" not in db_context:
+            issues.append("InfrastructureDbContext does not inherit from DbContext")
+        
+        # Check for API controller attributes
+        controller_code = merged_code.get("PresentationController", {}).get("content", "")
+        if controller_code and "[ApiController]" not in controller_code:
+            issues.append("PresentationController missing [ApiController] attribute")
         
         return issues
     
-
-
     def _merge_oop_code(self, results: List[Dict[str, Any]], 
                         target_language: str,
                         structure_info: Dict[str, Any] = None) -> str:
@@ -1188,8 +1134,6 @@ class CodeConverter:
         else:
             return "\n".join(merged_code)
 
-
-
     def _fallback_merge(self, results: List[Dict[str, Any]]) -> str:
         """
         Simple fallback method to merge code chunks when the intelligent merge fails.
@@ -1210,10 +1154,6 @@ class CodeConverter:
         
         return merged_code
     
-
-    
-            
-
     def _deduplicate_methods(self, class_content: str, method_regex: str) -> str:
             """
             Removes duplicate method definitions in class content based on method signatures.
@@ -1255,6 +1195,172 @@ class CodeConverter:
 
             return deduplicated_content
 
+    def _generate_project_files(self, project_name: str = "TaskManagementSystem") -> Dict[str, Dict[str, str]]:
+        """
+        Generate .csproj files for each layer and solution file.
+        
+        Args:
+            project_name: The name of the solution/project
+            
+        Returns:
+            Dictionary containing project files
+        """
+        project_files = {}
+        
+        # Domain Project (.csproj)
+        domain_csproj = f"""<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>"""
+        
+        # Application Project (.csproj)
+        application_csproj = f"""<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Domain/Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+    <PackageReference Include="AutoMapper" Version="12.0.0" />
+  </ItemGroup>
+
+</Project>"""
+        
+        # Infrastructure Project (.csproj)
+        infrastructure_csproj = f"""<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Application/Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>"""
+        
+        # Presentation Project (.csproj)
+        presentation_csproj = f"""<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Application/Application.csproj" />
+    <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
+  </ItemGroup>
+
+</Project>"""
+        
+        # Solution File (.sln)
+        solution_file = f"""Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "Domain", "Domain\\Domain.csproj", "{{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}"
+EndProject
+Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "Application", "Application\\Application.csproj", "{{B2C3D4E5-F6G7-8901-BCDE-F23456789012}}"
+EndProject
+Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "Infrastructure", "Infrastructure\\Infrastructure.csproj", "{{C3D4E5F6-G7H8-9012-CDEF-345678901234}}"
+EndProject
+Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "Presentation", "Presentation\\Presentation.csproj", "{{D4E5F6G7-H8I9-0123-DEF0-456789012345}}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}.Release|Any CPU.Build.0 = Release|Any CPU
+		{{B2C3D4E5-F6G7-8901-BCDE-F23456789012}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{{B2C3D4E5-F6G7-8901-BCDE-F23456789012}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{{B2C3D4E5-F6G7-8901-BCDE-F23456789012}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{{B2C3D4E5-F6G7-8901-BCDE-F23456789012}}.Release|Any CPU.Build.0 = Release|Any CPU
+		{{C3D4E5F6-G7H8-9012-CDEF-345678901234}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{{C3D4E5F6-G7H8-9012-CDEF-345678901234}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{{C3D4E5F6-G7H8-9012-CDEF-345678901234}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{{C3D4E5F6-G7H8-9012-CDEF-345678901234}}.Release|Any CPU.Build.0 = Release|Any CPU
+		{{D4E5F6G7-H8I9-0123-DEF0-456789012345}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{{D4E5F6G7-H8I9-0123-DEF0-456789012345}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{{D4E5F6G7-H8I9-0123-DEF0-456789012345}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{{D4E5F6G7-H8I9-0123-DEF0-456789012345}}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {{E5F6G7H8-I9J0-1234-EF01-567890123456}}
+	EndGlobalSection
+EndGlobal"""
+        
+        project_files["DomainProject"] = {
+            "FileName": "Domain.csproj",
+            "Path": "Domain/",
+            "content": domain_csproj
+        }
+        
+        project_files["ApplicationProject"] = {
+            "FileName": "Application.csproj", 
+            "Path": "Application/",
+            "content": application_csproj
+        }
+        
+        project_files["InfrastructureProject"] = {
+            "FileName": "Infrastructure.csproj",
+            "Path": "Infrastructure/", 
+            "content": infrastructure_csproj
+        }
+        
+        project_files["PresentationProject"] = {
+            "FileName": "Presentation.csproj",
+            "Path": "Presentation/",
+            "content": presentation_csproj
+        }
+        
+        project_files["SolutionFile"] = {
+            "FileName": f"{project_name}.sln",
+            "Path": "./",
+            "content": solution_file
+        }
+        
+        return project_files
+
 
 def should_chunk_code(code: str, line_threshold: int = 24000) -> bool:
     """
@@ -1283,3 +1389,13 @@ def create_code_converter(client, model_name: str) -> CodeConverter:
         A CodeConverter instance
     """
     return CodeConverter(client, model_name)
+
+def extract_cobol_program_name(source_code: str, fallback: str = "TaskManagementSystem") -> str:
+    """
+    Extracts the PROGRAM-ID from COBOL code, or returns the fallback if not found.
+    """
+    import re
+    match = re.search(r'PROGRAM-ID\.\s*([A-Z0-9_-]+)\.', source_code, re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return fallback

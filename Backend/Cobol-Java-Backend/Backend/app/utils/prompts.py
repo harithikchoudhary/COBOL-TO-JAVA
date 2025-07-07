@@ -3,16 +3,7 @@ Module for generating prompts for code analysis and conversion.
 """
 
 def create_business_requirements_prompt(source_language, source_code):
-    """
-    Creates a prompt for analyzing business requirements from source code.
-    
-    Args:
-        source_language (str): The programming language of the source code
-        source_code (str): The source code to analyze
-        
-    Returns:
-        str: The prompt for business requirements analysis
-    """
+    # Unchanged, as business requirements don't need Onion Architecture-specific changes
     return f"""
             You are a business analyst responsible for analyzing and documenting the business requirements from the following {source_language} code. Your task is to interpret the code's intent and extract meaningful business logic suitable for non-technical stakeholders.
 
@@ -68,19 +59,9 @@ def create_business_requirements_prompt(source_language, source_code):
             """
 
 def create_technical_requirements_prompt(source_language, target_language, source_code):
-    """
-    Creates a prompt for analyzing technical requirements from source code.
-    
-    Args:
-        source_language (str): The programming language of the source code
-        target_language (str): The target programming language for conversion (.NET 8)
-        source_code (str): The source code to analyze
-        
-    Returns:
-        str: The prompt for technical requirements analysis
-    """
+    # Updated to include Onion Architecture principles in technical requirements
     return f"""
-            Analyze the following {source_language} code and extract the technical requirements for migrating it to {target_language}.
+            Analyze the following {source_language} code and extract the technical requirements for migrating it to {target_language} using Onion Architecture.
             Do not use any Markdown formatting (e.g., no **bold**, italics, or backticks).
             Return plain text only.
 
@@ -90,6 +71,11 @@ def create_technical_requirements_prompt(source_language, target_language, sourc
             3. For each COBOL-specific construct, identify the exact technical requirement it represents.
             4. Document all technical constraints, dependencies, and integration points.
             5. Pay special attention to error handling, transaction management, and data access patterns.
+            6. Ensure alignment with Onion Architecture principles:
+               - Domain Layer: Core entities, interfaces, and business logic, independent of frameworks.
+               - Application Layer: Use cases and application services, dependent only on Domain.
+               - Infrastructure Layer: Data access, external services, dependent on Application interfaces.
+               - Presentation Layer: API controllers, dependent on Application services.
 
             Format each requirement as 'The system must [specific technical capability]' or 'The system should [specific technical capability]' with direct traceability to code sections.
 
@@ -112,52 +98,85 @@ def create_technical_requirements_prompt(source_language, target_language, sourc
 
 def create_dotnet_specific_prompt(source_language, source_code, business_requirements, technical_requirements, db_setup_template):
     """
-    Creates a .NET 8-specific prompt for code conversion.
-    
-    Args:
-        source_language (str): The programming language of the source code
-        source_code (str): The source code to convert
-        business_requirements (str): The business requirements extracted from analysis
-        technical_requirements (str): The technical requirements extracted from analysis
-        db_setup_template (str): The database setup template for .NET 8
-        
-    Returns:
-        str: The .NET 8-specific prompt for code conversion
+    Creates a .NET 8-specific prompt for code conversion using Onion Architecture.
     """
     return f"""
-    .NET 8-Specific Requirements:
-    - Use .NET 8 framework
-    - Follow C# naming conventions (PascalCase for public members, camelCase for private)
-    - Implement proper exception handling using try-catch blocks
-    - Use C# 12 features where appropriate
-    - Implement proper logging using Microsoft.Extensions.Logging
-    - Use dependency injection with IServiceCollection
+    .NET 8-Specific Requirements (Onion Architecture):
+    - Target Framework: .NET 8 with Onion Architecture principles
+    - Organize code into four main layers: Domain, Application, Infrastructure, Presentation
+    - Enforce dependency inversion: Outer layers depend on inner layers via interfaces
+    - Domain Layer:
+        - Contains entities, enums, exceptions, and service interfaces
+        - Must be independent of frameworks and external systems
+        - Use plain C# classes with no external dependencies
+        - Namespace: Company.Project.Domain.[Entities|Interfaces|Exceptions]
+        - Project file: Domain.csproj (Class Library)
+    - Application Layer:
+        - Contains application services, DTOs, and interfaces
+        - Implements business use cases from business_requirements
+        - Depends only on Domain layer
+        - Defines interfaces for infrastructure implementations
+        - Namespace: Company.Project.Application.[Services|Interfaces|DTOs]
+        - Project file: Application.csproj (Class Library)
+    - Infrastructure Layer:
+        - Contains repositories, DbContext, and external service implementations
+        - Implements interfaces defined in Application layer
+        - Uses Entity Framework Core for database operations
+        - Namespace: Company.Project.Infrastructure.[Data|Repositories]
+        - Project file: Infrastructure.csproj (Class Library)
+    - Presentation Layer:
+        - Contains API controllers
+        - Depends on Application layer services
+        - Uses ASP.NET Core for RESTful APIs
+        - Namespace: Company.Project.Presentation.Controllers
+        - Project file: Presentation.csproj (Web Application)
+    - Solution Structure:
+        - Solution file: TaskManagementSystem.sln
+        - Each layer has its own .csproj file with appropriate dependencies
+        - Proper project references between layers
+    - Naming Conventions:
+        - PascalCase for public members, classes, and interfaces
+        - camelCase with _prefix for private fields
+    - Implement exception handling with try-catch blocks and custom exceptions in Domain/Exceptions
+    - Use C# 12 features (e.g., primary constructors, collection expressions) where appropriate
+    - Implement logging with Microsoft.Extensions.Logging
+    - Use dependency injection with IServiceCollection in Program.cs
     - Follow SOLID principles
-    - Use Entity Framework Core for database operations
-    - Implement proper validation using System.ComponentModel.DataAnnotations
-    - Use proper C# namespace structure (Company.Project.*)
+    - Use Entity Framework Core for database operations with proper connection management
+    - Implement validation with System.ComponentModel.DataAnnotations
+    - Required NuGet Packages by Layer:
+        - Domain: No external dependencies (pure C#)
+        - Application: Microsoft.Extensions.DependencyInjection, AutoMapper
+        - Infrastructure: Microsoft.EntityFrameworkCore, Microsoft.EntityFrameworkCore.SqlServer, Microsoft.Extensions.Logging
+        - Presentation: Microsoft.AspNetCore.App, Microsoft.EntityFrameworkCore.Design, Swashbuckle.AspNetCore, AutoMapper.Extensions.Microsoft.DependencyInjection
 
-    Required NuGet Packages:
-    - Microsoft.AspNetCore.App
-    - Microsoft.EntityFrameworkCore
-    - Microsoft.Extensions.Logging
-    - AutoMapper
-
-    .NET 8 Project Structure:
-    src/
-    ├── Controllers/
-    ├── Services/
-    │   └── Interfaces/       # Service layer interfaces
-    ├── Repositories/
-    │   └── Interfaces/       # Repository layer interfaces
-    ├── Models/
-    ├── DTOs/
+    Project Structure:
+    TaskManagementSystem/
+    ├── Domain/
+    │   ├── Domain.csproj
+    │   ├── Entities/
+    │   ├── Interfaces/
+    │   ├── Exceptions/
+    ├── Application/
+    │   ├── Application.csproj
+    │   ├── Interfaces/
+    │   ├── Services/
+    │   ├── DTOs/
+    ├── Infrastructure/
+    │   ├── Infrastructure.csproj
+    │   ├── Data/
+    │   ├── Repositories/
+    ├── Presentation/
+    │   ├── Presentation.csproj
+    │   ├── Controllers/
+    │   ├── Program.cs
+    │   ├── appsettings.json
+    ├── TaskManagementSystem.sln
 
     .NET 8-Specific Attributes:
-    - Use [ApiController] for API controllers
-    - Use [Route] for routing
+    - Use [ApiController] and [Route] for controllers
     - Use [FromBody] for request body binding
-    - Use [Required] for validation
+    - Use [Required] and [StringLength] for validation
     - Use [JsonPropertyName] for JSON serialization
     """
 
@@ -170,11 +189,11 @@ def create_code_conversion_prompt(
     db_setup_template
 ):
     """
-    Creates a prompt for converting code from one language to .NET 8.
+    Creates a prompt for converting code from one language to .NET 8 using Onion Architecture.
 
     Args:
         source_language (str): The programming language of the source code
-        target_language (str): The target programming language for conversion (.NET 8)
+        target_language (str): The target programming language (.NET 8)
         source_code (str): The source code to convert
         business_requirements (str): The business requirements extracted from analysis
         technical_requirements (str): The technical requirements extracted from analysis
@@ -183,12 +202,12 @@ def create_code_conversion_prompt(
     Returns:
         str: The prompt for code conversion
     """
-    language_specific_prompt = ""
+    if not isinstance(source_code, str):
+        raise ValueError("source_code must be a string")
 
-# Normalize the input for safe comparison
+    language_specific_prompt = ""
     normalized_target = target_language.lower().strip()
 
-    # Accept multiple synonyms
     if normalized_target in [".net 8", "c#", "csharp", ".net"]:
         language_specific_prompt = create_dotnet_specific_prompt(
             source_language,
@@ -200,10 +219,8 @@ def create_code_conversion_prompt(
     else:
         raise ValueError("Only .NET 8 / C# is supported as the target language.")
 
-
     base_prompt = f"""
-    Important: Please ensure that the {source_language} code is translated into its exact equivalent in {target_language}, maintaining a clean layered architecture.
-    Convert the following {source_language} code to {target_language} while strictly adhering to the provided business and technical requirements.
+    Convert the following {source_language} code to {target_language} using Onion Architecture, ensuring the output is a complete, executable .NET 8 application that maintains all business logic and functionality.
 
     Source Language: {source_language}
     Target Language: {target_language}
@@ -211,51 +228,46 @@ def create_code_conversion_prompt(
     {language_specific_prompt}
 
     Required Output Structure:
-    
-    Give output in below structure mentioned clearly. Each section must be properly formatted with clear section markers.
-    
-    Your response must be organized in the following sections, each clearly marked with a section header:
+    Return the response in JSON format with the following structure (all sections must be present, even if empty):
+    {{
+      "convertedCode": {{
+        "DomainEntity": {{"FileName": "EntityName.cs", "Path": "Domain/Entities/", "content": ""}},
+        "DomainInterface": {{"FileName": "IEntityNameService.cs", "Path": "Domain/Interfaces/", "content": ""}},
+        "DomainExceptions": {{"FileName": "EntityNameException.cs", "Path": "Domain/Exceptions/", "content": ""}},
+        "ApplicationServiceInterface": {{"FileName": "IEntityNameAppService.cs", "Path": "Application/Interfaces/", "content": ""}},
+        "ApplicationService": {{"FileName": "EntityNameAppService.cs", "Path": "Application/Services/", "content": ""}},
+        "ApplicationDTO": {{"FileName": "EntityNameDTO.cs", "Path": "Application/DTOs/", "content": ""}},
+        "InfrastructureRepository": {{"FileName": "EntityNameRepository.cs", "Path": "Infrastructure/Repositories/", "content": ""}},
+        "InfrastructureDbContext": {{"FileName": "ApplicationDbContext.cs", "Path": "Infrastructure/Data/", "content": ""}},
+        "PresentationController": {{"FileName": "EntityNameController.cs", "Path": "Presentation/Controllers/", "content": ""}},
+        "Program": {{"FileName": "Program.cs", "Path": "Presentation/", "content": ""}},
+        "AppSettings": {{"FileName": "appsettings.json", "Path": "Presentation/", "content": ""}},
+        "DomainProject": {{"FileName": "Domain.csproj", "Path": "Domain/", "content": ""}},
+        "ApplicationProject": {{"FileName": "Application.csproj", "Path": "Application/", "content": ""}},
+        "InfrastructureProject": {{"FileName": "Infrastructure.csproj", "Path": "Infrastructure/", "content": ""}},
+        "PresentationProject": {{"FileName": "Presentation.csproj", "Path": "Presentation/", "content": ""}},
+        "SolutionFile": {{"FileName": "TaskManagementSystem.sln", "Path": "./", "content": ""}},
+        "Dependencies": {{"content": "NuGet packages and .NET dependencies needed"}}
+      }},
+      "databaseUsed": true/false,
+      "conversionNotes": "Detailed notes about the conversion process",
+      "potentialIssues": ["List of potential issues or considerations"]
+    }}
 
-    ##Entity
-    FileName: [filename]
-    // Entity code here
+    Each section must be clearly separated with correct file names and paths. Ensure:
+    - Proper dependency injection between layers
+    - Domain layer has no dependencies (pure C# class library)
+    - Application layer depends only on Domain (references Domain project)
+    - Infrastructure layer implements Application interfaces (references Application project)
+    - Presentation layer depends on Application (references Application project)
+    - Each layer has its own .csproj file with appropriate dependencies
+    - Solution file (.sln) includes all projects with proper references
+    - Code follows C# naming conventions and SOLID principles
+    - Project references follow dependency direction (outer layers reference inner layers)
 
-    ##Repository
-    FileName: [filename]
-    // Repository code here
-
-    ##Service
-    FileName: [filename]
-    // Service code here
-
-    ##Controller
-    FileName: [filename]
-    // Controller code here
-
-    ##appsettings.json
-    // Configuration here
-
-    ##Dependencies
-    // Dependencies configuration here
-
-    Each section must be clearly separated using the above headers. Include only relevant code for each layer.
-    Ensure proper dependency injection and relationships between layers are maintained.
-    Each code block must be properly formatted with the correct language identifier (e.g., csharp for code, json for configuration).
-    File names must be clearly specified for each section.
-
-    Requirements:
-    - The output should be a complete, executable implementation in .NET 8
-    - Maintain all business logic, functionality, and behavior of the original code
-    - Produce idiomatic code following .NET 8 best practices
-    - Include all necessary class definitions, method implementations, and boilerplate code
-    - Ensure consistent data handling, formatting, and computations
-    - DO NOT include markdown code blocks (like ```csharp or ```) in your response, just provide the raw code
-    - Do not return any unwanted code in {target_language} or functions which are not in {source_language}.
-
-    Database-Specific Instructions:
-    - If the {source_language} code includes any database-related operations, automatically generate the necessary setup code using Entity Framework Core
-    - Follow this example format for database initialization and setup:
-
+    Database Instructions:
+    - Include Entity Framework Core setup in Infrastructure layer only if {source_language} code contains database operations (e.g., EXEC SQL, FILE SECTION, VSAM)
+    - Use this database setup template if applicable:
     {db_setup_template if db_setup_template else 'No database setup required.'}
 
     Business Requirements:
@@ -267,27 +279,62 @@ def create_code_conversion_prompt(
     Source Code ({source_language}):
     {source_code}
 
-    IMPORTANT: Only return the complete converted code WITHOUT any markdown formatting. DO NOT wrap your code in triple backticks (```). Return just the raw code itself.
-
-    Additional Database Setup Instructions:
-    If database operations are detected in the source code, include these files in your output:
-
-    ##appsettings.json
-    - Database connection configuration
-    - Logging settings
-
-    ##Dependencies
-    - Required database dependencies (e.g., Microsoft.EntityFrameworkCore)
-    - EF Core provider dependencies (e.g., Pomelo.EntityFrameworkCore.MySql)
+    Additional Instructions:
+    - Only include database code if explicitly required by source code
+    - Ensure all variables are initialized and methods are implemented
+    - Use proper namespace organization (Company.Project.[Layer])
+    - Include all necessary using statements
+    - Handle COBOL-specific constructs (e.g., PIC clauses, PERFORM) appropriately
+    - Return raw code without markdown code fences
     """
 
     return base_prompt
 
 def create_unit_test_prompt(target_language, converted_code, business_requirements, technical_requirements):
+    """
+    Creates a prompt for generating unit tests for the converted .NET 8 code.
+    """
+    return f"""
+    Generate unit tests for the following .NET 8 code using xUnit and Moq, focusing on the Application and Domain layers. Ensure tests cover all business logic and edge cases.
+
+    Target Language: {target_language}
+    Converted Code: {converted_code}
+    Business Requirements: {business_requirements}
+    Technical Requirements: {technical_requirements}
+
+    Return the response in JSON format:
+    {{
+      "unitTestCode": "Complete unit test code",
+      "testDescription": "Description of the test strategy",
+      "coverage": ["List of functionalities covered"]
+    }}
+    """
+
+def create_functional_test_prompt(target_language, converted_code, business_requirements):
+    """
+    Creates a prompt for generating functional tests for the converted .NET 8 code.
+    """
+    return f"""
+    Generate functional test scenarios for the following .NET 8 application, focusing on user journeys and business requirements. Use SpecFlow for acceptance testing.
+
+    Target Language: {target_language}
+    Converted Code: {converted_code}
+    Business Requirements: {business_requirements}
+
+    Return the response in JSON format:
+    {{
+      "functionalTests": [
+        {{"id": "FT1", "title": "Test scenario title", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome"}}
+      ],
+      "testStrategy": "Description of the overall testing approach"
+    }}
+    """
+
+def create_unit_test_prompt(target_language, converted_code, business_requirements, technical_requirements):
     """Create a prompt for generating unit tests for the converted .NET 8 code"""
     
     prompt = f"""
-    You are tasked with creating comprehensive unit tests for newly converted {target_language} code.
+    You are tasked with creating comprehensive unit tests for newly converted {target_language} code organized in Onion Architecture.
     
     Please generate unit tests for the following {target_language} code. The tests should verify that 
     the code meets all business requirements and handles edge cases appropriately.
@@ -303,14 +350,15 @@ def create_unit_test_prompt(target_language, converted_code, business_requiremen
     {converted_code}
     
     Guidelines for the unit tests:
-    1. Use NUnit or xUnit as the unit testing framework for .NET 8
-    2. Create tests for all public methods and key functionality
+    1. Use NUnit as the unit testing framework for .NET 8
+    2. Create tests for all public methods in Application and Domain services
     3. Include positive test cases, negative test cases, and edge cases
-    4. Use Moq for mocking external dependencies where appropriate
+    4. Use Moq for mocking dependencies (e.g., repository interfaces)
     5. Follow test naming conventions that clearly describe what is being tested
     6. Include setup and teardown as needed using [SetUp] and [TearDown]
     7. Add comments explaining complex test scenarios
     8. Ensure high code coverage, especially for complex business logic
+    9. Place tests in a Tests/UnitTests/ folder with appropriate namespace (e.g., SolutionName.Tests.UnitTests)
     
     Provide ONLY the unit test code without additional explanations.
     """
@@ -318,8 +366,7 @@ def create_unit_test_prompt(target_language, converted_code, business_requiremen
     return prompt
 
 def create_functional_test_prompt(target_language, converted_code, business_requirements):
-    """Create a prompt for generating functional test cases based on business requirements"""
-    
+    # Unchanged, as functional tests don't need specific changes for Onion Architecture
     prompt = f"""
     You are tasked with creating functional test cases for a newly converted {target_language} application.
     Give response of functional tests in numeric plain text numbering.

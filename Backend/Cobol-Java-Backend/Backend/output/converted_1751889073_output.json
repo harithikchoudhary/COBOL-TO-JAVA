@@ -1,0 +1,224 @@
+{
+  "status": "success",
+  "convertedCode": {
+    "DomainEntity": {
+      "FileName": "Employee.cs",
+      "Path": "Domain/Entities/",
+      "content": "using System;\nusing System.ComponentModel.DataAnnotations;\n\nnamespace Company.Project.Domain.Entities\n{\n    public class Employee\n    {\n        [Key]\n        public int EmpId { get; set; }\n\n        [Required, StringLength(20)]\n        public string FirstName { get; set; }\n\n        [Required, StringLength(20)]\n        public string LastName { get; set; }\n\n        [StringLength(15)]\n        public string Department { get; set; }\n\n        [StringLength(20)]\n        public string Position { get; set; }\n\n        [Range(0, 9999999.99)]\n        public decimal Salary { get; set; }\n\n        public DateTime HireDate { get; set; }\n    }\n}"
+    },
+    "DomainInterface": {
+      "FileName": "IEmployeeRepository.cs",
+      "Path": "Domain/Interfaces/",
+      "content": "using System.Collections.Generic;\nusing System.Threading.Tasks;\nusing Company.Project.Domain.Entities;\n\nnamespace Company.Project.Domain.Interfaces\n{\n    public interface IEmployeeRepository\n    {\n        Task<IEnumerable<Employee>> GetAllAsync();\n        Task<Employee> GetByIdAsync(int id);\n        Task AddAsync(Employee employee);\n        Task UpdateAsync(Employee employee);\n        Task DeleteAsync(int id);\n    }\n}"
+    },
+    "DomainExceptions": {
+      "FileName": "DatabaseException.cs",
+      "Path": "Domain/Exceptions/",
+      "content": "using System;\n\nnamespace Company.Project.Domain.Exceptions\n{\n    public class DatabaseException : Exception\n    {\n        public DatabaseException(string message) : base(message) { }\n    }\n}"
+    },
+    "ApplicationServiceInterface": {
+      "FileName": "IEmployeeAppService.cs",
+      "Path": "Application/Interfaces/",
+      "content": "using System.Collections.Generic;\nusing System.Threading.Tasks;\nusing Company.Project.Application.DTOs;\n\nnamespace Company.Project.Application.Interfaces\n{\n    public interface IEmployeeAppService\n    {\n        Task<IEnumerable<EmployeeDTO>> GetAllEmployeesAsync();\n        Task<EmployeeDTO> GetEmployeeByIdAsync(int id);\n        Task AddEmployeeAsync(EmployeeDTO employee);\n        Task UpdateEmployeeAsync(EmployeeDTO employee);\n        Task DeleteEmployeeAsync(int id);\n    }\n}"
+    },
+    "ApplicationService": {
+      "FileName": "EmployeeAppService.cs",
+      "Path": "Application/Services/",
+      "content": "using System.Collections.Generic;\nusing System.Threading.Tasks;\nusing AutoMapper;\nusing Company.Project.Application.DTOs;\nusing Company.Project.Application.Interfaces;\nusing Company.Project.Domain.Entities;\nusing Company.Project.Domain.Interfaces;\n\nnamespace Company.Project.Application.Services\n{\n    public class EmployeeAppService : IEmployeeAppService\n    {\n        private readonly IEmployeeRepository _employeeRepository;\n        private readonly IMapper _mapper;\n\n        public EmployeeAppService(IEmployeeRepository employeeRepository, IMapper mapper)\n        {\n            _employeeRepository = employeeRepository;\n            _mapper = mapper;\n        }\n\n        public async Task<IEnumerable<EmployeeDTO>> GetAllEmployeesAsync()\n        {\n            var employees = await _employeeRepository.GetAllAsync();\n            return _mapper.Map<IEnumerable<EmployeeDTO>>(employees);\n        }\n\n        public async Task<EmployeeDTO> GetEmployeeByIdAsync(int id)\n        {\n            var employee = await _employeeRepository.GetByIdAsync(id);\n            return _mapper.Map<EmployeeDTO>(employee);\n        }\n\n        public async Task AddEmployeeAsync(EmployeeDTO employeeDto)\n        {\n            var employee = _mapper.Map<Employee>(employeeDto);\n            await _employeeRepository.AddAsync(employee);\n        }\n\n        public async Task UpdateEmployeeAsync(EmployeeDTO employeeDto)\n        {\n            var employee = _mapper.Map<Employee>(employeeDto);\n            await _employeeRepository.UpdateAsync(employee);\n        }\n\n        public async Task DeleteEmployeeAsync(int id)\n        {\n            await _employeeRepository.DeleteAsync(id);\n        }\n    }\n}"
+    },
+    "ApplicationDTO": {
+      "FileName": "EmployeeDTO.cs",
+      "Path": "Application/DTOs/",
+      "content": "using System;\n\nnamespace Company.Project.Application.DTOs\n{\n    public class EmployeeDTO\n    {\n        public int EmpId { get; set; }\n        public string FirstName { get; set; }\n        public string LastName { get; set; }\n        public string Department { get; set; }\n        public string Position { get; set; }\n        public decimal Salary { get; set; }\n        public DateTime HireDate { get; set; }\n    }\n}"
+    },
+    "InfrastructureRepository": {
+      "FileName": "EmployeeRepository.cs",
+      "Path": "Infrastructure/Repositories/",
+      "content": "using System.Collections.Generic;\nusing System.Threading.Tasks;\nusing Microsoft.EntityFrameworkCore;\nusing Company.Project.Domain.Entities;\nusing Company.Project.Domain.Interfaces;\nusing Company.Project.Infrastructure.Data;\n\nnamespace Company.Project.Infrastructure.Repositories\n{\n    public class EmployeeRepository : IEmployeeRepository\n    {\n        private readonly ApplicationDbContext _context;\n\n        public EmployeeRepository(ApplicationDbContext context)\n        {\n            _context = context;\n        }\n\n        public async Task<IEnumerable<Employee>> GetAllAsync()\n        {\n            return await _context.Employees.ToListAsync();\n        }\n\n        public async Task<Employee> GetByIdAsync(int id)\n        {\n            return await _context.Employees.FindAsync(id);\n        }\n\n        public async Task AddAsync(Employee employee)\n        {\n            await _context.Employees.AddAsync(employee);\n            await _context.SaveChangesAsync();\n        }\n\n        public async Task UpdateAsync(Employee employee)\n        {\n            _context.Employees.Update(employee);\n            await _context.SaveChangesAsync();\n        }\n\n        public async Task DeleteAsync(int id)\n        {\n            var employee = await _context.Employees.FindAsync(id);\n            if (employee != null)\n            {\n                _context.Employees.Remove(employee);\n                await _context.SaveChangesAsync();\n            }\n        }\n    }\n}"
+    },
+    "InfrastructureDbContext": {
+      "FileName": "ApplicationDbContext.cs",
+      "Path": "Infrastructure/Data/",
+      "content": "using Microsoft.EntityFrameworkCore;\nusing Company.Project.Domain.Entities;\n\nnamespace Company.Project.Infrastructure.Data\n{\n    public class ApplicationDbContext : DbContext\n    {\n        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)\n            : base(options)\n        {\n        }\n\n        public DbSet<Employee> Employees { get; set; }\n\n        protected override void OnModelCreating(ModelBuilder modelBuilder)\n        {\n            base.OnModelCreating(modelBuilder);\n            modelBuilder.Entity<Employee>().ToTable(\"EMPLOYEES\");\n        }\n    }\n}"
+    },
+    "PresentationController": {
+      "FileName": "EmployeeController.cs",
+      "Path": "Presentation/Controllers/",
+      "content": "using Microsoft.AspNetCore.Mvc;\nusing System.Collections.Generic;\nusing System.Threading.Tasks;\nusing Company.Project.Application.DTOs;\nusing Company.Project.Application.Interfaces;\n\nnamespace Company.Project.Presentation.Controllers\n{\n    [ApiController]\n    [Route(\"api/[controller]\")]\n    public class EmployeeController : ControllerBase\n    {\n        private readonly IEmployeeAppService _employeeAppService;\n\n        public EmployeeController(IEmployeeAppService employeeAppService)\n        {\n            _employeeAppService = employeeAppService;\n        }\n\n        [HttpGet]\n        public async Task<ActionResult<IEnumerable<EmployeeDTO>>> GetAll()\n        {\n            var employees = await _employeeAppService.GetAllEmployeesAsync();\n            return Ok(employees);\n        }\n\n        [HttpGet(\"{id}\")]\n        public async Task<ActionResult<EmployeeDTO>> GetById(int id)\n        {\n            var employee = await _employeeAppService.GetEmployeeByIdAsync(id);\n            if (employee == null)\n            {\n                return NotFound();\n            }\n            return Ok(employee);\n        }\n\n        [HttpPost]\n        public async Task<ActionResult> Add([FromBody] EmployeeDTO employeeDto)\n        {\n            await _employeeAppService.AddEmployeeAsync(employeeDto);\n            return CreatedAtAction(nameof(GetById), new { id = employeeDto.EmpId }, employeeDto);\n        }\n\n        [HttpPut(\"{id}\")]\n        public async Task<ActionResult> Update(int id, [FromBody] EmployeeDTO employeeDto)\n        {\n            if (id != employeeDto.EmpId)\n            {\n                return BadRequest();\n            }\n            await _employeeAppService.UpdateEmployeeAsync(employeeDto);\n            return NoContent();\n        }\n\n        [HttpDelete(\"{id}\")]\n        public async Task<ActionResult> Delete(int id)\n        {\n            await _employeeAppService.DeleteEmployeeAsync(id);\n            return NoContent();\n        }\n    }\n}"
+    },
+    "Program": {
+      "FileName": "Program.cs",
+      "Path": "Presentation/",
+      "content": "using Microsoft.AspNetCore.Builder;\nusing Microsoft.EntityFrameworkCore;\nusing Microsoft.Extensions.DependencyInjection;\nusing Microsoft.Extensions.Hosting;\nusing Company.Project.Application.Interfaces;\nusing Company.Project.Application.Services;\nusing Company.Project.Infrastructure.Data;\nusing Company.Project.Infrastructure.Repositories;\n\nvar builder = WebApplication.CreateBuilder(args);\n\n// Add services to the container\nbuilder.Services.AddControllers();\n\n// Configure Entity Framework with SQL Server\nvar connectionString = builder.Configuration.GetConnectionString(\"DefaultConnection\");\nbuilder.Services.AddDbContext<ApplicationDbContext>(options =>\n    options.UseSqlServer(connectionString));\n\n// Register services and repositories\nbuilder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();\nbuilder.Services.AddScoped<IEmployeeAppService, EmployeeAppService>();\nbuilder.Services.AddAutoMapper(typeof(Program));\n\nvar app = builder.Build();\n\n// Configure the HTTP request pipeline\nif (app.Environment.IsDevelopment())\n{\n    app.UseDeveloperExceptionPage();\n}\n\napp.UseHttpsRedirection();\napp.UseAuthorization();\napp.MapControllers();\n\n// Ensure database is created\nusing (var scope = app.Services.CreateScope())\n{\n    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();\n    dbContext.Database.EnsureCreated();\n}\n\napp.Run();"
+    },
+    "AppSettings": {
+      "FileName": "appsettings.json",
+      "Path": "Presentation/",
+      "content": "{\n  \"ConnectionStrings\": {\n    \"DefaultConnection\": \"Server=localhost;Database=EmployeeDB;User Id=admin;Password=P@ssw0rd;\"\n  },\n  \"Logging\": {\n    \"LogLevel\": {\n      \"Default\": \"Information\",\n      \"Microsoft.AspNetCore\": \"Warning\"\n    }\n  },\n  \"AllowedHosts\": \"*\"\n}"
+    },
+    "DomainProject": {
+      "FileName": "Domain.csproj",
+      "Path": "Domain/",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n\n</Project>"
+    },
+    "ApplicationProject": {
+      "FileName": "Application.csproj",
+      "Path": "Application/",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.Extensions.DependencyInjection\" Version=\"8.0.0\" />\n    <PackageReference Include=\"AutoMapper\" Version=\"12.0.0\" />\n  </ItemGroup>\n\n  <ItemGroup>\n    <ProjectReference Include=\"..\\Domain\\Domain.csproj\" />\n  </ItemGroup>\n\n</Project>"
+    },
+    "InfrastructureProject": {
+      "FileName": "Infrastructure.csproj",
+      "Path": "Infrastructure/",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore.SqlServer\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.Extensions.Logging\" Version=\"8.0.0\" />\n  </ItemGroup>\n\n  <ItemGroup>\n    <ProjectReference Include=\"..\\Application\\Application.csproj\" />\n  </ItemGroup>\n\n</Project>"
+    },
+    "PresentationProject": {
+      "FileName": "Presentation.csproj",
+      "Path": "Presentation/",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk.Web\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore.Design\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Swashbuckle.AspNetCore\" Version=\"6.5.0\" />\n    <PackageReference Include=\"AutoMapper.Extensions.Microsoft.DependencyInjection\" Version=\"12.0.0\" />\n  </ItemGroup>\n\n  <ItemGroup>\n    <ProjectReference Include=\"..\\Application\\Application.csproj\" />\n  </ItemGroup>\n\n</Project>"
+    },
+    "SolutionFile": {
+      "FileName": "TaskManagementSystem.sln",
+      "Path": "./",
+      "content": "Microsoft Visual Studio Solution File, Format Version 12.00\n# Visual Studio Version 17\nVisualStudioVersion = 17.0.31903.59\nMinimumVisualStudioVersion = 10.0.40219.1\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Domain\", \"Domain\\Domain.csproj\", \"{GUID}\"\nEndProject\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Application\", \"Application\\Application.csproj\", \"{GUID}\"\nEndProject\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Infrastructure\", \"Infrastructure\\Infrastructure.csproj\", \"{GUID}\"\nEndProject\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Presentation\", \"Presentation\\Presentation.csproj\", \"{GUID}\"\nEndProject\nGlobal\n    GlobalSection(SolutionConfigurationPlatforms) = preSolution\n        Debug|Any CPU = Debug|Any CPU\n        Release|Any CPU = Release|Any CPU\n    EndGlobalSection\n    GlobalSection(ProjectConfigurationPlatforms) = postSolution\n        {GUID}.Debug|Any CPU.ActiveCfg = Debug|Any CPU\n        {GUID}.Debug|Any CPU.Build.0 = Debug|Any CPU\n        {GUID}.Release|Any CPU.ActiveCfg = Release|Any CPU\n        {GUID}.Release|Any CPU.Build.0 = Release|Any CPU\n    EndGlobalSection\n    GlobalSection(SolutionProperties) = preSolution\n        HideSolutionNode = FALSE\n    EndGlobalSection\nEndGlobal"
+    },
+    "Dependencies": {
+      "content": "Domain: No external dependencies\nApplication: Microsoft.Extensions.DependencyInjection, AutoMapper\nInfrastructure: Microsoft.EntityFrameworkCore, Microsoft.EntityFrameworkCore.SqlServer, Microsoft.Extensions.Logging\nPresentation: Microsoft.AspNetCore.App, Microsoft.EntityFrameworkCore.Design, Swashbuckle.AspNetCore, AutoMapper.Extensions.Microsoft.DependencyInjection"
+    }
+  },
+  "conversionNotes": "The COBOL code was converted to a .NET 8 application using Onion Architecture. The database operations were implemented using Entity Framework Core, reflecting the SQL operations in the COBOL code. The application is structured into four layers: Domain, Application, Infrastructure, and Presentation, with proper dependency injection and project references.",
+  "potentialIssues": [
+    "Ensure the database connection string in appsettings.json matches your SQL Server setup.",
+    "Verify that Entity Framework Core is properly configured to match the database schema.",
+    "Check for any discrepancies in data types between COBOL and C# (e.g., date formats)."
+  ],
+  "unitTests": "using System.Collections.Generic;\nusing System.Threading.Tasks;\nusing AutoMapper;\nusing Moq;\nusing Xunit;\nusing Company.Project.Application.DTOs;\nusing Company.Project.Application.Interfaces;\nusing Company.Project.Application.Services;\nusing Company.Project.Domain.Entities;\nusing Company.Project.Domain.Interfaces;\n\nnamespace Company.Project.Tests.UnitTests.Application\n{\n    public class EmployeeAppServiceTests\n    {\n        private readonly Mock<IEmployeeRepository> _mockEmployeeRepository;\n        private readonly Mock<IMapper> _mockMapper;\n        private readonly IEmployeeAppService _employeeAppService;\n\n        public EmployeeAppServiceTests()\n        {\n            _mockEmployeeRepository = new Mock<IEmployeeRepository>();\n            _mockMapper = new Mock<IMapper>();\n            _employeeAppService = new EmployeeAppService(_mockEmployeeRepository.Object, _mockMapper.Object);\n        }\n\n        [Fact]\n        public async Task GetAllEmployeesAsync_ShouldReturnAllEmployees()\n        {\n            // Arrange\n            var employees = new List<Employee> { new Employee { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" } };\n            _mockEmployeeRepository.Setup(repo => repo.GetAllAsync()).ReturnsAsync(employees);\n            _mockMapper.Setup(m => m.Map<IEnumerable<EmployeeDTO>>(It.IsAny<IEnumerable<Employee>>()))\n                       .Returns(new List<EmployeeDTO> { new EmployeeDTO { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" } });\n\n            // Act\n            var result = await _employeeAppService.GetAllEmployeesAsync();\n\n            // Assert\n            Assert.NotNull(result);\n            Assert.Single(result);\n        }\n\n        [Fact]\n        public async Task GetEmployeeByIdAsync_ShouldReturnEmployee_WhenEmployeeExists()\n        {\n            // Arrange\n            var employee = new Employee { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            _mockEmployeeRepository.Setup(repo => repo.GetByIdAsync(1)).ReturnsAsync(employee);\n            _mockMapper.Setup(m => m.Map<EmployeeDTO>(It.IsAny<Employee>()))\n                       .Returns(new EmployeeDTO { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" });\n\n            // Act\n            var result = await _employeeAppService.GetEmployeeByIdAsync(1);\n\n            // Assert\n            Assert.NotNull(result);\n            Assert.Equal(1, result.EmpId);\n        }\n\n        [Fact]\n        public async Task GetEmployeeByIdAsync_ShouldReturnNull_WhenEmployeeDoesNotExist()\n        {\n            // Arrange\n            _mockEmployeeRepository.Setup(repo => repo.GetByIdAsync(1)).ReturnsAsync((Employee)null);\n\n            // Act\n            var result = await _employeeAppService.GetEmployeeByIdAsync(1);\n\n            // Assert\n            Assert.Null(result);\n        }\n\n        [Fact]\n        public async Task AddEmployeeAsync_ShouldAddEmployee()\n        {\n            // Arrange\n            var employeeDto = new EmployeeDTO { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            var employee = new Employee { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            _mockMapper.Setup(m => m.Map<Employee>(It.IsAny<EmployeeDTO>())).Returns(employee);\n\n            // Act\n            await _employeeAppService.AddEmployeeAsync(employeeDto);\n\n            // Assert\n            _mockEmployeeRepository.Verify(repo => repo.AddAsync(It.IsAny<Employee>()), Times.Once);\n        }\n\n        [Fact]\n        public async Task UpdateEmployeeAsync_ShouldUpdateEmployee()\n        {\n            // Arrange\n            var employeeDto = new EmployeeDTO { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            var employee = new Employee { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            _mockMapper.Setup(m => m.Map<Employee>(It.IsAny<EmployeeDTO>())).Returns(employee);\n\n            // Act\n            await _employeeAppService.UpdateEmployeeAsync(employeeDto);\n\n            // Assert\n            _mockEmployeeRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Employee>()), Times.Once);\n        }\n\n        [Fact]\n        public async Task DeleteEmployeeAsync_ShouldDeleteEmployee()\n        {\n            // Arrange\n            var employeeId = 1;\n\n            // Act\n            await _employeeAppService.DeleteEmployeeAsync(employeeId);\n\n            // Assert\n            _mockEmployeeRepository.Verify(repo => repo.DeleteAsync(employeeId), Times.Once);\n        }\n    }\n}",
+  "unitTestDetails": {
+    "unitTestCode": "using System.Collections.Generic;\nusing System.Threading.Tasks;\nusing AutoMapper;\nusing Moq;\nusing Xunit;\nusing Company.Project.Application.DTOs;\nusing Company.Project.Application.Interfaces;\nusing Company.Project.Application.Services;\nusing Company.Project.Domain.Entities;\nusing Company.Project.Domain.Interfaces;\n\nnamespace Company.Project.Tests.UnitTests.Application\n{\n    public class EmployeeAppServiceTests\n    {\n        private readonly Mock<IEmployeeRepository> _mockEmployeeRepository;\n        private readonly Mock<IMapper> _mockMapper;\n        private readonly IEmployeeAppService _employeeAppService;\n\n        public EmployeeAppServiceTests()\n        {\n            _mockEmployeeRepository = new Mock<IEmployeeRepository>();\n            _mockMapper = new Mock<IMapper>();\n            _employeeAppService = new EmployeeAppService(_mockEmployeeRepository.Object, _mockMapper.Object);\n        }\n\n        [Fact]\n        public async Task GetAllEmployeesAsync_ShouldReturnAllEmployees()\n        {\n            // Arrange\n            var employees = new List<Employee> { new Employee { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" } };\n            _mockEmployeeRepository.Setup(repo => repo.GetAllAsync()).ReturnsAsync(employees);\n            _mockMapper.Setup(m => m.Map<IEnumerable<EmployeeDTO>>(It.IsAny<IEnumerable<Employee>>()))\n                       .Returns(new List<EmployeeDTO> { new EmployeeDTO { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" } });\n\n            // Act\n            var result = await _employeeAppService.GetAllEmployeesAsync();\n\n            // Assert\n            Assert.NotNull(result);\n            Assert.Single(result);\n        }\n\n        [Fact]\n        public async Task GetEmployeeByIdAsync_ShouldReturnEmployee_WhenEmployeeExists()\n        {\n            // Arrange\n            var employee = new Employee { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            _mockEmployeeRepository.Setup(repo => repo.GetByIdAsync(1)).ReturnsAsync(employee);\n            _mockMapper.Setup(m => m.Map<EmployeeDTO>(It.IsAny<Employee>()))\n                       .Returns(new EmployeeDTO { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" });\n\n            // Act\n            var result = await _employeeAppService.GetEmployeeByIdAsync(1);\n\n            // Assert\n            Assert.NotNull(result);\n            Assert.Equal(1, result.EmpId);\n        }\n\n        [Fact]\n        public async Task GetEmployeeByIdAsync_ShouldReturnNull_WhenEmployeeDoesNotExist()\n        {\n            // Arrange\n            _mockEmployeeRepository.Setup(repo => repo.GetByIdAsync(1)).ReturnsAsync((Employee)null);\n\n            // Act\n            var result = await _employeeAppService.GetEmployeeByIdAsync(1);\n\n            // Assert\n            Assert.Null(result);\n        }\n\n        [Fact]\n        public async Task AddEmployeeAsync_ShouldAddEmployee()\n        {\n            // Arrange\n            var employeeDto = new EmployeeDTO { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            var employee = new Employee { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            _mockMapper.Setup(m => m.Map<Employee>(It.IsAny<EmployeeDTO>())).Returns(employee);\n\n            // Act\n            await _employeeAppService.AddEmployeeAsync(employeeDto);\n\n            // Assert\n            _mockEmployeeRepository.Verify(repo => repo.AddAsync(It.IsAny<Employee>()), Times.Once);\n        }\n\n        [Fact]\n        public async Task UpdateEmployeeAsync_ShouldUpdateEmployee()\n        {\n            // Arrange\n            var employeeDto = new EmployeeDTO { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            var employee = new Employee { EmpId = 1, FirstName = \"John\", LastName = \"Doe\" };\n            _mockMapper.Setup(m => m.Map<Employee>(It.IsAny<EmployeeDTO>())).Returns(employee);\n\n            // Act\n            await _employeeAppService.UpdateEmployeeAsync(employeeDto);\n\n            // Assert\n            _mockEmployeeRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Employee>()), Times.Once);\n        }\n\n        [Fact]\n        public async Task DeleteEmployeeAsync_ShouldDeleteEmployee()\n        {\n            // Arrange\n            var employeeId = 1;\n\n            // Act\n            await _employeeAppService.DeleteEmployeeAsync(employeeId);\n\n            // Assert\n            _mockEmployeeRepository.Verify(repo => repo.DeleteAsync(employeeId), Times.Once);\n        }\n    }\n}",
+    "testDescription": "Unit tests for EmployeeAppService in the Application layer, covering CRUD operations with positive, negative, and edge cases using Moq for repository and AutoMapper.",
+    "coverage": "The tests cover all public methods in the EmployeeAppService class, ensuring that CRUD operations are correctly handled, including scenarios where employees exist or do not exist, and verifying interactions with the repository."
+  },
+  "functionalTests": {
+    "functionalTests": [
+      {
+        "testID": "FT001",
+        "title": "Verify Successful Database Connection",
+        "description": "Ensure the application can successfully connect to the SQL database using specified credentials.",
+        "preconditions": "Database server is running and accessible. Correct connection string is configured in appsettings.json.",
+        "testSteps": [
+          "Start the application.",
+          "Check the application logs for database connection status."
+        ],
+        "expectedResults": "Application logs indicate a successful connection to the database.",
+        "priority": "High"
+      },
+      {
+        "testID": "FT002",
+        "title": "Retrieve All Employee Records",
+        "description": "Verify that the application can retrieve all employee records from the database.",
+        "preconditions": "Database contains employee records.",
+        "testSteps": [
+          "Send a GET request to the /api/employee endpoint.",
+          "Observe the response."
+        ],
+        "expectedResults": "Response contains a list of all employee records.",
+        "priority": "High"
+      },
+      {
+        "testID": "FT003",
+        "title": "Filter Employee Records by Department",
+        "description": "Ensure the application can filter employee records by department.",
+        "preconditions": "Database contains employee records with various departments.",
+        "testSteps": [
+          "Send a GET request to the /api/employee endpoint with a department filter.",
+          "Observe the response."
+        ],
+        "expectedResults": "Response contains only employee records from the specified department.",
+        "priority": "Medium"
+      },
+      {
+        "testID": "FT004",
+        "title": "Insert New Employee Record",
+        "description": "Verify that a new employee record can be inserted into the database.",
+        "preconditions": "Database is accessible.",
+        "testSteps": [
+          "Send a POST request to the /api/employee endpoint with valid employee data.",
+          "Check the response status and database for the new record."
+        ],
+        "expectedResults": "Response status is 201 Created. New employee record is present in the database.",
+        "priority": "High"
+      },
+      {
+        "testID": "FT005",
+        "title": "Update Existing Employee Record",
+        "description": "Ensure an existing employee record can be updated based on employee ID.",
+        "preconditions": "Database contains employee records.",
+        "testSteps": [
+          "Send a PUT request to the /api/employee/{id} endpoint with updated employee data.",
+          "Check the response status and database for updated record."
+        ],
+        "expectedResults": "Response status is 204 No Content. Employee record is updated in the database.",
+        "priority": "High"
+      },
+      {
+        "testID": "FT006",
+        "title": "Delete Employee Record",
+        "description": "Verify that an employee record can be deleted after confirmation.",
+        "preconditions": "Database contains employee records.",
+        "testSteps": [
+          "Send a DELETE request to the /api/employee/{id} endpoint.",
+          "Check the response status and database for the absence of the record."
+        ],
+        "expectedResults": "Response status is 204 No Content. Employee record is removed from the database.",
+        "priority": "High"
+      },
+      {
+        "testID": "FT007",
+        "title": "Handle SQL Errors",
+        "description": "Ensure SQL errors are handled and transactions are rolled back if necessary.",
+        "preconditions": "Database is accessible.",
+        "testSteps": [
+          "Simulate a SQL error by sending invalid data to the database.",
+          "Observe the application behavior and logs."
+        ],
+        "expectedResults": "Application logs show error handling and rollback of transactions.",
+        "priority": "High"
+      },
+      {
+        "testID": "FT008",
+        "title": "Boundary Test for Salary Field",
+        "description": "Verify boundary conditions for the Salary field in employee records.",
+        "preconditions": "Database is accessible.",
+        "testSteps": [
+          "Send a POST request to the /api/employee endpoint with salary values at boundary limits (0 and 9999999.99).",
+          "Observe the response."
+        ],
+        "expectedResults": "Application accepts salary values within the specified range and rejects values outside the range.",
+        "priority": "Medium"
+      },
+      {
+        "testID": "FT009",
+        "title": "End-to-End Test for Employee Management",
+        "description": "Perform an end-to-end test covering the complete employee management process.",
+        "preconditions": "Database is accessible.",
+        "testSteps": [
+          "Insert a new employee record.",
+          "Retrieve the employee record.",
+          "Update the employee record.",
+          "Delete the employee record.",
+          "Verify each operation's success."
+        ],
+        "expectedResults": "All operations are successful, and the employee record is correctly managed throughout the process.",
+        "priority": "High"
+      }
+    ],
+    "testStrategy": {
+      "approach": "The test strategy involves executing functional tests to validate the application's ability to meet business requirements. Tests are organized by feature and cover positive, negative, boundary, and end-to-end scenarios.",
+      "tools": "SpecFlow for BDD-style test scenarios, NUnit for test execution, and SQL Server for database operations.",
+      "environment": "Tests will be conducted in a controlled environment with access to the SQL database and application services.",
+      "riskManagement": "Focus on high-priority tests to mitigate risks related to data integrity and application reliability. Regularly review and update test cases based on changes in business requirements."
+    }
+  },
+  "sourceLanguage": "COBOL",
+  "targetLanguage": "C#",
+  "databaseUsed": true
+}

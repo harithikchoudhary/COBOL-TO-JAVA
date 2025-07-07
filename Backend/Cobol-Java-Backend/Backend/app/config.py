@@ -18,6 +18,8 @@ output_dir = 'output'
 def setup_logging():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
+    # Ensure logs directory exists
+    os.makedirs('logs', exist_ok=True)
     handler = RotatingFileHandler('logs/app.log', maxBytes=10000000, backupCount=5)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)

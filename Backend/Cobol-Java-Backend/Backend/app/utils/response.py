@@ -2,7 +2,9 @@ import os
 import time       
 import json       
 import re         
+import logging
 
+logger = logging.getLogger(__name__)
 
 def extract_json_from_response(text):
     """
