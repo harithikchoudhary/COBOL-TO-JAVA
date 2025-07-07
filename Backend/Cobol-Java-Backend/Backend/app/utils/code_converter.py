@@ -595,7 +595,7 @@ class CodeConverter:
                 "convertedCode": "",
                 "conversionNotes": f"Error calling model API: {str(e)}",
                 "potentialIssues": ["Failed to get response from model"],
-                "databaseUsed": true
+                "databaseUsed": False
             }
     
     def _validate_code(self, conversion_result: Dict[str, Any], target_language: str) -> None:
