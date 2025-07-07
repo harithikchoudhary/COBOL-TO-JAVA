@@ -216,7 +216,7 @@ export default function Input({
 
         <label
           className="btn px-3 py-2 text-white"
-          style={{ backgroundColor: "#634d03" }}
+          style={{ backgroundColor: "#0d9488" }}
         >
           <FileArchive size={16} className="me-2" />
           Upload Standards
