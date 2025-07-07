@@ -128,14 +128,14 @@ def convert_code():
                 "databaseUsed": False
             }), 400
 
-        # NEW: Get comprehensive enhanced context from analysis results
+        # NEW: Get comprehensive enhanced context from analysis results.
         log_processing_step("Retrieving comprehensive analysis context", {
             "has_analysis_manager": True
         }, 2)
         
         enhanced_context = get_enhanced_context_from_analysis()
 
-        # Analyze the code to detect if it contains database operations
+        # Analyze the code to detect if it contains database operations.
         log_processing_step("Analyzing source code for database operations", {
             "source_language": source_language,
             "code_preview": source_code[:200] + "..." if len(source_code) > 200 else source_code,
@@ -149,7 +149,7 @@ def convert_code():
             "will_include_db_template": has_database
         }, 4)
         
-        # Only get DB template if database operations are detected
+        # Only get DB template if database operations are detected.
         if has_database:
             logger.info(f"📊 Database operations detected in COBOL code. Including DB setup in conversion.")
             db_setup_template = get_db_template("C#")
