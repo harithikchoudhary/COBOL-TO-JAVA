@@ -125,7 +125,8 @@ def analyze_requirements():
         comprehensive_analysis = {"status": "skipped", "reason": "No files to analyze"}
         if cobol_files:
             try:
-                logger.info("🚀 Starting comprehensive CICS + Dual RAG analysis")
+                logger.info("Starting comprehensive analysis")
+                logger.info(f"Analysis completed with status: {comprehensive_analysis.get('status', 'unknown')}")
                 
                 # Process files through the comprehensive analysis manager
                 comprehensive_analysis = analysis_manager.process_uploaded_files(cobol_files)

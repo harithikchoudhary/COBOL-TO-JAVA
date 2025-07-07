@@ -80,9 +80,7 @@ def convert_code():
     
     conversion_start_time = time.time()
     conversion_logger = logging.getLogger('conversion')
-    conversion_logger.info("="*80)
-    conversion_logger.info("🚀 ENHANCED CODE CONVERSION WITH COMPREHENSIVE ANALYSIS STARTED")
-    conversion_logger.info("="*80)
+    logger.info("Starting code conversion process")
 
     try:
         data = request.json
@@ -105,14 +103,7 @@ def convert_code():
         technical_requirements = data.get("technicalRequirements", "")
         vsam_definition = data.get("vsam_definition", "")
 
-        log_processing_step("Validating enhanced conversion request", {
-            "source_language": source_language,
-            "target_language": target_language,
-            "source_code_length": len(source_code) if source_code else 0,
-            "has_business_requirements": bool(business_requirements),
-            "has_technical_requirements": bool(technical_requirements),
-            "has_vsam_definition": bool(vsam_definition)
-        }, 1)
+        logger.info(f"Converting {source_language} to {target_language} - {len(source_code) if source_code else 0} characters")
 
         if not all([source_language, target_language, source_code]):
             logger.error("Missing required fields for conversion")
@@ -186,25 +177,39 @@ def convert_code():
             business_requirements, technical_requirements, db_setup_template
         )
 
-        # NEW: Add comprehensive enhanced context from analysis
+        # NEW: Embed full analysis.json plus live RAG contexts
         analysis_instructions = ""
-        if enhanced_context:
+        try:
+            from ..routes.analysis import analysis_manager
+            full = analysis_manager.analysis_results  # complete analysis dict
+            full_json = json.dumps(full, indent=2)[:2000]
+            standards_ctx = analysis_manager.get_standards_context(source_code[:200], k=3)
+            project_ctx   = analysis_manager.get_project_context(source_code[:200], k=5)
+
             analysis_instructions = f"""
-            
-CRITICAL: Use the comprehensive analysis context below to generate more accurate .NET code:
 
-{enhanced_context}
+FULL ANALYSIS JSON (truncated):
+{full_json}
 
-Based on this comprehensive analysis:
-1. Implement the recommended architecture patterns and clean architecture principles
-2. Use the identified business entities with proper namespaces and domain modeling
-3. Apply the CICS-to-microservices patterns for modern service architecture
-4. Follow the technology stack recommendations for optimal .NET implementation
-5. Ensure proper domain-driven design based on the identified business domain
-6. Implement the suggested caching, messaging, and security patterns
-7. Use Entity Framework Core configurations based on data analysis
-8. Apply the architectural recommendations for scalable, maintainable code
+STANDARDS RAG CONTEXT:
+{standards_ctx}
+
+PROJECT RAG CONTEXT:
+{project_ctx}
+
+CRITICAL: Use these detailed analysis artifacts to:
+1. Honor EVERY architecture recommendation.
+2. Map COBOL structures → .NET entities EXACTLY.
+3. Embed all business rules & CICS patterns.
+4. Follow the derived namespace & project conventions.
 """
+        except Exception:
+            # fallback to just the short enhanced_context
+            if enhanced_context:
+                analysis_instructions = f"\n{enhanced_context}\n"
+        
+        conversion_messages = [ {"role": "user", "content": prompt + analysis_instructions}]
+
 
         # Add enhanced instruction about database code
         prompt += f"\n\nIMPORTANT: Only include database initialization code if the source COBOL code contains database or SQL operations. If the code is a simple algorithm (like sorting, calculation, etc.) without any database interaction, do NOT include any database setup code in the converted .NET 8 code."

@@ -1,0 +1,44 @@
+{
+  "project_summary": {
+    "total_files": 3,
+    "total_connections": 1,
+    "business_entities": 14,
+    "conversion_patterns": 58
+  },
+  "file_connections": {
+    "BANKING.CBL": {
+      "depends_on": [
+        "ACCOUNT-VALIDATION.CPY"
+      ],
+      "used_by": [],
+      "connection_type": [
+        "ACCOUNT-VALIDATION.CPY:COPY"
+      ]
+    },
+    "ACCOUNT-VALIDATION.CPY": {
+      "depends_on": [],
+      "used_by": [
+        "BANKING.CBL"
+      ],
+      "connection_type": []
+    },
+    "BANKING.JCL": {
+      "depends_on": [],
+      "used_by": [],
+      "connection_type": []
+    }
+  },
+  "dependency_matrix": {
+    "BANKING.CBL": [
+      "ACCOUNT-VALIDATION.CPY"
+    ],
+    "ACCOUNT-VALIDATION.CPY": [],
+    "BANKING.JCL": []
+  },
+  "rag_summary": {
+    "standards_rag_available": true,
+    "project_rag_available": true,
+    "standards_rag_path": "rag_storage\\standards_rag",
+    "project_rag_path": "rag_storage\\project_rag"
+  }
+}
