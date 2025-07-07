@@ -797,7 +797,7 @@
     "total_bms_maps": 0
   },
   "project_metadata": {
-    "analysis_timestamp": "2025-07-04T13:20:07.984551",
+    "analysis_timestamp": "2025-07-07T11:54:58.000435",
     "total_files": 1,
     "business_domain": "RETAIL",
     "cics_transaction_flow": [],
@@ -828,22 +828,23 @@
     ],
     "data_flows": [
       {
-        "source": "cobol_code.cbl",
-        "destination": "Database",
-        "operations": "SQL",
-        "count": 23
+        "source": "Mainframe",
+        "destination": "SQL Database",
+        "type": "Transactional Data",
+        "frequency": "Real-time"
       }
     ],
     "modernization_recommendations": [
-      "Consider migrating COBOL programs to a modern language like Java or C# to improve maintainability.",
-      "Implement API-based integration for real-time data access and processing.",
-      "Evaluate cloud-based database solutions for scalability and cost-effectiveness."
+      "Migrate COBOL programs to modern languages like Java or .NET",
+      "Implement API-based integration for real-time data access",
+      "Consider cloud-based solutions for scalability and flexibility"
     ],
     "risk_assessment": {
-      "legacy_code_dependency": "High",
-      "database_integration_risk": "Medium",
-      "modernization_complexity": "High"
+      "legacy_technology": "High",
+      "data_security": "Medium",
+      "integration_complexity": "Medium",
+      "operational_disruption": "Low"
     }
   },
-  "enhancement_timestamp": "2025-07-04T13:20:11.022873"
+  "enhancement_timestamp": "2025-07-07T11:55:00.194659"
 }

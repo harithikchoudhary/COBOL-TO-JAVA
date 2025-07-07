@@ -235,9 +235,6 @@ export default function Cobol({ children }) {
         if (data.technicalRequirements.technologyStack) {
           formattedTechReqs += "\n## Recommended Technology Stack\n";
           const stack = data.technicalRequirements.technologyStack;
-          if (stack.database) formattedTechReqs += `- **Database:** ${stack.database}\n`;
-          if (stack.caching) formattedTechReqs += `- **Caching:** ${stack.caching}\n`;
-          if (stack.messaging) formattedTechReqs += `- **Messaging:** ${stack.messaging}\n`;
         }
       } else {
         formattedTechReqs +=
