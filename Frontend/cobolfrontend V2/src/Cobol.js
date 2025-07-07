@@ -55,25 +55,25 @@ export default function Cobol({ children }) {
   }, [setSourceCodeJson]);
 
   const handleGenerateRequirements = async (setActiveTab, sourceCodeJson) => {
-    setError("");
-    if (!sourceCodeJson) {
-      setError("Please upload COBOL files to analyze");
-      return;
-    }
+  setError("");
+  if (!sourceCodeJson) {
+    setError("Please upload COBOL files to analyze");
+    return;
+  }
 
-    setIsGeneratingRequirements(true);
+  setIsGeneratingRequirements(true);
 
-    try {
-      if (!isBackendAvailable) {
-        setTimeout(() => {
-          const simulatedBusinessReqs = `# Business Requirements
+  try {
+    if (!isBackendAvailable) {
+      setTimeout(() => {
+        const simulatedBusinessReqs = `# Business Requirements
 1. The system appears to handle financial transactions, specifically account balances and updates.
 2. There is a validation process for transaction codes, indicating business rules around transaction types.
 3. The code suggests a batch processing system that processes multiple records sequentially.
 4. Error handling and reporting requirements exist for invalid transactions.
 5. The system needs to maintain audit trails for financial operations.`;
 
-          const simulatedTechReqs = `# Technical Requirements
+        const simulatedTechReqs = `# Technical Requirements
 1. Code needs to be migrated from legacy COBOL to ${targetLanguage} while preserving all business logic.
 2. File handling must be converted to appropriate database or file operations in ${targetLanguage}.
 3. COBOL's fixed decimal precision must be maintained in the target language.
@@ -81,135 +81,206 @@ export default function Cobol({ children }) {
 5. Batch processing paradigm should be adapted to object-oriented design.
 6. Field validations and business rules should be extracted into separate service classes.`;
 
-          setBusinessRequirements(simulatedBusinessReqs);
-          setTechnicalRequirements(simulatedTechReqs);
-          setTechnicalRequirementsList(
-            parseRequirementsList(simulatedTechReqs)
-          );
-          setIsGeneratingRequirements(false);
-          setActiveTab("requirements");
-        }, 1500);
+        setBusinessRequirements(simulatedBusinessReqs);
+        setTechnicalRequirements(simulatedTechReqs);
+        setTechnicalRequirementsList(
+          parseRequirementsList(simulatedTechReqs)
+        );
+        setIsGeneratingRequirements(false);
+        setActiveTab("requirements");
+      }, 1500);
+      return;
+    }
+
+    // Parse sourceCodeJson if it's a string
+    let filesData = sourceCodeJson;
+    if (typeof sourceCodeJson === 'string') {
+      try {
+        filesData = JSON.parse(sourceCodeJson);
+      } catch (e) {
+        setError("Invalid file data format");
+        setIsGeneratingRequirements(false);
         return;
       }
-
-      const response = await fetch(`${API_BASE_URL}/analyze-requirements`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sourceLanguage: "COBOL",
-          targetLanguage,
-          file_data: sourceCodeJson,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Analysis failed");
-      }
-
-      const data = await response.json();
-      let formattedBusinessReqs = "# Business Requirements\n\n";
-      if (data.businessRequirements) {
-        if (typeof data.businessRequirements === "string") {
-          formattedBusinessReqs = data.businessRequirements;
-        } else {
-          const br = data.businessRequirements;
-          if (br.Overview) {
-            formattedBusinessReqs += "## Overview\n";
-            if (br.Overview["Purpose of the System"]) {
-              formattedBusinessReqs += `- **Purpose:** ${br.Overview["Purpose of the System"]}\n`;
-            }
-            if (br.Overview["Context and Business Impact"]) {
-              formattedBusinessReqs += `- **Business Impact:** ${br.Overview["Context and Business Impact"]}\n`;
-            }
-            formattedBusinessReqs += "\n";
-          }
-          if (br.Objectives) {
-            formattedBusinessReqs += "## Objectives\n";
-            if (br.Objectives["Primary Objective"]) {
-              formattedBusinessReqs += `- **Primary Objective:** ${br.Objectives["Primary Objective"]}\n`;
-            }
-            if (br.Objectives["Key Outcomes"]) {
-              formattedBusinessReqs += `- **Key Outcomes:** ${br.Objectives["Key Outcomes"]}\n`;
-            }
-            formattedBusinessReqs += "\n";
-          }
-          if (br["Business Rules & Requirements"]) {
-            formattedBusinessReqs += "## Business Rules & Requirements\n";
-            if (br["Business Rules & Requirements"]["Business Purpose"]) {
-              formattedBusinessReqs += `- **Business Purpose:** ${br["Business Rules & Requirements"]["Business Purpose"]}\n`;
-            }
-            if (br["Business Rules & Requirements"]["Business Rules"]) {
-              formattedBusinessReqs += `- **Business Rules:** ${br["Business Rules & Requirements"]["Business Rules"]}\n`;
-            }
-            if (br["Business Rules & Requirements"]["Impact on System"]) {
-              formattedBusinessReqs += `- **System Impact:** ${br["Business Rules & Requirements"]["Impact on System"]}\n`;
-            }
-            if (br["Business Rules & Requirements"]["Constraints"]) {
-              formattedBusinessReqs += `- **Constraints:** ${br["Business Rules & Requirements"]["Constraints"]}\n`;
-            }
-            formattedBusinessReqs += "\n";
-          }
-          if (br["Assumptions & Recommendations"]) {
-            formattedBusinessReqs += "## Assumptions & Recommendations\n";
-            if (br["Assumptions & Recommendations"]["Assumptions"]) {
-              formattedBusinessReqs += `- **Assumptions:** ${br["Assumptions & Recommendations"]["Assumptions"]}\n`;
-            }
-            if (br["Assumptions & Recommendations"]["Recommendations"]) {
-              formattedBusinessReqs += `- **Recommendations:** ${br["Assumptions & Recommendations"]["Recommendations"]}\n`;
-            }
-            formattedBusinessReqs += "\n";
-          }
-          if (br["Expected Output"]) {
-            formattedBusinessReqs += "## Expected Output\n";
-            if (br["Expected Output"]["Output"]) {
-              formattedBusinessReqs += `- **Output:** ${br["Expected Output"]["Output"]}\n`;
-            }
-            if (br["Expected Output"]["Business Significance"]) {
-              formattedBusinessReqs += `- **Business Significance:** ${br["Expected Output"]["Business Significance"]}\n`;
-            }
-          }
-        }
-      }
-
-      let formattedTechReqs = "# Technical Requirements\n\n";
-      if (data.technicalRequirements) {
-        if (typeof data.technicalRequirements === "string") {
-          formattedTechReqs = data.technicalRequirements;
-        } else if (Array.isArray(data.technicalRequirements)) {
-          data.technicalRequirements.forEach((req, index) => {
-            formattedTechReqs += `${index + 1}. ${req.description}\n`;
-          });
-        } else if (data.technicalRequirements.technicalRequirements) {
-          const techReqs = data.technicalRequirements.technicalRequirements;
-          if (Array.isArray(techReqs)) {
-            techReqs.forEach((req, index) => {
-              formattedTechReqs += `${index + 1}. ${req.description}\n`;
-            });
-          }
-        } else {
-          formattedTechReqs +=
-            "Could not format technical requirements - unexpected data structure.";
-          console.error(
-            "Unexpected technical requirements format:",
-            data.technicalRequirements
-          );
-        }
-      }
-
-      setBusinessRequirements(formattedBusinessReqs);
-      setTechnicalRequirements(formattedTechReqs);
-      setTechnicalRequirementsList(parseRequirementsList(formattedTechReqs));
-      setActiveTab("requirements");
-    } catch (error) {
-      console.error("Error during requirements analysis:", error);
-      setError(error.message || "Failed to analyze code. Please try again.");
-    } finally {
-      setIsGeneratingRequirements(false);
     }
-  };
+
+    // Enhanced flow with comprehensive analysis
+    console.log("🚀 Starting enhanced requirements generation with comprehensive analysis");
+
+    const response = await fetch(`${API_BASE_URL}/analyze-requirements`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sourceLanguage: "COBOL",
+        targetLanguage,
+        file_data: filesData
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Analysis failed");
+    }
+
+    const data = await response.json();
+    console.log("✅ Enhanced analysis completed:", data);
+
+    // Process business requirements
+    let formattedBusinessReqs = "# Business Requirements\n\n";
+    if (data.businessRequirements) {
+      if (typeof data.businessRequirements === "string") {
+        formattedBusinessReqs = data.businessRequirements;
+      } else {
+        const br = data.businessRequirements;
+        if (br.Overview) {
+          formattedBusinessReqs += "## Overview\n";
+          if (br.Overview["Purpose of the System"]) {
+            formattedBusinessReqs += `- **Purpose:** ${br.Overview["Purpose of the System"]}\n`;
+          }
+          if (br.Overview["Context and Business Impact"]) {
+            formattedBusinessReqs += `- **Business Impact:** ${br.Overview["Context and Business Impact"]}\n`;
+          }
+          formattedBusinessReqs += "\n";
+        }
+        if (br.Objectives) {
+          formattedBusinessReqs += "## Objectives\n";
+          if (br.Objectives["Primary Objective"]) {
+            formattedBusinessReqs += `- **Primary Objective:** ${br.Objectives["Primary Objective"]}\n`;
+          }
+          if (br.Objectives["Key Outcomes"]) {
+            formattedBusinessReqs += `- **Key Outcomes:** ${br.Objectives["Key Outcomes"]}\n`;
+          }
+          formattedBusinessReqs += "\n";
+        }
+        if (br["Business Rules & Requirements"]) {
+          formattedBusinessReqs += "## Business Rules & Requirements\n";
+          if (br["Business Rules & Requirements"]["Business Purpose"]) {
+            formattedBusinessReqs += `- **Business Purpose:** ${br["Business Rules & Requirements"]["Business Purpose"]}\n`;
+          }
+          if (br["Business Rules & Requirements"]["Business Rules"]) {
+            formattedBusinessReqs += `- **Business Rules:** ${br["Business Rules & Requirements"]["Business Rules"]}\n`;
+          }
+          if (br["Business Rules & Requirements"]["Impact on System"]) {
+            formattedBusinessReqs += `- **System Impact:** ${br["Business Rules & Requirements"]["Impact on System"]}\n`;
+          }
+          if (br["Business Rules & Requirements"]["Constraints"]) {
+            formattedBusinessReqs += `- **Constraints:** ${br["Business Rules & Requirements"]["Constraints"]}\n`;
+          }
+          formattedBusinessReqs += "\n";
+        }
+        // Add CICS insights if available
+        if (br.CICS_Insights) {
+          formattedBusinessReqs += "## CICS Analysis Insights\n";
+          if (br.CICS_Insights["Business_Domain"]) {
+            formattedBusinessReqs += `- **Business Domain:** ${br.CICS_Insights["Business_Domain"]}\n`;
+          }
+          if (br.CICS_Insights["Transaction_Patterns"]) {
+            formattedBusinessReqs += `- **Transaction Patterns:** ${br.CICS_Insights["Transaction_Patterns"]}\n`;
+          }
+          if (br.CICS_Insights["Integration_Points"]) {
+            formattedBusinessReqs += `- **Integration Points:** ${br.CICS_Insights["Integration_Points"]}\n`;
+          }
+          formattedBusinessReqs += "\n";
+        }
+        if (br["Assumptions & Recommendations"]) {
+          formattedBusinessReqs += "## Assumptions & Recommendations\n";
+          if (br["Assumptions & Recommendations"]["Assumptions"]) {
+            formattedBusinessReqs += `- **Assumptions:** ${br["Assumptions & Recommendations"]["Assumptions"]}\n`;
+          }
+          if (br["Assumptions & Recommendations"]["Recommendations"]) {
+            formattedBusinessReqs += `- **Recommendations:** ${br["Assumptions & Recommendations"]["Recommendations"]}\n`;
+          }
+          formattedBusinessReqs += "\n";
+        }
+        if (br["Expected Output"]) {
+          formattedBusinessReqs += "## Expected Output\n";
+          if (br["Expected Output"]["Output"]) {
+            formattedBusinessReqs += `- **Output:** ${br["Expected Output"]["Output"]}\n`;
+          }
+          if (br["Expected Output"]["Business Significance"]) {
+            formattedBusinessReqs += `- **Business Significance:** ${br["Expected Output"]["Business Significance"]}\n`;
+          }
+        }
+      }
+    }
+
+    // Process technical requirements
+    let formattedTechReqs = "# Technical Requirements\n\n";
+    if (data.technicalRequirements) {
+      if (typeof data.technicalRequirements === "string") {
+        formattedTechReqs = data.technicalRequirements;
+      } else if (Array.isArray(data.technicalRequirements)) {
+        data.technicalRequirements.forEach((req, index) => {
+          formattedTechReqs += `${index + 1}. ${req.description}\n`;
+        });
+      } else if (data.technicalRequirements.technicalRequirements) {
+        const techReqs = data.technicalRequirements.technicalRequirements;
+        if (Array.isArray(techReqs)) {
+          techReqs.forEach((req, index) => {
+            const complexity = req.complexity ? ` (${req.complexity})` : '';
+            const category = req.category ? ` [${req.category}]` : '';
+            formattedTechReqs += `${index + 1}. ${req.description}${complexity}${category}\n`;
+          });
+        }
+        
+        // Add architecture recommendations if available
+        if (data.technicalRequirements.architectureRecommendations) {
+          formattedTechReqs += "\n## Architecture Recommendations\n";
+          data.technicalRequirements.architectureRecommendations.forEach((rec, index) => {
+            formattedTechReqs += `${index + 1}. ${rec}\n`;
+          });
+        }
+        
+        // Add technology stack if available
+        if (data.technicalRequirements.technologyStack) {
+          formattedTechReqs += "\n## Recommended Technology Stack\n";
+          const stack = data.technicalRequirements.technologyStack;
+          if (stack.database) formattedTechReqs += `- **Database:** ${stack.database}\n`;
+          if (stack.caching) formattedTechReqs += `- **Caching:** ${stack.caching}\n`;
+          if (stack.messaging) formattedTechReqs += `- **Messaging:** ${stack.messaging}\n`;
+        }
+      } else {
+        formattedTechReqs +=
+          "Could not format technical requirements - unexpected data structure.";
+        console.error(
+          "Unexpected technical requirements format:",
+          data.technicalRequirements
+        );
+      }
+    }
+
+    // Add comprehensive analysis summary
+    if (data.comprehensiveAnalysis && data.analysisEnhanced) {
+      formattedTechReqs += "\n## Comprehensive Analysis Summary\n";
+      formattedTechReqs += `- **Analysis Status:** ${data.comprehensiveAnalysis.status}\n`;
+      if (data.comprehensiveAnalysis.rag_analysis) {
+        formattedTechReqs += `- **Files Analyzed:** ${data.comprehensiveAnalysis.rag_analysis.total_files || 0}\n`;
+        formattedTechReqs += `- **Business Entities Found:** ${data.comprehensiveAnalysis.rag_analysis.business_entities || 0}\n`;
+        formattedTechReqs += `- **Conversion Patterns:** ${data.comprehensiveAnalysis.rag_analysis.conversion_patterns || 0}\n`;
+      }
+      if (data.comprehensiveAnalysis.cics_analysis) {
+        formattedTechReqs += `- **CICS Programs:** ${data.comprehensiveAnalysis.cics_analysis.total_programs || 0}\n`;
+        formattedTechReqs += `- **Business Domain:** ${data.comprehensiveAnalysis.cics_analysis.business_domain || 'Unknown'}\n`;
+      }
+      if (data.conversionContextReady) {
+        formattedTechReqs += `- **Conversion Context:** Ready for enhanced code generation\n`;
+      }
+    }
+
+    setBusinessRequirements(formattedBusinessReqs);
+    setTechnicalRequirements(formattedTechReqs);
+    setTechnicalRequirementsList(parseRequirementsList(formattedTechReqs));
+    setActiveTab("requirements");
+
+    console.log("✅ Requirements generation completed successfully");
+
+  } catch (error) {
+    console.error("Error during requirements analysis:", error);
+    setError(error.message || "Failed to analyze code. Please try again.");
+  } finally {
+    setIsGeneratingRequirements(false);
+  }
+};
 
   const parseRequirementsList = (requirementsText) => {
     if (!requirementsText) return [];
