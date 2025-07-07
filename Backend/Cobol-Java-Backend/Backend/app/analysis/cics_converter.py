@@ -68,6 +68,7 @@ class CICSConverter:
         all_data_structures = {}
         all_data_structures.update(analysis.get("copybooks", {}))
         all_data_structures.update(analysis.get("control_includes", {}))
+
         
         for filename, data_structure in all_data_structures.items():
             entity_name = self._to_pascal_case(filename.replace(".cpy", "").replace(".ctl", ""))
@@ -164,7 +165,8 @@ class CICSConverter:
     def _generate_solution_files(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Generate solution and project files"""
         
-        project_name = analysis.get("project_metadata", {}).get("business_domain", "CicsModernization")
+        # Get dynamic project name instead of hard-coded
+        project_name = self._get_project_namespace()
         
         return {
             "SolutionFile": {
@@ -176,7 +178,8 @@ class CICSConverter:
                 "content": self._generate_global_config()
             }
         }
-
+    
+    
     # === CODE GENERATION METHODS ===
 
     def _generate_entity_class(self, entity_name: str, data_structure: Dict[str, Any]) -> Dict[str, str]:
@@ -1092,8 +1095,65 @@ EndGlobal
     # === HELPER METHODS ===
 
     def _get_project_namespace(self) -> str:
-        """Get project namespace"""
-        return "CicsModernization"
+        """
+        Get project namespace dynamically from analysis or file content.
+        Priority: 1) Business domain 2) Program names 3) File names 4) Default
+        """
+        try:
+            from ..routes.analysis import analysis_manager
+            
+            # Priority 1: Business domain from analysis (if not generic)
+            if hasattr(analysis_manager, 'analysis_results') and analysis_manager.analysis_results:
+                cics_results = analysis_manager.analysis_results.get("cics_results", {})
+                pm = cics_results.get("project_metadata", {})
+                domain = pm.get("business_domain", "").strip()
+                
+                if domain and domain not in ["GENERAL", "Unknown", ""]:
+                    namespace = "".join(w.capitalize() for w in domain.lower().split())
+                    logger.info(f"Using business domain for namespace: {namespace}")
+                    return namespace
+            
+            # Priority 2: Extract from COBOL program IDs
+            if hasattr(analysis_manager, 'analysis_results') and analysis_manager.analysis_results:
+                programs = analysis_manager.analysis_results.get("cics_results", {}).get("programs", {})
+                for prog_name, prog_data in programs.items():
+                    program_id = prog_data.get("program_id")
+                    if program_id:
+                        clean_name = ''.join(c for c in program_id if c.isalnum())
+                        if clean_name and len(clean_name) > 2:
+                            namespace = f"{clean_name.capitalize()}App"
+                            logger.info(f"Using program ID for namespace: {namespace}")
+                            return namespace
+            
+            # Priority 3: Extract from file names
+            if hasattr(analysis_manager, 'project_files') and analysis_manager.project_files:
+                for filename in analysis_manager.project_files.keys():
+                    if filename.lower().endswith(('.cbl', '.cob', '.cobol')):
+                        base_name = os.path.splitext(filename)[0]
+                        clean_name = ''.join(c for c in base_name if c.isalnum())
+                        if clean_name and len(clean_name) > 2:
+                            namespace = f"{clean_name.capitalize()}App"
+                            logger.info(f"Using filename for namespace: {namespace}")
+                            return namespace
+            
+            # Priority 4: Extract from file content
+            if hasattr(analysis_manager, 'project_files') and analysis_manager.project_files:
+                import re
+                for content in analysis_manager.project_files.values():
+                    prog_match = re.search(r'PROGRAM-ID\.\s*([A-Z0-9-]+)', content, re.I)
+                    if prog_match:
+                        prog_name = prog_match.group(1).replace('-', '').replace('_', '')
+                        if len(prog_name) > 2:
+                            namespace = f"{prog_name.capitalize()}App"
+                            logger.info(f"Using PROGRAM-ID for namespace: {namespace}")
+                            return namespace
+                            
+        except Exception as e:
+            logger.debug(f"Error deriving dynamic namespace: {e}")
+        
+        # Final fallback
+        logger.info("Using default namespace: ModernizedApp")
+        return "ModernizedApp"
 
     def _is_entity(self, data_structure: Dict[str, Any]) -> bool:
         """Determine if data structure should be an entity or value object"""

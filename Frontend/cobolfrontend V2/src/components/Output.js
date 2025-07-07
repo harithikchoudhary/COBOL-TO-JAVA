@@ -176,9 +176,44 @@ export default function Output({
     console.log("backend response",backendResponse);
     console.log("Unit Test cases",unitTestsData);
     
-    // Extract class name dynamically from Entity or default to Employee
+    // Extract class name dynamically from Entity or derive from content
     let className = "Employee";
     let projectName = "Company.Project";
+
+    // Try to extract actual class/project name from the converted code
+    if (codeObj.Entity && codeObj.Entity.content) {
+        const entityMatch = codeObj.Entity.content.match(/public class (\w+)/);
+        if (entityMatch) {
+            className = entityMatch[1];
+        }
+        
+        // Extract namespace/project name
+        const namespaceMatch = codeObj.Entity.content.match(/namespace ([^\n\r{]+)/);
+        if (namespaceMatch) {
+            projectName = namespaceMatch[1].trim();
+        }
+    } else {
+        // Fallback: try to derive from any available content
+        const allContent = Object.values(codeObj).map(item => 
+            typeof item === 'object' && item.content ? item.content : ''
+        ).join('\n');
+        
+        const namespaceMatch = allContent.match(/namespace ([^\n\r{]+)/);
+        if (namespaceMatch) {
+            projectName = namespaceMatch[1].trim();
+        }
+        
+        const classMatch = allContent.match(/public class (\w+)/);
+        if (classMatch) {
+            className = classMatch[1];
+        }
+    }
+
+    // If still default values, try to derive from backend response metadata
+    if (projectName === "Company.Project" && backendResponse.sourceLanguage) {
+        // Use a more generic project name
+        projectName = "ConvertedApp";
+    }
     
     if (codeObj.Entity && codeObj.Entity.content) {
         const entityMatch = codeObj.Entity.content.match(/public class (\w+)/);

@@ -125,7 +125,8 @@ def analyze_requirements():
         comprehensive_analysis = {"status": "skipped", "reason": "No files to analyze"}
         if cobol_files:
             try:
-                logger.info("🚀 Starting comprehensive CICS + Dual RAG analysis")
+                logger.info("Starting comprehensive analysis")
+                logger.info(f"Analysis completed with status: {comprehensive_analysis.get('status', 'unknown')}")
                 
                 # Process files through the comprehensive analysis manager
                 comprehensive_analysis = analysis_manager.process_uploaded_files(cobol_files)
@@ -259,15 +260,6 @@ Use this analysis context to provide more accurate and specific requirements.
                           f'    {{"id": "TR1", "description": "Technical requirement description", "complexity": "High/Medium/Low", "category": "CICS/Database/Architecture/etc"}},\n'
                           f'    {{"id": "TR2", "description": "Another technical requirement", "complexity": "High/Medium/Low", "category": "category"}}\n'
                           f'  ],\n'
-                          f'  "architectureRecommendations": [\n'
-                          f'    "Recommendation 1",\n'
-                          f'    "Recommendation 2"\n'
-                          f'  ],\n'
-                          f'  "technologyStack": {{\n'
-                          f'    "database": "Recommended database technology",\n'
-                          f'    "caching": "Recommended caching approach",\n'
-                          f'    "messaging": "Recommended messaging pattern"\n'
-                          f'  }}\n'
                           f"}}"
             },
             {"role": "user", "content": tech_prompt}

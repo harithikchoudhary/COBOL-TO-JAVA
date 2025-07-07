@@ -36,10 +36,10 @@ class AnalysisManager:
             # Initialize CICS Converter
             self.cics_converter = CICSConverter(AZURE_CONFIG, output_dir=OUTPUT_DIR)
             
-            logger.info("✅ All enhanced analysis components initialized successfully")
+            logger.info("Analysis components initialized successfully")
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize analysis components: {e}")
+            logger.error(f"Failed to initialize analysis components: {e}")
             raise
     
     def process_uploaded_files(self, files_data: Dict[str, str]) -> Dict[str, Any]:
@@ -52,7 +52,7 @@ class AnalysisManager:
         Returns:
             Dictionary with comprehensive analysis results
         """
-        logger.info(f"🔍 Processing {len(files_data)} uploaded files for comprehensive analysis")
+        logger.info(f"Processing {len(files_data)} uploaded files for comprehensive analysis")
         
         # Store files
         self.project_files = files_data
@@ -69,7 +69,7 @@ class AnalysisManager:
         
         try:
             # 1. Run RAG analysis
-            logger.info("🔗 Running comprehensive RAG analysis...")
+            logger.info("Running comprehensive RAG analysis")
             rag_results = self.dual_rag_analyzer.analyze_project(files_data)
             results["rag_analysis"] = {
                 "total_files": len(rag_results["files"]),
@@ -83,7 +83,7 @@ class AnalysisManager:
             }
             
             # 2. Run CICS analysis
-            logger.info("⚙️ Running comprehensive CICS analysis...")
+            logger.info("Running comprehensive CICS analysis")
             cics_results = self.cics_analyzer.analyze_project()
             results["cics_analysis"] = {
                 "total_programs": len(cics_results.get("programs", {})),
@@ -93,7 +93,7 @@ class AnalysisManager:
             }
             
             # 3. NEW: Generate conversion-ready context
-            logger.info("📝 Generating conversion-ready context...")
+            logger.info("Generating conversion-ready context")
             self.conversion_context = self._generate_conversion_context(rag_results, cics_results)
             results["conversion_context"] = {
                 "entities_count": len(self.conversion_context.get("business_entities", [])),
@@ -112,10 +112,10 @@ class AnalysisManager:
             # Save enhanced analysis to disk
             self._save_enhanced_analysis()
             
-            logger.info("✅ Comprehensive analysis completed successfully")
+            logger.info("Comprehensive analysis completed successfully")
             
         except Exception as e:
-            logger.error(f"❌ Analysis failed: {e}")
+            logger.error(f"Analysis failed: {e}")
             results["status"] = "error"
             results["error"] = str(e)
         
@@ -131,7 +131,7 @@ class AnalysisManager:
         Returns:
             Processing results
         """
-        logger.info(f"📄 Processing {len(standards_files)} standards documents")
+        logger.info(f"Processing {len(standards_files)} standards documents")
         
         try:
             # Save standards files to documents directory
@@ -150,16 +150,104 @@ class AnalysisManager:
             }
             
         except Exception as e:
-            logger.error(f"❌ Standards processing failed: {e}")
+            logger.error(f"Standards processing failed: {e}")
             return {
                 "status": "error",
                 "error": str(e)
             }
     
+    def get_project_namespace(self) -> str:
+        """Public method to get project namespace"""
+        return self._get_project_namespace()
+
+    def _get_project_namespace(self) -> str:
+        """
+        Get project namespace dynamically from analysis or file content.
+        Priority: 1) Business domain 2) Program names 3) File names 4) Default
+        """
+        try:
+            # Priority 1: Business domain from analysis (if not generic)
+            if hasattr(self, 'analysis_results') and self.analysis_results:
+                cics_results = self.analysis_results.get("cics_results", {})
+                pm = cics_results.get("project_metadata", {})
+                domain = pm.get("business_domain", "").strip()
+                
+                if domain and domain not in ["GENERAL", "Unknown", ""]:
+                    namespace = "".join(w.capitalize() for w in domain.lower().split())
+                    logger.info(f"Using business domain for namespace: {namespace}App")
+                    return f"{namespace}App"
+            
+            # Priority 2: Extract from COBOL program IDs
+            if hasattr(self, 'analysis_results') and self.analysis_results:
+                programs = self.analysis_results.get("cics_results", {}).get("programs", {})
+                for prog_name, prog_data in programs.items():
+                    program_id = prog_data.get("program_id")
+                    if program_id:
+                        clean_name = ''.join(c for c in program_id if c.isalnum())
+                        if clean_name and len(clean_name) > 2:
+                            namespace = f"{clean_name.capitalize()}App"
+                            logger.info(f"Using program ID for namespace: {namespace}")
+                            return namespace
+            
+            # Priority 3: Extract from file names
+            if hasattr(self, 'project_files') and self.project_files:
+                for filename in self.project_files.keys():
+                    if filename.lower().endswith(('.cbl', '.cob', '.cobol')):
+                        base_name = os.path.splitext(filename)[0]
+                        clean_name = ''.join(c for c in base_name if c.isalnum())
+                        if clean_name and len(clean_name) > 2:
+                            namespace = f"{clean_name.capitalize()}App"
+                            logger.info(f"Using filename for namespace: {namespace}")
+                            return namespace
+            
+            # Priority 4: Extract from file content
+            if hasattr(self, 'project_files') and self.project_files:
+                import re
+                for content in self.project_files.values():
+                    # Look for PROGRAM-ID
+                    prog_match = re.search(r'PROGRAM-ID\.\s*([A-Z0-9-]+)', content, re.I)
+                    if prog_match:
+                        prog_name = prog_match.group(1).replace('-', '').replace('_', '')
+                        if len(prog_name) > 2:
+                            namespace = f"{prog_name.capitalize()}App"
+                            logger.info(f"Using PROGRAM-ID for namespace: {namespace}")
+                            return namespace
+                    
+                    # Business domain detection from content
+                    content_upper = content.upper()
+                    if 'ACCOUNT' in content_upper and ('BALANCE' in content_upper or 'DEPOSIT' in content_upper):
+                        logger.info("Using business context for namespace: BankingApp")
+                        return "BankingApp"
+                    elif 'CUSTOMER' in content_upper:
+                        logger.info("Using business context for namespace: CustomerApp")
+                        return "CustomerApp"
+                    elif 'EMPLOYEE' in content_upper:
+                        logger.info("Using business context for namespace: EmployeeApp")
+                        return "EmployeeApp"
+                    elif 'INVENTORY' in content_upper or 'PRODUCT' in content_upper:
+                        logger.info("Using business context for namespace: InventoryApp")
+                        return "InventoryApp"
+                    elif 'ORDER' in content_upper:
+                        logger.info("Using business context for namespace: OrderApp")
+                        return "OrderApp"
+                    elif 'POLICY' in content_upper or 'CLAIM' in content_upper:
+                        logger.info("Using business context for namespace: InsuranceApp")
+                        return "InsuranceApp"
+                        
+        except Exception as e:
+            logger.debug(f"Error deriving dynamic namespace: {e}")
+        
+        # Final fallback
+        logger.info("Using default namespace: ModernizedApp")
+        return "ModernizedApp"
+    
     def _generate_conversion_context(self, rag_results: Dict, cics_results: Dict) -> Dict[str, Any]:
         """Generate conversion-ready context from analysis results"""
         
-        logger.info("🎯 Building comprehensive conversion context...")
+        logger.info("Building conversion context from analysis results")
+        
+        # Get dynamic namespace
+        project_namespace = self._get_project_namespace()
         
         conversion_context = {
             "business_entities": [],
@@ -167,6 +255,7 @@ class AnalysisManager:
             "dependencies": {},
             "cics_patterns": [],
             "architecture_recommendations": [],
+            "project_namespace": project_namespace,  # Store the dynamic namespace
             "technology_stack": {
                 "database_usage": False,
                 "messaging_patterns": [],
@@ -175,12 +264,12 @@ class AnalysisManager:
             }
         }
         
-        # Extract business entities with .NET mapping
+        # Extract business entities with .NET mapping using dynamic namespace
         for entity in rag_results.get("business_entities", []):
             dotnet_entity = {
                 "cobol_name": entity.get("name", ""),
                 "dotnet_class": entity.get("java_class_name", "").replace("Java", "").replace("Class", ""),
-                "namespace": f"CicsModernization.Domain.Entities",
+                "namespace": f"{project_namespace}.Domain.Entities",  # Use dynamic namespace
                 "source_file": entity.get("source_file", ""),
                 "complexity": entity.get("estimated_complexity", "medium")
             }
@@ -217,7 +306,7 @@ class AnalysisManager:
             rag_results, cics_results
         )
         
-        logger.info(f"✅ Conversion context generated with {len(conversion_context['business_entities'])} entities")
+        logger.info(f"Conversion context generated with {len(conversion_context['business_entities'])} entities using namespace: {project_namespace}")
         return conversion_context
     
     def _convert_java_to_dotnet_pattern(self, java_pattern: str) -> str:
@@ -318,12 +407,18 @@ class AnalysisManager:
         """Get enhanced conversion context for code conversion"""
         
         if not self.conversion_context:
-            logger.warning("⚠️ No conversion context available")
+            logger.warning("No conversion context available")
             return ""
+        
+        # Get dynamic namespace
+        project_namespace = self.conversion_context.get("project_namespace", self._get_project_namespace())
         
         context_parts = [
             "\n=== ENHANCED CONVERSION CONTEXT FROM COMPREHENSIVE ANALYSIS ===\n"
         ]
+        
+        # Project Namespace
+        context_parts.append(f"🏗️ Project Namespace: {project_namespace}")
         
         # Business Domain Context
         business_domain = self.analysis_results.get("cics_results", {}).get("project_metadata", {}).get("business_domain", "Unknown")
@@ -335,7 +430,7 @@ class AnalysisManager:
             for rec in self.conversion_context["architecture_recommendations"]:
                 context_parts.append(f"  • {rec}")
         
-        # Business Entities Mapping
+        # Business Entities Mapping with dynamic namespace
         if self.conversion_context.get("business_entities"):
             context_parts.append(f"\n📊 Business Entities ({len(self.conversion_context['business_entities'])}):")
             for entity in self.conversion_context["business_entities"][:5]:  # Show top 5
@@ -379,7 +474,7 @@ class AnalysisManager:
         context_parts.append("\n=== END ENHANCED CONTEXT ===\n")
         
         full_context = "\n".join(context_parts)
-        logger.info(f"✅ Generated enhanced conversion context ({len(full_context)} characters)")
+        logger.info(f"Generated enhanced conversion context ({len(full_context)} characters) with namespace: {project_namespace}")
         
         return full_context
     
@@ -402,10 +497,10 @@ class AnalysisManager:
                     "timestamp": self._get_timestamp()
                 }, f, indent=2, ensure_ascii=False)
             
-            logger.info(f"💾 Enhanced analysis saved to {analysis_file}")
+            logger.info(f"Enhanced analysis saved to {analysis_file}")
             
         except Exception as e:
-            logger.error(f"❌ Failed to save enhanced analysis: {e}")
+            logger.error(f"Failed to save enhanced analysis: {e}")
     
     def _get_timestamp(self) -> str:
         """Get current timestamp"""
@@ -466,5 +561,5 @@ class AnalysisManager:
             return {"status": "success", "results": results}
             
         except Exception as e:
-            logger.error(f"❌ RAG query failed: {e}")
+            logger.error(f"RAG query failed: {e}")
             return {"status": "error", "error": str(e)}

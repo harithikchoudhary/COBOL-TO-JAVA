@@ -235,9 +235,6 @@ export default function Cobol({ children }) {
         if (data.technicalRequirements.technologyStack) {
           formattedTechReqs += "\n## Recommended Technology Stack\n";
           const stack = data.technicalRequirements.technologyStack;
-          if (stack.database) formattedTechReqs += `- **Database:** ${stack.database}\n`;
-          if (stack.caching) formattedTechReqs += `- **Caching:** ${stack.caching}\n`;
-          if (stack.messaging) formattedTechReqs += `- **Messaging:** ${stack.messaging}\n`;
         }
       } else {
         formattedTechReqs +=
@@ -246,24 +243,6 @@ export default function Cobol({ children }) {
           "Unexpected technical requirements format:",
           data.technicalRequirements
         );
-      }
-    }
-
-    // Add comprehensive analysis summary
-    if (data.comprehensiveAnalysis && data.analysisEnhanced) {
-      formattedTechReqs += "\n## Comprehensive Analysis Summary\n";
-      formattedTechReqs += `- **Analysis Status:** ${data.comprehensiveAnalysis.status}\n`;
-      if (data.comprehensiveAnalysis.rag_analysis) {
-        formattedTechReqs += `- **Files Analyzed:** ${data.comprehensiveAnalysis.rag_analysis.total_files || 0}\n`;
-        formattedTechReqs += `- **Business Entities Found:** ${data.comprehensiveAnalysis.rag_analysis.business_entities || 0}\n`;
-        formattedTechReqs += `- **Conversion Patterns:** ${data.comprehensiveAnalysis.rag_analysis.conversion_patterns || 0}\n`;
-      }
-      if (data.comprehensiveAnalysis.cics_analysis) {
-        formattedTechReqs += `- **CICS Programs:** ${data.comprehensiveAnalysis.cics_analysis.total_programs || 0}\n`;
-        formattedTechReqs += `- **Business Domain:** ${data.comprehensiveAnalysis.cics_analysis.business_domain || 'Unknown'}\n`;
-      }
-      if (data.conversionContextReady) {
-        formattedTechReqs += `- **Conversion Context:** Ready for enhanced code generation\n`;
       }
     }
 

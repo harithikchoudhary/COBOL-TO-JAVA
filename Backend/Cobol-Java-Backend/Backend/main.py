@@ -9,16 +9,9 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8010))
     debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
 
-    logger.info("=" * 80)
-    logger.info("STARTING COBOL CONVERTER APPLICATION")
-    logger.info("=" * 80)
-    logger.info("Host: 0.0.0.0")
-    logger.info(f"Port: {port}")
-    logger.info(f"Debug Mode: {debug}")
-    logger.info(f"Azure OpenAI Endpoint: {app.config.get('AZURE_OPENAI_ENDPOINT')}")
-    logger.info(f"Azure OpenAI Deployment: {app.config.get('AZURE_OPENAI_DEPLOYMENT_NAME')}")
-    logger.info("Log Directory: logs/")
-    logger.info("=" * 80)
+    logger.info("Starting COBOL Converter Application")
+    logger.info(f"Server: 0.0.0.0:{port} | Debug: {debug}")
+    logger.info(f"Azure OpenAI: {app.config['AZURE_OPENAI_DEPLOYMENT_NAME']}")
 
     app.run(
         host="0.0.0.0",
