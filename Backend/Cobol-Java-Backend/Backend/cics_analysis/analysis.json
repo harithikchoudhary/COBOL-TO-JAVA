@@ -1,0 +1,1016 @@
+{
+  "programs": {
+    "BANKING.CBL": {
+      "description": "COBOL CICS program",
+      "program_id": "BANKING",
+      "copybooks": [
+        "ACCOUNT-VALIDATION.cpy",
+        "ERROR-CODES.cpy",
+        "SECURITY-CONTROL.cpy",
+        "TRANSACTION-TYPES.cpy"
+      ],
+      "control_includes": [],
+      "file_descriptors": [
+        {
+          "name": "ACCOUNT-FILE",
+          "line": 69,
+          "type": "Sequential"
+        },
+        {
+          "name": "TRANS-FILE",
+          "line": 93,
+          "type": "Sequential"
+        },
+        {
+          "name": "AUDIT-FILE",
+          "line": 121,
+          "type": "Sequential"
+        }
+      ],
+      "cics_commands": [
+        {
+          "line": 343,
+          "verb": "RETURN",
+          "command_type": "RETURN",
+          "parameters": {
+            "TRANSID": "BANK",
+            "COMMAREA": "DFHCOMMAREA",
+            "USERID": "WS-USER-ID",
+            "TERMID": "WS-TERMINAL-ID"
+          },
+          "raw_block": "EXEC CICS RETURN  TRANSID('BANK')  COMMAREA(DFHCOMMAREA)  END-EXEC.    INITIALIZE-TRANSACTION.  *> Get terminal and user information  EXEC CICS ASSIGN  USERID(WS-USER-ID)  TERMID(WS-TERMINAL-ID)  END-EXEC",
+          "dotnet_service": "ITransactionService",
+          "dotnet_method": "CompleteTransactionAsync",
+          "conversion_hint": "Transaction completion",
+          "ai_conversion": "public class CicsTransaction\n{\n    private string DFHCOMMAREA;\n    private string WS_USER_ID;\n    private string WS_TERMINAL_ID;\n\n    public void Execute()\n    {\n        // Simulate CICS RETURN\n        ReturnTransaction(\"BANK\", DFHCOMMAREA);\n\n        // Initialize transaction\n        InitializeTransaction();\n\n        // Simulate CICS ASSIGN\n        AssignUserAndTerminal(out WS_USER_ID, out WS_TERMINAL_ID);\n    }\n\n    private void ReturnTransaction(string transId, string commArea)\n    {\n        // Logic to handle transaction return\n    }\n\n    private void InitializeTransaction()\n    {\n        // Logic to initialize transaction\n    }\n\n    private void AssignUserAndTerminal(out string userId, out string terminalId)\n    {\n        // Logic to assign user and terminal information\n        userId = \"SampleUserId\"; // Replace with actual logic\n        terminalId = \"SampleTerminalId\"; // Replace with actual logic\n    }\n}",
+          "complexity_score": 4,
+          "performance_impact": "low",
+          "security_considerations": [
+            "Validate and sanitize COMMAREA payload"
+          ]
+        },
+        {
+          "line": 381,
+          "verb": "LINK",
+          "command_type": "LINK",
+          "parameters": {
+            "PROGRAM": "AUTHCHK",
+            "COMMAREA": "LK-USER-ID",
+            "LENGTH": "8"
+          },
+          "raw_block": "EXEC CICS LINK  PROGRAM('AUTHCHK')  COMMAREA(LK-USER-ID)  LENGTH(8)  END-EXEC",
+          "dotnet_service": "IMediator",
+          "dotnet_method": "SendAsync",
+          "conversion_hint": "MediatR command/query pattern",
+          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"AUTHCHK\";\n        byte[] commArea = Encoding.ASCII.GetBytes(\"LK-USER-ID\".PadRight(8));\n        \n        // Assuming a method LinkProgram exists to handle the LINK operation\n        LinkProgram(programName, commArea);\n    }\n\n    private void LinkProgram(string programName, byte[] commArea)\n    {\n        // Implementation for linking to the program\n        // This is a placeholder for the actual logic to call the external program\n        Console.WriteLine($\"Linking to program: {programName} with commarea: {BitConverter.ToString(commArea)}\");\n    }\n}",
+          "complexity_score": 3,
+          "performance_impact": "high",
+          "security_considerations": [
+            "Validate and sanitize COMMAREA payload",
+            "Ensure linked program is authorized"
+          ]
+        },
+        {
+          "line": 417,
+          "verb": "LINK",
+          "command_type": "LINK",
+          "parameters": {
+            "PROGRAM": "SESSVAL",
+            "CHANNEL": "WS-CHANNEL-NAME",
+            "CONTAINER": "WS-CONTAINER-NAME",
+            "FILE": "ACCOUNTS",
+            "INTO": "ACCOUNT-RECORD",
+            "RIDFLD": "ACC-KEY",
+            "RESP": "WS-CICS-RESP"
+          },
+          "raw_block": "EXEC CICS LINK  PROGRAM('SESSVAL')  CHANNEL(WS-CHANNEL-NAME)  CONTAINER(WS-CONTAINER-NAME)  END-EXEC.    ACCOUNT-INQUIRY.  *> Read account information  MOVE LK-FROM-ACCOUNT TO ACC-NUMBER    EXEC CICS READ  FILE('ACCOUNTS')  INTO(ACCOUNT-RECORD)  RIDFLD(ACC-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+          "dotnet_service": "IMediator",
+          "dotnet_method": "SendAsync",
+          "conversion_hint": "MediatR command/query pattern",
+          "ai_conversion": "using System;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"SESSVAL\";\n        string channelName = \"WS-CHANNEL-NAME\";\n        string containerName = \"WS-CONTAINER-NAME\";\n        string fileName = \"ACCOUNTS\";\n        string accountRecord = string.Empty;\n        string accKey = \"ACC-KEY\";\n        int cicsResponse = 0;\n\n        // Simulate CICS LINK command\n        LinkToProgram(programName, channelName, containerName);\n\n        // Simulate account inquiry\n        string accNumber = \"LK-FROM-ACCOUNT\";\n        accKey = accNumber;\n\n        // Simulate CICS READ command\n        ReadAccountInformation(fileName, ref accountRecord, accKey, ref cicsResponse);\n    }\n\n    private void LinkToProgram(string program, string channel, string container)\n    {\n        // Logic to link to the program\n        Console.WriteLine($\"Linking to program: {program}, Channel: {channel}, Container: {container}\");\n    }\n\n    private void ReadAccountInformation(string file, ref string accountRecord, string ridFld, ref int resp)\n    {\n        // Logic to read account information\n        Console.WriteLine($\"Reading from file: {file}, RIDFLD: {ridFld}\");\n        accountRecord = \"Sample Account Record\"; // Simulated data\n        resp = 0; // Simulated response code\n    }\n}",
+          "complexity_score": 8,
+          "performance_impact": "high",
+          "security_considerations": [
+            "Ensure container data is authenticated",
+            "Ensure linked program is authorized"
+          ]
+        },
+        {
+          "line": 465,
+          "verb": "SYNCPOINT",
+          "command_type": "",
+          "parameters": {
+            "DFHRESP": "NORMAL"
+          },
+          "raw_block": "EXEC CICS SYNCPOINT ROLLBACK END-EXEC    PERFORM DEBIT-FROM-ACCOUNT  IF WS-CICS-RESP = DFHRESP(NORMAL)  PERFORM CREDIT-TO-ACCOUNT  IF WS-CICS-RESP = DFHRESP(NORMAL)  PERFORM LOG-TRANSACTION  EXEC CICS SYNCPOINT END-EXEC",
+          "dotnet_service": "",
+          "dotnet_method": "",
+          "conversion_hint": "",
+          "ai_conversion": "try\n{\n    // Perform debit from account\n    DebitFromAccount();\n    \n    if (WsCicsResp == Dfhresp.Normal)\n    {\n        // Perform credit to account\n        CreditToAccount();\n        \n        if (WsCicsResp == Dfhresp.Normal)\n        {\n            // Perform log transaction\n            LogTransaction();\n            \n            // Commit the transaction\n            CommitTransaction();\n        }\n    }\n}\ncatch (Exception ex)\n{\n    // Rollback the transaction in case of an error\n    RollbackTransaction();\n    throw;\n}",
+          "complexity_score": 2,
+          "performance_impact": "low",
+          "security_considerations": []
+        },
+        {
+          "line": 471,
+          "verb": "SYNCPOINT",
+          "command_type": "",
+          "parameters": {},
+          "raw_block": "EXEC CICS SYNCPOINT END-EXEC  PERFORM NOTIFY-TRANSFER-COMPLETE  ELSE  EXEC CICS SYNCPOINT ROLLBACK END-EXEC",
+          "dotnet_service": "",
+          "dotnet_method": "",
+          "conversion_hint": "",
+          "ai_conversion": "try\n{\n    // Commit the transaction\n    CommitTransaction();\n\n    // Perform the equivalent of NOTIFY-TRANSFER-COMPLETE\n    NotifyTransferComplete();\n}\ncatch (Exception)\n{\n    // Rollback the transaction in case of an error\n    RollbackTransaction();\n}\n\nvoid CommitTransaction()\n{\n    // Implementation for committing the transaction\n}\n\nvoid NotifyTransferComplete()\n{\n    // Implementation for notifying transfer completion\n}\n\nvoid RollbackTransaction()\n{\n    // Implementation for rolling back the transaction\n}",
+          "complexity_score": 0,
+          "performance_impact": "low",
+          "security_considerations": []
+        },
+        {
+          "line": 479,
+          "verb": "SYNCPOINT",
+          "command_type": "",
+          "parameters": {},
+          "raw_block": "EXEC CICS SYNCPOINT ROLLBACK END-EXEC  PERFORM HANDLE-CREDIT-ERROR  END-IF  ELSE  EXEC CICS SYNCPOINT ROLLBACK END-EXEC",
+          "dotnet_service": "",
+          "dotnet_method": "",
+          "conversion_hint": "",
+          "ai_conversion": "try\n{\n    // Perform syncpoint rollback logic here\n}\ncatch (Exception)\n{\n    // Handle credit error\n}",
+          "complexity_score": 0,
+          "performance_impact": "low",
+          "security_considerations": []
+        },
+        {
+          "line": 505,
+          "verb": "SYNCPOINT",
+          "command_type": "READ",
+          "parameters": {
+            "FILE": "ACCOUNTS",
+            "INTO": "ACCOUNT-RECORD",
+            "RIDFLD": "ACC-KEY",
+            "RESP": "WS-CICS-RESP"
+          },
+          "raw_block": "EXEC CICS SYNCPOINT ROLLBACK END-EXEC  PERFORM HANDLE-DEBIT-ERROR  END-IF  END-IF.    DEBIT-FROM-ACCOUNT.  MOVE LK-FROM-ACCOUNT TO ACC-NUMBER    EXEC CICS READ UPDATE  FILE('ACCOUNTS')  INTO(ACCOUNT-RECORD)  RIDFLD(ACC-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+          "dotnet_service": "IRepositoryService",
+          "dotnet_method": "ReadAsync",
+          "conversion_hint": "Entity Framework repository pattern",
+          "ai_conversion": "try\n{\n    // Begin transaction\n    using (var transaction = new TransactionScope())\n    {\n        // Read the account record\n        var accountRecord = ReadAccountRecord(\"ACCOUNTS\", accKey, out var response);\n\n        if (response == CicsResponse.Success)\n        {\n            // Perform debit from account\n            DebitFromAccount(accountRecord);\n\n            // Commit the transaction\n            transaction.Complete();\n        }\n        else\n        {\n            // Handle error\n            HandleDebitError();\n        }\n    }\n}\ncatch (Exception ex)\n{\n    // Handle exception\n    HandleDebitError();\n}\n\nAccountRecord ReadAccountRecord(string fileName, string recordId, out CicsResponse response)\n{\n    // Simulate reading from a file\n    response = CicsResponse.Success;\n    return new AccountRecord();\n}\n\nvoid DebitFromAccount(AccountRecord accountRecord)\n{\n    // Simulate debiting from account\n}\n\nvoid HandleDebitError()\n{\n    // Simulate error handling\n}\n\nenum CicsResponse\n{\n    Success,\n    Error\n}\n\nclass AccountRecord\n{\n    // Simulate account record structure\n}",
+          "complexity_score": 5,
+          "performance_impact": "medium",
+          "security_considerations": []
+        },
+        {
+          "line": 527,
+          "verb": "REWRITE",
+          "command_type": "WRITE",
+          "parameters": {
+            "FILE": "ACCOUNTS",
+            "FROM": "ACCOUNT-RECORD",
+            "RESP": "WS-CICS-RESP"
+          },
+          "raw_block": "EXEC CICS REWRITE  FILE('ACCOUNTS')  FROM(ACCOUNT-RECORD)  RESP(WS-CICS-RESP)  END-EXEC",
+          "dotnet_service": "IRepositoryService",
+          "dotnet_method": "CreateAsync",
+          "conversion_hint": "Entity Framework Add operation",
+          "ai_conversion": "try\n{\n    // Assuming ACCOUNT_RECORD is a byte array or similar structure\n    var accountRecord = GetAccountRecord(); // Method to retrieve the account record data\n    var fileName = \"ACCOUNTS\";\n\n    // Open the file for writing\n    using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Write))\n    {\n        // Write the account record to the file\n        fileStream.Write(accountRecord, 0, accountRecord.Length);\n    }\n\n    // Set response code to indicate success\n    var wsCicsResp = 0; // Assuming 0 indicates success\n}\ncatch (Exception ex)\n{\n    // Handle exceptions and set response code to indicate failure\n    var wsCicsResp = -1; // Assuming -1 indicates failure\n    // Log or handle the exception as needed\n}",
+          "complexity_score": 3,
+          "performance_impact": "medium",
+          "security_considerations": []
+        },
+        {
+          "line": 557,
+          "verb": "READ",
+          "command_type": "READ",
+          "parameters": {
+            "FILE": "ACCOUNTS",
+            "INTO": "ACCOUNT-RECORD",
+            "RIDFLD": "ACC-KEY",
+            "RESP": "WS-CICS-RESP"
+          },
+          "raw_block": "EXEC CICS READ UPDATE  FILE('ACCOUNTS')  INTO(ACCOUNT-RECORD)  RIDFLD(ACC-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+          "dotnet_service": "IRepositoryService",
+          "dotnet_method": "ReadAsync",
+          "conversion_hint": "Entity Framework repository pattern",
+          "ai_conversion": "try\n{\n    // Assuming a method GetAccountRecord that reads from a data source\n    var accountRecord = GetAccountRecord(\"ACCOUNTS\", ACC_KEY);\n\n    if (accountRecord != null)\n    {\n        ACCOUNT_RECORD = accountRecord;\n        WS_CICS_RESP = 0; // Success response code\n    }\n    else\n    {\n        WS_CICS_RESP = 1; // Not found response code\n    }\n}\ncatch (Exception ex)\n{\n    WS_CICS_RESP = 2; // Error response code\n    // Log exception or handle error\n}",
+          "complexity_score": 4,
+          "performance_impact": "medium",
+          "security_considerations": []
+        },
+        {
+          "line": 575,
+          "verb": "REWRITE",
+          "command_type": "WRITE",
+          "parameters": {
+            "FILE": "ACCOUNTS",
+            "FROM": "ACCOUNT-RECORD",
+            "RESP": "WS-CICS-RESP"
+          },
+          "raw_block": "EXEC CICS REWRITE  FILE('ACCOUNTS')  FROM(ACCOUNT-RECORD)  RESP(WS-CICS-RESP)  END-EXEC",
+          "dotnet_service": "IRepositoryService",
+          "dotnet_method": "CreateAsync",
+          "conversion_hint": "Entity Framework Add operation",
+          "ai_conversion": "try\n{\n    // Assuming ACCOUNT-RECORD is a byte array or similar data structure\n    byte[] accountRecord = GetAccountRecord(); // Method to get the account record data\n\n    // Assuming a method to rewrite the record in the file\n    RewriteRecordInFile(\"ACCOUNTS\", accountRecord);\n}\ncatch (Exception ex)\n{\n    int wsCicsResp = GetCicsResponseCode(ex); // Method to map exception to a CICS response code\n    // Handle the response code as needed\n}",
+          "complexity_score": 3,
+          "performance_impact": "medium",
+          "security_considerations": []
+        },
+        {
+          "line": 621,
+          "verb": "ASKTIME",
+          "command_type": "WRITE",
+          "parameters": {
+            "ABSTIME": "TRANS-DATE",
+            "DATE": "9:6",
+            "FILE": "TRANSACTIONS",
+            "FROM": "TRANSACTION-RECORD",
+            "RIDFLD": "TRANS-KEY",
+            "RESP": "WS-CICS-RESP"
+          },
+          "raw_block": "EXEC CICS ASKTIME ABSTIME(TRANS-DATE) END-EXEC  MOVE FUNCTION CURRENT-DATE(1:8) TO TRANS-DATE  MOVE FUNCTION CURRENT-DATE(9:6) TO TRANS-TIME  ADD 1 TO WS-RECORD-COUNT  MOVE WS-RECORD-COUNT TO TRANS-SEQ  MOVE LK-FROM-ACCOUNT TO TRANS-FROM-ACC  MOVE LK-TO-ACCOUNT TO TRANS-TO-ACC  MOVE LK-AMOUNT TO TRANS-AMOUNT  MOVE 'TRF' TO TRANS-TYPE  MOVE 'C' TO TRANS-STATUS  MOVE WS-USER-ID TO TRANS-USER-ID  MOVE WS-TERMINAL-ID TO TRANS-TERMINAL    EXEC CICS WRITE  FILE('TRANSACTIONS')  FROM(TRANSACTION-RECORD)  RIDFLD(TRANS-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+          "dotnet_service": "IRepositoryService",
+          "dotnet_method": "CreateAsync",
+          "conversion_hint": "Entity Framework Add operation",
+          "ai_conversion": "using System;\n\npublic class TransactionProcessor\n{\n    private DateTime transDate;\n    private int wsRecordCount;\n    private string transKey;\n    private string transFromAcc;\n    private string transToAcc;\n    private decimal transAmount;\n    private string transType;\n    private string transStatus;\n    private string transUserId;\n    private string transTerminal;\n    private int wsCicsResp;\n\n    public void ProcessTransaction()\n    {\n        // Get current date and time\n        transDate = DateTime.Now;\n\n        // Increment record count\n        wsRecordCount++;\n\n        // Set transaction details\n        transKey = wsRecordCount.ToString();\n        transFromAcc = \"LK-FROM-ACCOUNT\";\n        transToAcc = \"LK-TO-ACCOUNT\";\n        transAmount = 100.00m; // Example amount\n        transType = \"TRF\";\n        transStatus = \"C\";\n        transUserId = \"WS-USER-ID\";\n        transTerminal = \"WS-TERMINAL-ID\";\n\n        // Write transaction record\n        WriteTransactionRecord();\n    }\n\n    private void WriteTransactionRecord()\n    {\n        // Simulate writing to a file or database\n        // This is where you would implement the actual write logic\n        Console.WriteLine(\"Transaction written:\");\n        Console.WriteLine($\"Date: {transDate}\");\n        Console.WriteLine($\"From Account: {transFromAcc}\");\n        Console.WriteLine($\"To Account: {transToAcc}\");\n        Console.WriteLine($\"Amount: {transAmount}\");\n        Console.WriteLine($\"Type: {transType}\");\n        Console.WriteLine($\"Status: {transStatus}\");\n        Console.WriteLine($\"User ID: {transUserId}\");\n        Console.WriteLine($\"Terminal: {transTerminal}\");\n        Console.WriteLine($\"Response: {wsCicsResp}\");\n    }\n}",
+          "complexity_score": 8,
+          "performance_impact": "medium",
+          "security_considerations": []
+        },
+        {
+          "line": 643,
+          "verb": "STARTBR",
+          "command_type": "",
+          "parameters": {
+            "FILE": "TRANSACTIONS",
+            "RIDFLD": "LK-FROM-ACCOUNT",
+            "RESP": "WS-CICS-RESP"
+          },
+          "raw_block": "EXEC CICS STARTBR  FILE('TRANSACTIONS')  RIDFLD(LK-FROM-ACCOUNT)  RESP(WS-CICS-RESP)  END-EXEC",
+          "dotnet_service": "",
+          "dotnet_method": "",
+          "conversion_hint": "",
+          "ai_conversion": "using System;\n\npublic class CicsTransaction\n{\n    public void StartBrowse()\n    {\n        try\n        {\n            // Assuming a method to start browsing the file\n            StartBrowseFile(\"TRANSACTIONS\", LK_FROM_ACCOUNT);\n        }\n        catch (Exception ex)\n        {\n            WS_CICS_RESP = ex.Message;\n        }\n    }\n\n    private void StartBrowseFile(string fileName, string ridField)\n    {\n        // Implementation for starting the browse on the file\n        // This is a placeholder for the actual logic\n    }\n\n    private string LK_FROM_ACCOUNT; // This should be initialized with the appropriate value\n    private string WS_CICS_RESP;\n}",
+          "complexity_score": 3,
+          "performance_impact": "low",
+          "security_considerations": []
+        },
+        {
+          "line": 677,
+          "verb": "ENDBR",
+          "command_type": "",
+          "parameters": {
+            "FILE": "TRANSACTIONS",
+            "INTO": "TRANSACTION-RECORD",
+            "RIDFLD": "TRANS-KEY",
+            "RESP": "WS-CICS-RESP"
+          },
+          "raw_block": "EXEC CICS ENDBR FILE('TRANSACTIONS') END-EXEC  END-IF.    READ-TRANSACTION-HISTORY.  MOVE 'N' TO WS-EOF-FLAG  MOVE 1 TO WS-TSQ-ITEM    PERFORM UNTIL WS-EOF-FLAG = 'Y'  EXEC CICS READNEXT  FILE('TRANSACTIONS')  INTO(TRANSACTION-RECORD)  RIDFLD(TRANS-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+          "dotnet_service": "",
+          "dotnet_method": "",
+          "conversion_hint": "",
+          "ai_conversion": "bool wsEofFlag = false;\nint wsTsqItem = 1;\nTransactionRecord transactionRecord = new TransactionRecord();\nstring transKey = string.Empty;\nint wsCicsResp = 0;\n\n// End browse logic\nEndBrowse(\"TRANSACTIONS\");\n\n// Read transaction history logic\nReadTransactionHistory();\n\nwhile (!wsEofFlag)\n{\n    wsEofFlag = ReadNextTransaction(\"TRANSACTIONS\", ref transactionRecord, ref transKey, ref wsCicsResp);\n    wsTsqItem++;\n}\n\n// Method to end browse\nvoid EndBrowse(string fileName)\n{\n    // Logic to end browse on the file\n}\n\n// Method to read transaction history\nvoid ReadTransactionHistory()\n{\n    // Logic to read transaction history\n}\n\n// Method to read next transaction\nbool ReadNextTransaction(string fileName, ref TransactionRecord record, ref string key, ref int response)\n{\n    // Logic to read next transaction\n    // Return true if end of file, otherwise false\n    return false;\n}\n\n// TransactionRecord class definition\nclass TransactionRecord\n{\n    // Define properties for transaction record\n}",
+          "complexity_score": 5,
+          "performance_impact": "low",
+          "security_considerations": []
+        },
+        {
+          "line": 715,
+          "verb": "GET",
+          "command_type": "",
+          "parameters": {
+            "CONTAINER": "WS-CONTAINER-NAME",
+            "CHANNEL": "WS-CHANNEL-NAME",
+            "INTO": "WS-CONTAINER-DATA",
+            "FLENGTH": "WS-CONTAINER-LENGTH"
+          },
+          "raw_block": "EXEC CICS GET CONTAINER(WS-CONTAINER-NAME)  CHANNEL(WS-CHANNEL-NAME)  INTO(WS-CONTAINER-DATA)  FLENGTH(WS-CONTAINER-LENGTH)  END-EXEC",
+          "dotnet_service": "",
+          "dotnet_method": "",
+          "conversion_hint": "",
+          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsContainerHandler\n{\n    public byte[] GetContainerData(string containerName, string channelName, out int containerLength)\n    {\n        // Simulate fetching data from a CICS container\n        byte[] containerData = FetchDataFromContainer(containerName, channelName);\n        containerLength = containerData.Length;\n        return containerData;\n    }\n\n    private byte[] FetchDataFromContainer(string containerName, string channelName)\n    {\n        // Placeholder for actual CICS interaction logic\n        // For demonstration, returning a sample byte array\n        return Encoding.UTF8.GetBytes(\"Sample container data\");\n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        var handler = new CicsContainerHandler();\n        int containerLength;\n        byte[] containerData = handler.GetContainerData(\"WS-CONTAINER-NAME\", \"WS-CHANNEL-NAME\", out containerLength);\n\n        // Assuming WS-CONTAINER-DATA is a byte array\n        byte[] WS_CONTAINER_DATA = containerData;\n        int WS_CONTAINER_LENGTH = containerLength;\n\n        // Output the results\n        Console.WriteLine(\"Container Data: \" + Encoding.UTF8.GetString(WS_CONTAINER_DATA));\n        Console.WriteLine(\"Container Length: \" + WS_CONTAINER_LENGTH);\n    }\n}",
+          "complexity_score": 4,
+          "performance_impact": "low",
+          "security_considerations": [
+            "Ensure container data is authenticated"
+          ]
+        },
+        {
+          "line": 747,
+          "verb": "LINK",
+          "command_type": "LINK",
+          "parameters": {
+            "PROGRAM": "BATCHPRC",
+            "CHANNEL": "WS-CHANNEL-NAME"
+          },
+          "raw_block": "EXEC CICS LINK  PROGRAM('BATCHPRC')  CHANNEL(WS-CHANNEL-NAME)  END-EXEC.    *> SQL Operations for reporting  GENERATE-ACCOUNT-REPORT.  EXEC SQL  DECLARE ACCOUNT-CURSOR CURSOR FOR  SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE  FROM ACCOUNTS  WHERE ACC_STATUS = 'A'  ORDER BY ACC_BALANCE DESC  END-EXEC",
+          "dotnet_service": "IMediator",
+          "dotnet_method": "SendAsync",
+          "conversion_hint": "MediatR command/query pattern",
+          "ai_conversion": "using System;\nusing System.Data.SqlClient;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        // Simulate the LINK command to call the program BATCHPRC\n        CallBatchProcess();\n\n        // SQL Operations for reporting\n        GenerateAccountReport();\n    }\n\n    private void CallBatchProcess()\n    {\n        // Logic to call the external program BATCHPRC\n        Console.WriteLine(\"Calling external program BATCHPRC with channel WS-CHANNEL-NAME\");\n        // Implement the actual call logic here\n    }\n\n    private void GenerateAccountReport()\n    {\n        string connectionString = \"your_connection_string_here\";\n        string query = @\"\n            SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE\n            FROM ACCOUNTS\n            WHERE ACC_STATUS = 'A'\n            ORDER BY ACC_BALANCE DESC\";\n\n        using (SqlConnection connection = new SqlConnection(connectionString))\n        {\n            SqlCommand command = new SqlCommand(query, connection);\n            connection.Open();\n\n            using (SqlDataReader reader = command.ExecuteReader())\n            {\n                while (reader.Read())\n                {\n                    Console.WriteLine($\"Account Number: {reader[\"ACC_NUMBER\"]}, \" +\n                                      $\"Holder Name: {reader[\"ACC_HOLDER_NAME\"]}, \" +\n                                      $\"Balance: {reader[\"ACC_BALANCE\"]}, \" +\n                                      $\"Type: {reader[\"ACC_TYPE\"]}\");\n                }\n            }\n        }\n    }\n}",
+          "complexity_score": 3,
+          "performance_impact": "high",
+          "security_considerations": [
+            "Ensure container data is authenticated",
+            "Ensure linked program is authorized"
+          ]
+        },
+        {
+          "line": 899,
+          "verb": "WRITEQ",
+          "command_type": "WRITEQ_TS",
+          "parameters": {
+            "QUEUE": "AUDIT",
+            "FROM": "TRANSACTION-START",
+            "LENGTH": "17",
+            "ITEM": "WS-TSQ-ITEM",
+            "RESP": "WS-CICS-RESP",
+            "MAPSET": "WS-MAPSET",
+            "MAP": "WS-MAP-NAME",
+            "CURSOR": "WS-CURSOR-POS"
+          },
+          "raw_block": "EXEC CICS WRITEQ TS  QUEUE(WS-TSQ-NAME)  FROM('SESSION-START')  LENGTH(13)  ITEM(WS-TSQ-ITEM)  RESP(WS-CICS-RESP)  END-EXEC.    STORE-ACCOUNT-IN-TSQ.  ADD 1 TO WS-TSQ-ITEM  MOVE LENGTH OF ACCOUNT-RECORD TO WS-TSQ-LENGTH    EXEC CICS WRITEQ TS  QUEUE(WS-TSQ-NAME)  FROM(ACCOUNT-RECORD)  LENGTH(WS-TSQ-LENGTH)  ITEM(WS-TSQ-ITEM)  END-EXEC.    SEND-MQ-NOTIFICATION.  MOVE 'TRANSFER-COMPLETE' TO WS-MQ-MESSAGE  MOVE 100 TO WS-MQ-LENGTH    EXEC CICS WRITEQ TD  QUEUE(WS-MQ-QUEUE)  FROM(WS-MQ-MESSAGE)  LENGTH(WS-MQ-LENGTH)  END-EXEC.    SEND-ACCOUNT-MAP.  EXEC CICS SEND  MAPSET(WS-MAPSET)  MAP(WS-MAP-NAME)  FROM(ACCOUNT-RECORD)  ERASE  CURSOR(WS-CURSOR-POS)  END-EXEC.    HANDLE-FILE-ERROR.  ADD 1 TO WS-ERROR-COUNT  MOVE 'FILE-ERROR' TO WS-ERROR-CODE  PERFORM LOG-ERROR.    START-AUDIT-LOG.  EXEC CICS WRITEQ TD  QUEUE('AUDIT')  FROM('TRANSACTION-START')  LENGTH(17)  END-EXEC.    FINALIZE-TRANSACTION.  EXEC CICS DELETEQ TS  QUEUE(WS-TSQ-NAME)  END-EXEC",
+          "dotnet_service": "ICacheService",
+          "dotnet_method": "WriteToTempStorageAsync",
+          "conversion_hint": "Redis/MemoryCache implementation",
+          "ai_conversion": "using System;\nusing System.Collections.Generic;\n\npublic class CicsTransaction\n{\n    private string WS_TSQ_NAME = \"WS-TSQ-NAME\";\n    private string WS_MQ_QUEUE = \"WS-MQ-QUEUE\";\n    private string WS_MAPSET = \"WS-MAPSET\";\n    private string WS_MAP_NAME = \"WS-MAP-NAME\";\n    private int WS_CURSOR_POS = 0;\n    private int WS_TSQ_ITEM = 0;\n    private int WS_TSQ_LENGTH = 0;\n    private int WS_MQ_LENGTH = 100;\n    private int WS_ERROR_COUNT = 0;\n    private string WS_ERROR_CODE = string.Empty;\n    private string WS_CICS_RESP = string.Empty;\n    private string ACCOUNT_RECORD = \"ACCOUNT-RECORD\";\n    private string WS_MQ_MESSAGE = \"TRANSFER-COMPLETE\";\n\n    public void ExecuteTransaction()\n    {\n        WriteQueueTS(WS_TSQ_NAME, \"SESSION-START\", 13, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        StoreAccountInTSQ();\n        WS_TSQ_ITEM++;\n        WS_TSQ_LENGTH = ACCOUNT_RECORD.Length;\n        WriteQueueTS(WS_TSQ_NAME, ACCOUNT_RECORD, WS_TSQ_LENGTH, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        SendMQNotification();\n        WriteQueueTD(WS_MQ_QUEUE, WS_MQ_MESSAGE, WS_MQ_LENGTH);\n        SendAccountMap();\n        HandleFileError();\n        StartAuditLog();\n        FinalizeTransaction();\n    }\n\n    private void WriteQueueTS(string queue, string from, int length, int item, ref string resp)\n    {\n        // Simulate CICS WRITEQ TS operation\n        Console.WriteLine($\"WRITEQ TS: Queue={queue}, From={from}, Length={length}, Item={item}\");\n    }\n\n    private void StoreAccountInTSQ()\n    {\n        // Simulate storing account in TSQ\n        Console.WriteLine(\"Store account in TSQ.\");\n    }\n\n    private void SendMQNotification()\n    {\n        // Simulate sending MQ notification\n        Console.WriteLine(\"Send MQ notification.\");\n    }\n\n    private void WriteQueueTD(string queue, string from, int length)\n    {\n        // Simulate CICS WRITEQ TD operation\n        Console.WriteLine($\"WRITEQ TD: Queue={queue}, From={from}, Length={length}\");\n    }\n\n    private void SendAccountMap()\n    {\n        // Sim",
+          "complexity_score": 12,
+          "performance_impact": "medium",
+          "security_considerations": []
+        }
+      ],
+      "sql_blocks": [
+        {
+          "original_sql": "EXEC SQL OPEN ACCOUNT-CURSOR END-EXEC\n\n\n\nPERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'\n\n\n\nEXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.",
+          "line_number": 759,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL OPEN ACCOUNT-CURSOR END-EXEC\n\n\n\nPERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'\n\n\n\nEXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.\n\n\n\nPROCESS-REPORT-RECORDS.\n\nEXEC SQL\n\nFETCH ACCOUNT-CURSOR\n\nINTO :ACC-NUMBER, :ACC-HOLDER-NAME, :ACC-BALANCE, :ACC-TYPE\n\nEND-EXEC",
+          "line_number": 771,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.\n\n\n\nPROCESS-REPORT-RECORDS.\n\nEXEC SQL\n\nFETCH ACCOUNT-CURSOR\n\nINTO :ACC-NUMBER, :ACC-HOLDER-NAME, :ACC-BALANCE, :ACC-TYPE\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        }
+      ],
+      "business_logic": [],
+      "procedures": [
+        {
+          "name": "INITIALIZE-TRANSACTION",
+          "line": 285,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task InitializeTransactionAsync()"
+        },
+        {
+          "name": "VALIDATE-USER-SESSION",
+          "line": 291,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task ValidateUserSessionAsync()"
+        },
+        {
+          "name": "ACCOUNT-INQUIRY",
+          "line": 299,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task AccountInquiryAsync()"
+        },
+        {
+          "name": "ACCOUNT-TRANSFER",
+          "line": 301,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task AccountTransferAsync()"
+        },
+        {
+          "name": "TRANSACTION-HISTORY",
+          "line": 303,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task TransactionHistoryAsync()"
+        },
+        {
+          "name": "ACCOUNT-BALANCE-UPDATE",
+          "line": 305,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task AccountBalanceUpdateAsync()"
+        },
+        {
+          "name": "BATCH-PROCESSING",
+          "line": 307,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task BatchProcessingAsync()"
+        },
+        {
+          "name": "INVALID-FUNCTION",
+          "line": 309,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task InvalidFunctionAsync()"
+        },
+        {
+          "name": "FINALIZE-TRANSACTION",
+          "line": 317,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task FinalizeTransactionAsync()"
+        },
+        {
+          "name": "START-AUDIT-LOG",
+          "line": 351,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task StartAuditLogAsync()"
+        },
+        {
+          "name": "INITIALIZE-TEMP-STORAGE",
+          "line": 359,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task InitializeTempStorageAsync()"
+        },
+        {
+          "name": "STORE-ACCOUNT-IN-TSQ",
+          "line": 425,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task StoreAccountInTsqAsync()"
+        },
+        {
+          "name": "SEND-ACCOUNT-MAP",
+          "line": 429,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task SendAccountMapAsync()"
+        },
+        {
+          "name": "HANDLE-FILE-ERROR",
+          "line": 433,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task HandleFileErrorAsync()"
+        },
+        {
+          "name": "VALIDATE-TRANSFER-REQUEST",
+          "line": 443,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task ValidateTransferRequestAsync()"
+        },
+        {
+          "name": "SEND-MQ-NOTIFICATION",
+          "line": 627,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task SendMqNotificationAsync()"
+        },
+        {
+          "name": "READ-TRANSACTION-HISTORY",
+          "line": 649,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task ReadTransactionHistoryAsync()"
+        },
+        {
+          "name": "STORE-TRANSACTION-IN-TSQ",
+          "line": 683,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task StoreTransactionInTsqAsync()"
+        },
+        {
+          "name": "SEND-HISTORY-MAP",
+          "line": 699,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task SendHistoryMapAsync()"
+        },
+        {
+          "name": "FORMAT-REPORT-LINE",
+          "line": 777,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task FormatReportLineAsync()"
+        },
+        {
+          "name": "WRITE-REPORT-LINE",
+          "line": 779,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task WriteReportLineAsync()"
+        },
+        {
+          "name": "END-AUDIT-LOG",
+          "line": 905,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task EndAuditLogAsync()"
+        }
+      ],
+      "data_movements": [
+        {
+          "line": 365,
+          "statement": "MOVE ZERO TO WS-ERROR-COUNT.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 511,
+          "statement": "MOVE ACC-BALANCE TO WS-OLD-BALANCE",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 531,
+          "statement": "MOVE 'INSUFFICIENT_FUNDS' TO WS-ERROR-CODE",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 533,
+          "statement": "MOVE DFHRESP(ERROR) TO WS-CICS-RESP",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 543,
+          "statement": "MOVE LK-TO-ACCOUNT TO ACC-NUMBER",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 689,
+          "statement": "MOVE 'Y' TO WS-EOF-FLAG",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 783,
+          "statement": "MOVE 'Y' TO WS-EOF-FLAG",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        }
+      ],
+      "conditional_logic": [
+        {
+          "condition": "WS-AUDIT-FLAG = 'Y'",
+          "line": 349,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+          "line": 421,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-VALID-TRANS-FLAG = 'Y'",
+          "line": 447,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+          "line": 509,
+          "complexity": "low"
+        },
+        {
+          "condition": "ACC-BALANCE >= ZERO",
+          "line": 517,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+          "line": 561,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+          "line": 647,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+          "line": 681,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 775,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-AUDIT-FLAG = 'Y'",
+          "line": 903,
+          "complexity": "low"
+        }
+      ],
+      "state_mechanisms": {
+        "TSQ_queues": [
+          "AUDIT"
+        ],
+        "TDQ_queues": [],
+        "COMMAREAs": [
+          "DFHCOMMAREA",
+          "LK-USER-ID"
+        ],
+        "CHANNELS": [
+          "WS-CHANNEL-NAME"
+        ],
+        "CONTAINERS": [
+          "WS-CONTAINER-NAME"
+        ],
+        "MAPSETS": [
+          "WS-MAPSET"
+        ],
+        "TRANSIDS": [
+          "BANK"
+        ]
+      },
+      "performance_indicators": {
+        "file_operations": 3,
+        "database_operations": 2,
+        "network_operations": 1,
+        "loops": 22,
+        "conditions": 10
+      },
+      "error_handling": [
+        {
+          "line": 161,
+          "type": "error_handling",
+          "statement": "01  WS-ERROR-AREA."
+        },
+        {
+          "line": 163,
+          "type": "error_handling",
+          "statement": "05  WS-ERROR-CODE        PIC X(8)."
+        },
+        {
+          "line": 165,
+          "type": "error_handling",
+          "statement": "05  WS-ERROR-MESSAGE     PIC X(80)."
+        },
+        {
+          "line": 167,
+          "type": "error_handling",
+          "statement": "05  WS-CICS-RESP         PIC S9(8) COMP."
+        },
+        {
+          "line": 169,
+          "type": "error_handling",
+          "statement": "05  WS-CICS-RESP2        PIC S9(8) COMP."
+        },
+        {
+          "line": 229,
+          "type": "error_handling",
+          "statement": "05  WS-ERROR-COUNT       PIC S9(4) COMP VALUE ZERO."
+        },
+        {
+          "line": 263,
+          "type": "error_handling",
+          "statement": "05  LK-ERROR-MESSAGE     PIC X(80)."
+        },
+        {
+          "line": 273,
+          "type": "error_handling",
+          "statement": "COPY ERROR-CODES."
+        },
+        {
+          "line": 365,
+          "type": "error_handling",
+          "statement": "MOVE ZERO TO WS-ERROR-COUNT."
+        },
+        {
+          "line": 421,
+          "type": "error_handling",
+          "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+        },
+        {
+          "line": 433,
+          "type": "error_handling",
+          "statement": "PERFORM HANDLE-FILE-ERROR"
+        },
+        {
+          "line": 509,
+          "type": "error_handling",
+          "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+        },
+        {
+          "line": 531,
+          "type": "error_handling",
+          "statement": "MOVE 'INSUFFICIENT_FUNDS' TO WS-ERROR-CODE"
+        },
+        {
+          "line": 533,
+          "type": "error_handling",
+          "statement": "MOVE DFHRESP(ERROR) TO WS-CICS-RESP"
+        },
+        {
+          "line": 561,
+          "type": "error_handling",
+          "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+        },
+        {
+          "line": 647,
+          "type": "error_handling",
+          "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+        },
+        {
+          "line": 681,
+          "type": "error_handling",
+          "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+        }
+      ],
+      "security_aspects": [],
+      "metadata": {
+        "total_lines": 0,
+        "cics_commands_count": 16,
+        "sql_blocks_count": 2,
+        "business_logic_statements": 0,
+        "procedures_count": 22,
+        "complexity_score": 20,
+        "modernization_score": 1
+      },
+      "dotnet_suggestions": {
+        "service_name": "BankingService",
+        "controller_name": "BankingController",
+        "required_services": [
+          "ICacheService",
+          "IMediator",
+          "IRepositoryService",
+          "ITransactionService"
+        ],
+        "suggested_patterns": [
+          "Mediator (MediatR)",
+          "Command/Write Model",
+          "Strategy or Template Method"
+        ],
+        "performance_considerations": [
+          "Batch operations instead of loops"
+        ],
+        "security_recommendations": [
+          "Use HTTPS for all endpoints",
+          "Implement authentication & authorization",
+          "Log sensitive operations"
+        ]
+      }
+    }
+  },
+  "copybooks": {
+    "ACCOUNT-VALIDATION.CPY": {
+      "description": "COBOL copybook defining a data structure",
+      "fields": [
+        {
+          "level": "05",
+          "name": "VALID-ACC-NUMBER",
+          "pic": "9(14).",
+          "line_number": 5,
+          "cobol_type": "numeric_decimal",
+          "dotnet_property": {
+            "name": "ValidAccNumber",
+            "type": "decimal",
+            "original_name": "VALID-ACC-NUMBER",
+            "pic_clause": "9(14)."
+          },
+          "java_property": {
+            "name": "validAccNumber",
+            "type": "BigDecimal",
+            "original_name": "VALID-ACC-NUMBER",
+            "pic_clause": "9(14)."
+          },
+          "validation_hints": [
+            "Numeric"
+          ],
+          "is_key_field": true,
+          "is_required": true
+        },
+        {
+          "level": "05",
+          "name": "VALID-ACC-TYPE",
+          "pic": "X(2).",
+          "line_number": 7,
+          "cobol_type": "alphanumeric",
+          "dotnet_property": {
+            "name": "ValidAccType",
+            "type": "string",
+            "original_name": "VALID-ACC-TYPE",
+            "pic_clause": "X(2)."
+          },
+          "java_property": {
+            "name": "validAccType",
+            "type": "String",
+            "original_name": "VALID-ACC-TYPE",
+            "pic_clause": "X(2)."
+          },
+          "validation_hints": [
+            "MaxLength=2"
+          ],
+          "is_key_field": true,
+          "is_required": true
+        },
+        {
+          "level": "05",
+          "name": "VALID-STATUS",
+          "pic": "X.",
+          "line_number": 9,
+          "cobol_type": "alphanumeric",
+          "dotnet_property": {
+            "name": "ValidStatus",
+            "type": "string",
+            "original_name": "VALID-STATUS",
+            "pic_clause": "X."
+          },
+          "java_property": {
+            "name": "validStatus",
+            "type": "String",
+            "original_name": "VALID-STATUS",
+            "pic_clause": "X."
+          },
+          "validation_hints": [
+            "MaxLength=variable"
+          ],
+          "is_key_field": true,
+          "is_required": false
+        },
+        {
+          "level": "05",
+          "name": "VALID-DAILY-LIMIT",
+          "pic": "S9(11)V99",
+          "line_number": 11,
+          "cobol_type": "numeric_decimal",
+          "dotnet_property": {
+            "name": "ValidDailyLimit",
+            "type": "decimal",
+            "original_name": "VALID-DAILY-LIMIT",
+            "pic_clause": "S9(11)V99"
+          },
+          "java_property": {
+            "name": "validDailyLimit",
+            "type": "BigDecimal",
+            "original_name": "VALID-DAILY-LIMIT",
+            "pic_clause": "S9(11)V99"
+          },
+          "validation_hints": [
+            "Numeric"
+          ],
+          "is_key_field": true,
+          "is_required": true
+        },
+        {
+          "level": "05",
+          "name": "VALID-MIN-BALANCE",
+          "pic": "S9(11)V99",
+          "line_number": 13,
+          "cobol_type": "numeric_decimal",
+          "dotnet_property": {
+            "name": "ValidMinBalance",
+            "type": "decimal",
+            "original_name": "VALID-MIN-BALANCE",
+            "pic_clause": "S9(11)V99"
+          },
+          "java_property": {
+            "name": "validMinBalance",
+            "type": "BigDecimal",
+            "original_name": "VALID-MIN-BALANCE",
+            "pic_clause": "S9(11)V99"
+          },
+          "validation_hints": [
+            "Numeric"
+          ],
+          "is_key_field": true,
+          "is_required": true
+        },
+        {
+          "level": "05",
+          "name": "VALID-OVERDRAFT",
+          "pic": "S9(11)V99",
+          "line_number": 15,
+          "cobol_type": "numeric_decimal",
+          "dotnet_property": {
+            "name": "ValidOverdraft",
+            "type": "decimal",
+            "original_name": "VALID-OVERDRAFT",
+            "pic_clause": "S9(11)V99"
+          },
+          "java_property": {
+            "name": "validOverdraft",
+            "type": "BigDecimal",
+            "original_name": "VALID-OVERDRAFT",
+            "pic_clause": "S9(11)V99"
+          },
+          "validation_hints": [
+            "Numeric"
+          ],
+          "is_key_field": true,
+          "is_required": true
+        }
+      ],
+      "total_fields": 6,
+      "complexity_score": 6,
+      "suggested_dotnet_class": "AccountValidation",
+      "entity_type": "Entity",
+      "has_key_fields": true
+    }
+  },
+  "control_includes": {},
+  "jcl_files": {
+    "BANKING.JCL": {
+      "description": "JCL job control file",
+      "jobs": [
+        "BANKJOB"
+      ],
+      "steps": [
+        {
+          "name": "COMPILE",
+          "line": 19,
+          "dotnet_equivalent": "Background Service or Azure Function"
+        },
+        {
+          "name": "LINK",
+          "line": 39,
+          "dotnet_equivalent": "Background Service or Azure Function"
+        },
+        {
+          "name": "CICSDEF",
+          "line": 77,
+          "dotnet_equivalent": "Background Service or Azure Function"
+        },
+        {
+          "name": "VSAM",
+          "line": 171,
+          "dotnet_equivalent": "Background Service or Azure Function"
+        }
+      ],
+      "datasets": [
+        "SYS1.PROCLIB",
+        "BANK.COPYBOOK.LIBRARY",
+        "CICS.COPYBOOK.LIBRARY",
+        "DB2.COPYBOOK.LIBRARY",
+        "BANK.SOURCE.LIBRARY",
+        "CICS.SDFHLOAD",
+        "DB2.SDSNLOAD",
+        "BANK.LOAD.LIBRARY",
+        "BANK.LOAD.LIBRARY",
+        "CICS.SDFHLOAD",
+        "CICS.DFHCSD"
+      ],
+      "programs": [
+        "IEWL",
+        "DFHCSDUP",
+        "IDCAMS"
+      ],
+      "dotnet_equivalent": "Azure Functions, Background Services, or Docker containers",
+      "complexity_score": 7
+    }
+  },
+  "bms_maps": {},
+  "summary": {
+    "total_programs": 1,
+    "total_copybooks": 1,
+    "total_control_includes": 0,
+    "total_jcl_files": 1,
+    "total_bms_maps": 0
+  },
+  "project_metadata": {
+    "analysis_timestamp": "2025-07-08T15:09:00.868017",
+    "total_files": 3,
+    "business_domain": "BANKING",
+    "cics_transaction_flow": [],
+    "data_flow_analysis": {},
+    "integration_points": []
+  },
+  "cross_references": {
+    "program_to_copybook": {
+      "BANKING.CBL": [
+        "ACCOUNT-VALIDATION.cpy",
+        "ERROR-CODES.cpy",
+        "SECURITY-CONTROL.cpy",
+        "TRANSACTION-TYPES.cpy"
+      ]
+    },
+    "program_to_program": {},
+    "data_dependencies": []
+  },
+  "transaction_flows": [
+    {
+      "program": "BANKING.CBL",
+      "entry_point": "BANKING",
+      "cics_operations": 16,
+      "data_operations": 2,
+      "complexity": 20
+    }
+  ],
+  "ai_insights": {
+    "business_domain": "BANKING",
+    "integration_patterns": [
+      "Synchronous request-response",
+      "Asynchronous messaging"
+    ],
+    "data_flows": [
+      {
+        "source": "CICS application",
+        "destination": "DB2 database",
+        "type": "SQL operations",
+        "count": 2
+      },
+      {
+        "source": "External systems",
+        "destination": "CICS application",
+        "type": "CICS commands",
+        "count": 16
+      }
+    ],
+    "modernization_recommendations": [
+      "Implement API gateways to expose CICS transactions as RESTful services",
+      "Migrate SQL operations to a microservices architecture for better scalability",
+      "Adopt containerization for CICS applications to improve deployment flexibility"
+    ],
+    "risk_assessment": {
+      "legacy_dependency": "High",
+      "data_integrity": "Medium",
+      "system_availability": "High",
+      "security": "Medium"
+    }
+  },
+  "enhancement_timestamp": "2025-07-08T15:09:43.701582"
+}
