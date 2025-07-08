@@ -168,6 +168,47 @@ export default function Output({
   };
 
   const parseCSharpStructure = (backendResponse, unitTests = null) => {
+    // Support new backend format: array of file objects [{ FileName, Path, content }]
+    if (Array.isArray(backendResponse)) {
+      // Try to infer project name from .sln or .csproj file, fallback to 'Project'
+      let projectName = 'Project';
+      const slnFile = backendResponse.find(f => f.FileName && f.FileName.endsWith('.sln'));
+      const csprojFile = backendResponse.find(f => f.FileName && f.FileName.endsWith('.csproj'));
+      if (slnFile) {
+        projectName = slnFile.FileName.replace('.sln', '');
+      } else if (csprojFile) {
+        projectName = csprojFile.FileName.replace('.csproj', '');
+      }
+
+      const structure = {
+        isFolder: true,
+        children: [projectName],
+        files: {},
+        expanded: {},
+      };
+
+      backendResponse.forEach(fileObj => {
+        if (!fileObj.FileName) return;
+        // Normalize path
+        let filePath = fileObj.Path ? fileObj.Path.replace(/^\.?\/?/, '').replace(/\/$/, '') : '';
+        let fullPath = filePath ? `${projectName}/${filePath}/${fileObj.FileName}` : `${projectName}/${fileObj.FileName}`;
+        structure.files[fullPath] = fileObj.content ?? '';
+        // Expand parent folders
+        if (filePath) {
+          const parts = filePath.split('/');
+          let current = projectName;
+          structure.expanded[current] = true;
+          for (const part of parts) {
+            current = `${current}/${part}`;
+            structure.expanded[current] = true;
+          }
+        } else {
+          structure.expanded[projectName] = true;
+        }
+      });
+      return structure;
+    }
+
     console.log("Parsing C# structure with Onion Architecture from backend response", backendResponse);
 
     // Extract the main conversion data
@@ -249,13 +290,11 @@ export default function Output({
 
     // Helper function to add file to structure
     const addFileToStructure = (filePath, content) => {
-      if (content && content.trim()) {
-        structure.files[filePath] = content;
-        // Ensure parent directory is expanded
-        const dir = filePath.substring(0, filePath.lastIndexOf('/'));
-        if (dir && dir !== projectName) {
-          structure.expanded[dir] = true;
-        }
+      structure.files[filePath] = content ?? "";
+      // Ensure parent directory is expanded
+      const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+      if (dir && dir !== projectName) {
+        structure.expanded[dir] = true;
       }
     };
 

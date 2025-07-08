@@ -228,7 +228,7 @@ def create_code_conversion_prompt(
     {language_specific_prompt}
 
     Required Output Structure:
-    Return the response in JSON format with the following structure (all sections must be present, even if empty):
+    Return the response in JSON format with the following structure:
     {{
       "convertedCode": {{
         "DomainEntity": {{"FileName": "EntityName.cs", "Path": "Domain/Entities/", "content": ""}},

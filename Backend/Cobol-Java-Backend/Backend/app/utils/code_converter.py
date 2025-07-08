@@ -3,6 +3,7 @@ import re
 import json
 from typing import List, Dict, Any, Optional
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+from .prompts import create_code_conversion_prompt
 
 # Configure logging
 logging.basicConfig(
@@ -81,85 +82,147 @@ class CodeConverter:
         logger.info(f"Split code into {len(chunks)} chunks")
         return chunks
     
+    def _extract_entity_name(self, source_code: str, fallback: str = "Task") -> str:
+        import re
+        match = re.search(r'PROGRAM-ID\.\s*([A-Z0-9_\-]+)\.', source_code, re.IGNORECASE)
+        if match:
+            return match.group(1).title().replace('_', '')
+        # Try to extract first 01-level record
+        match = re.search(r'01\s+([A-Z0-9_\-]+)\s+PIC', source_code, re.IGNORECASE)
+        if match:
+            return match.group(1).title().replace('_', '')
+        return fallback
+    
     def convert_code_chunks(self, chunks: List[str], source_language: str, 
                            target_language: str, business_requirements: str,
                            technical_requirements: str, db_setup_template: str,
                            project_name: str = "TaskManagementSystem") -> Dict[str, Any]:
-        """
-        Convert each code chunk and merge the results.
-        
-        Args:
-            chunks: List of code chunks to convert
-            source_language: Source programming language
-            target_language: Target programming language for conversion
-            business_requirements: Business requirements to consider during conversion
-            technical_requirements: Technical requirements to consider during conversion
-            db_setup_template: Database setup template if needed
-            project_name: The name of the solution/project
-            
-        Returns:
-            Dictionary containing the converted code and related information
-        """
         if not chunks:
             logger.warning("No code chunks to convert")
             return {
-                "convertedCode": "",
+                "convertedCode": [],
                 "conversionNotes": "Error: No code provided for conversion",
                 "potentialIssues": ["No source code was provided"],
                 "databaseUsed": False
             }
-        
-        # For a single chunk, convert directly
-        if len(chunks) == 1:
-            return self._convert_single_chunk(
-                chunks[0], source_language, target_language,
-                business_requirements, technical_requirements, db_setup_template
-            )
-        
-        # For multiple chunks, provide an overview of the entire code first
-        logger.info(f"Converting {len(chunks)} code chunks using a two-phase approach")
-        
-        # Phase 1: Generate a high-level structure of the target code
-        structure_prompt = self._create_structure_prompt(chunks, source_language, target_language)
-        structure_result = self._get_code_structure(structure_prompt, target_language)
-        
-        # Phase 2: Convert each chunk with awareness of the overall structure
-        conversion_results = []
-        for i, chunk in enumerate(chunks):
-            logger.info(f"Converting chunk {i+1}/{len(chunks)}")
+        full_code = "\n".join(chunks)
+        entity_name = self._extract_entity_name(full_code)
+        # Onion Architecture file structure
+        file_map = [
+            ("Domain/Entities", f"{entity_name}.cs", f"Convert the following COBOL data structures to a C# Domain Entity class named {entity_name}."),
+            ("Domain/Interfaces", f"I{entity_name}Repository.cs", f"Convert the following COBOL data structures and business logic to a C# Domain Repository Interface named I{entity_name}Repository."),
+            ("Domain/Exceptions", f"{entity_name}Exception.cs", f"Convert the following COBOL error handling and status codes to a C# custom exception class named {entity_name}Exception."),
+            ("Application/DTOs", f"{entity_name}Dto.cs", f"Convert the following COBOL data structures to a C# DTO class named {entity_name}Dto for the Application layer."),
+            ("Application/Services", f"I{entity_name}Service.cs", f"Convert the following COBOL business logic to a C# Application Service Interface named I{entity_name}Service."),
+            ("Application/Services", f"{entity_name}Service.cs", f"Convert the following COBOL business logic to a C# Application Service implementation named {entity_name}Service."),
+            ("Infrastructure/Data", f"InMemory{entity_name}Repository.cs", f"Convert the following COBOL file/database operations to a C# Infrastructure Repository class named InMemory{entity_name}Repository using Entity Framework Core."),
+            ("Infrastructure/Data", f"ApplicationDbContext.cs", "If the COBOL code uses files or databases, generate a C# DbContext class named ApplicationDbContext."),
+            ("Presentation/Controllers", f"{entity_name}sController.cs", f"Convert the following COBOL main program and control flow to a C# Web API Controller class named {entity_name}sController."),
+            ("Presentation", "Program.cs", "Generate the Program.cs file for a .NET 8 Web API project using Onion Architecture, with dependency injection for all layers."),
+            ("Presentation", "appsettings.json", "Generate the appsettings.json file for a .NET 8 Web API project using Onion Architecture."),
+        ]
+        converted_code_list = []
+        notes = []
+        issues = []
+        database_used = False
+        for path, filename, instruction in file_map:
+            prompt = f"""
+            {instruction}
             
-            chunk_context = f"""
-            This is chunk {i+1} of {len(chunks)} from the complete source code.
+            COBOL code:
+            ```cobol
+            {full_code}
+            ```
             
-            IMPORTANT: Ensure your conversion aligns with this overall code structure:
-            {structure_result.get('structure', 'No structure available')}
+            Business requirements:
+            {business_requirements}
             
-            When converting this chunk:
-            1. Follow the Onion Architecture structure (Domain, Application, Infrastructure, Presentation)
-            2. Include complete exception handling blocks
-            3. Properly close all resources in finally blocks
-            4. Ensure all methods have proper signatures and return types
-            5. Define all methods and classes completely - don't leave implementation gaps
-            6. Avoid duplicating code that would be defined in other chunks
-            7. Ensure all imports are included for this chunk
-            8. Maintain dependency inversion: Domain has no dependencies, Application depends on Domain, etc.
+            Technical requirements:
+            {technical_requirements}
             
-            If you see incomplete code:
-            - Complete class definitions even if they appear partial
-            - Handle exception blocks properly - don't leave them empty
-            - Complete any missing control flow statements (if/while/try)
+            Database setup template (if any):
+            {db_setup_template}
+            
+            If there is not enough information in the COBOL code, generate a minimal valid C# file for this layer (e.g., an empty class, interface, or controller with correct namespace and structure).
+            Please return ONLY the code for this file, with all necessary using statements, namespace, and class definition. Do not include explanations.
             """
-            
-            result = self._convert_single_chunk(
-                chunk, source_language, target_language,
-                business_requirements, technical_requirements, 
-                db_setup_template, additional_context=chunk_context
-            )
-            
-            conversion_results.append(result)
-        
-        # Use the structure-aware merge to create the final code
-        return self._merge_conversion_results(conversion_results, target_language, structure_result, project_name)
+            try:
+                logger.info(f"Prompt for {filename}:\n{prompt}")
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {"role": "system", "content": f"You are an expert COBOL to {target_language} converter specializing in Onion Architecture. Generate high-quality, idiomatic {target_language} code for each layer."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.1,
+                    max_tokens=4000
+                )
+                code_content = response.choices[0].message.content.strip()
+                code_content = re.sub(r'^```[a-zA-Z]*\n|\n```$', '', code_content, flags=re.MULTILINE)
+                logger.info(f"Model response for {filename}:\n{code_content}")
+                # Python fallback for empty files
+                if not code_content.strip():
+                    if filename.startswith('I') and filename.endswith('Repository.cs'):
+                        code_content = f"public interface {filename[:-3]} {{ }}"
+                    elif filename.endswith('Service.cs'):
+                        code_content = f"public class {filename[:-3]} {{ }}"
+                    elif filename.endswith('Controller.cs'):
+                        code_content = f"public class {filename[:-3]} {{ }}"
+                    elif filename.endswith('Exception.cs'):
+                        code_content = f"public class {filename[:-3]} : Exception {{ }}"
+                    elif filename.endswith('Dto.cs'):
+                        code_content = f"public class {filename[:-3]} {{ }}"
+                    elif filename.endswith('.cs'):
+                        code_content = f"public class {filename[:-3]} {{ }}"
+                    elif filename.endswith('.json'):
+                        code_content = "{}"
+                converted_code_list.append({
+                    "FileName": filename,
+                    "Path": path + "/",
+                    "content": code_content
+                })
+            except Exception as e:
+                logger.error(f"Error generating {filename}: {str(e)}")
+                converted_code_list.append({"FileName": filename, "Path": path + "/", "content": ""})
+                issues.append(f"Failed to generate {filename}: {str(e)}")
+        # Ensure all files in file_map are present in the output
+        existing_files = set((f["Path"], f["FileName"]) for f in converted_code_list)
+        for path, filename, instruction in file_map:
+            if (path + "/", filename) not in existing_files:
+                # Add a minimal stub if missing
+                if filename.startswith('I') and filename.endswith('Repository.cs'):
+                    code_content = f"public interface {filename[:-3]} {{ }}"
+                elif filename.endswith('Service.cs'):
+                    code_content = f"public class {filename[:-3]} {{ }}"
+                elif filename.endswith('Controller.cs'):
+                    code_content = f"public class {filename[:-3]} {{ }}"
+                elif filename.endswith('Exception.cs'):
+                    code_content = f"public class {filename[:-3]} : Exception {{ }}"
+                elif filename.endswith('Dto.cs'):
+                    code_content = f"public class {filename[:-3]} {{ }}"
+                elif filename.endswith('.cs'):
+                    code_content = f"public class {filename[:-3]} {{ }}"
+                elif filename.endswith('.json'):
+                    code_content = "{}"
+                else:
+                    code_content = ""
+                converted_code_list.append({
+                    "FileName": filename,
+                    "Path": path + "/",
+                    "content": code_content
+                })
+        # Log the final output for debugging
+        logger.info(f"Final converted_code_list: {[{'FileName': f['FileName'], 'Path': f['Path']} for f in converted_code_list]}")
+        # Project/solution files
+        project_files = self._generate_project_files(project_name)
+        for key, value in project_files.items():
+            converted_code_list.append(value)
+        return {
+            "convertedCode": converted_code_list,
+            "conversionNotes": "\n".join(notes),
+            "potentialIssues": issues,
+            "databaseUsed": database_used
+        }
     
     def _create_structure_prompt(self, chunks: List[str], source_language: str, target_language: str) -> str:
         """
@@ -414,8 +477,6 @@ class CodeConverter:
         Returns:
             Dictionary with conversion results
         """
-        from prompts import create_code_conversion_prompt
-        
         prompt = create_code_conversion_prompt(
             source_language,
             target_language,
@@ -527,23 +588,23 @@ class CodeConverter:
                                 f"For simple algorithms or calculations without database operations, don't add any database code. "
                                 f"Return your response in JSON format always with the following structure:\n"
                                 f"{{\n"
-                                f'  "DomainEntity": {{"FileName": "EntityName.cs", "Path": "Domain/Entities/", "content": ""}},\n'
-                                f'  "DomainInterface": {{"FileName": "IEntityNameService.cs", "Path": "Domain/Interfaces/", "content": ""}},\n'
-                                f'  "DomainExceptions": {{"FileName": "EntityNameException.cs", "Path": "Domain/Exceptions/", "content": ""}},\n'
-                                f'  "ApplicationServiceInterface": {{"FileName": "IEntityNameAppService.cs", "Path": "Application/Interfaces/", "content": ""}},\n'
-                                f'  "ApplicationService": {{"FileName": "EntityNameAppService.cs", "Path": "Application/Services/", "content": ""}},\n'
-                                f'  "ApplicationDTO": {{"FileName": "EntityNameDTO.cs", "Path": "Application/DTOs/", "content": ""}},\n'
-                                f'  "InfrastructureRepository": {{"FileName": "EntityNameRepository.cs", "Path": "Infrastructure/Repositories/", "content": ""}},\n'
-                                f'  "InfrastructureDbContext": {{"FileName": "ApplicationDbContext.cs", "Path": "Infrastructure/Data/", "content": ""}},\n'
-                                f'  "PresentationController": {{"FileName": "EntityNameController.cs", "Path": "Presentation/Controllers/", "content": ""}},\n'
-                                f'  "Program": {{"FileName": "Program.cs", "Path": "Presentation/", "content": ""}},\n'
-                                f'  "AppSettings": {{"FileName": "appsettings.json", "Path": "Presentation/", "content": ""}},\n'
-                                f'  "DomainProject": {{"FileName": "Domain.csproj", "Path": "Domain/", "content": ""}},\n'
-                                f'  "ApplicationProject": {{"FileName": "Application.csproj", "Path": "Application/", "content": ""}},\n'
-                                f'  "InfrastructureProject": {{"FileName": "Infrastructure.csproj", "Path": "Infrastructure/", "content": ""}},\n'
-                                f'  "PresentationProject": {{"FileName": "Presentation.csproj", "Path": "Presentation/", "content": ""}},\n'
-                                f'  "SolutionFile": {{"FileName": "TaskManagementSystem.sln", "Path": "./", "content": ""}},\n'
-                                f'  "Dependencies": {{"content": "NuGet packages and .NET dependencies needed"}}\n'
+                                f'  \"convertedCode\": {{\n'
+                                f'    \"DomainEntity\": {{\"FileName\": \"EntityName.cs\", \"Path\": \"Domain/Entities/\", \"content\": \"\"}},\n'
+                                f'    \"DomainInterface\": {{\"FileName\": \"IEntityNameService.cs\", \"Path\": \"Domain/Interfaces/\", \"content\": \"\"}},\n'
+                                f'    \"ApplicationServiceInterface\": {{\"FileName\": \"IEntityNameAppService.cs\", \"Path\": \"Application/Interfaces/\", \"content\": \"\"}},\n'
+                                f'    \"ApplicationService\": {{\"FileName\": \"EntityNameAppService.cs\", \"Path\": \"Application/Services/\", \"content\": \"\"}},\n'
+                                f'    \"ApplicationDTO\": {{\"FileName\": \"EntityNameDTO.cs\", \"Path\": \"Application/DTOs/\", \"content\": \"\"}},\n'
+                                f'    \"InfrastructureRepository\": {{\"FileName\": \"EntityNameRepository.cs\", \"Path\": \"Infrastructure/Repositories/\", \"content\": \"\"}},\n'
+                                f'    \"InfrastructureDbContext\": {{\"FileName\": \"ApplicationDbContext.cs\", \"Path\": \"Infrastructure/Data/\", \"content\": \"\"}},\n'
+                                f'    \"PresentationController\": {{\"FileName\": \"EntityNameController.cs\", \"Path\": \"Presentation/Controllers/\", \"content\": \"\"}},\n'
+                                f'    \"Program\": {{\"FileName\": \"Program.cs\", \"Path\": \"./\", \"content\": \"\"}},\n'
+                                f'    \"AppSettings\": {{\"FileName\": \"appsettings.json\", \"Path\": \"./\", \"content\": \"\"}},\n'
+                                f'    \"ProjectFile\": {{\"FileName\": \"SolutionName.csproj\", \"Path\": \"./\", \"content\": \"\"}},\n'
+                                f'    \"Dependencies\": {{\"content\": \"NuGet packages and .NET dependencies needed\"}}\n'
+                                f'  }},\n'
+                                f'  \"conversionNotes\": \"Notes about the conversion process\",\n'
+                                f'  \"potentialIssues\": [\"List of any potential issues or limitations\"],\n'
+                                f'  \"databaseUsed\": true/false\n'
                                 f"}}"
                     },
                     {"role": "user", "content": prompt}
@@ -583,7 +644,7 @@ class CodeConverter:
                     logger.error(f"Failed to extract JSON using regex: {str(extract_err)}")
                 
                 return {
-                    "convertedCode": "",
+                    "convertedCode": [],
                     "conversionNotes": f"Error processing response: {str(json_err)}",
                     "potentialIssues": ["Failed to process model response", "Response was not valid JSON"],
                     "databaseUsed": False
@@ -592,7 +653,7 @@ class CodeConverter:
         except Exception as e:
             logger.error(f"Error calling model API: {str(e)}")
             return {
-                "convertedCode": "",
+                "convertedCode": [],
                 "conversionNotes": f"Error calling model API: {str(e)}",
                 "potentialIssues": ["Failed to get response from model"],
                 "databaseUsed": False
@@ -606,7 +667,7 @@ class CodeConverter:
             conversion_result: The conversion result dictionary
             target_language: The target programming language
         """
-        converted_code = conversion_result.get("convertedCode", {})
+        converted_code = conversion_result.get("convertedCode", [])
         if not converted_code:
             logger.warning("Converted code is empty, skipping validation")
             return
@@ -614,46 +675,43 @@ class CodeConverter:
         issues = []
         
         # Validate each file's content
-        for section in ["DomainEntity", "DomainInterface", "ApplicationServiceInterface",
-                       "ApplicationService", "ApplicationDTO", "InfrastructureRepository",
-                       "InfrastructureDbContext", "PresentationController"]:
-            code = converted_code.get(section, {}).get("content", "")
+        for file in converted_code:
+            code = file.get("content", "")
             if not code:
-                issues.append(f"Missing or empty content for {section}")
+                issues.append(f"Missing or empty content for {file['FileName']}")
                 continue
             
             # Check for mismatched braces
             opening_braces = code.count("{")
             closing_braces = code.count("}")
             if opening_braces != closing_braces:
-                issues.append(f"Mismatched braces in {section}: {opening_braces} opening vs {closing_braces} closing")
+                issues.append(f"Mismatched braces in {file['FileName']}: {opening_braces} opening vs {closing_braces} closing")
             
             # Check for incomplete try-catch blocks
             try_count = len(re.findall(r'\btry\s*{', code))
             catch_count = len(re.findall(r'\bcatch\s*\(', code))
             if try_count > catch_count:
-                issues.append(f"Incomplete exception handling in {section}: {try_count} try blocks but only {catch_count} catch blocks")
+                issues.append(f"Incomplete exception handling in {file['FileName']}: {try_count} try blocks but only {catch_count} catch blocks")
             
             # Check for empty catch blocks
             empty_catches = len(re.findall(r'catch\s*\([^)]*\)\s*{\s*}', code))
             if empty_catches > 0:
-                issues.append(f"Found {empty_catches} empty catch blocks in {section}")
+                issues.append(f"Found {empty_catches} empty catch blocks in {file['FileName']}")
         
         # Onion Architecture-specific validations
         if target_language == "C#":
             # Check Domain layer for external dependencies
-            domain_code = converted_code.get("DomainEntity", {}).get("content", "") + \
-                         converted_code.get("DomainInterface", {}).get("content", "")
-            if "Microsoft.EntityFrameworkCore" in domain_code or "System.Data" in domain_code:
+            domain_code = [file.get("content", "") for file in converted_code if file.get("Path", "") == "Domain/Entities/" or file.get("Path", "") == "Domain/Interfaces/"]
+            if any("Microsoft.EntityFrameworkCore" in code or "System.Data" in code for code in domain_code):
                 issues.append("Domain layer contains infrastructure dependencies")
             
             # Check Application layer dependencies
-            app_service_code = converted_code.get("ApplicationService", {}).get("content", "")
-            if "DbContext" in app_service_code or "Repository" in app_service_code:
+            app_service_code = [file.get("content", "") for file in converted_code if file.get("Path", "") == "Application/Services/"]
+            if any("DbContext" in code or "Repository" in code for code in app_service_code):
                 issues.append("Application layer contains direct references to Infrastructure layer")
             
             # Check dependency injection in Program.cs
-            program_code = converted_code.get("Program", {}).get("content", "")
+            program_code = [file.get("content", "") for file in converted_code if file.get("Path", "") == "./" and file.get("FileName", "") == "Program.cs"]
             if "AddScoped" not in program_code and "AddSingleton" not in program_code:
                 issues.append("Program.cs missing dependency injection setup")
         
@@ -679,7 +737,7 @@ class CodeConverter:
         """
         if not results:
             return {
-                "convertedCode": "",
+                "convertedCode": [],
                 "conversionNotes": "No conversion results to merge",
                 "potentialIssues": ["No conversion was performed"],
                 "databaseUsed": False
@@ -688,29 +746,14 @@ class CodeConverter:
         all_notes = []
         all_issues = []
         database_used = any(result.get("databaseUsed", False) for result in results)
-        merged_code = {}
-        
-        # Initialize merged code structure
-        sections = [
-            "DomainEntity", "DomainInterface", "DomainExceptions", "ApplicationServiceInterface",
-            "ApplicationService", "ApplicationDTO", "InfrastructureRepository",
-            "InfrastructureDbContext", "PresentationController", "Program",
-            "AppSettings", "DomainProject", "ApplicationProject", "InfrastructureProject", 
-            "PresentationProject", "SolutionFile", "Dependencies"
-        ]
-        for section in sections:
-            merged_code[section] = {"FileName": "", "Path": "", "content": ""}
+        merged_code = []
         
         # Merge each section
         for result in results:
-            converted_code = result.get("convertedCode", {})
-            for section in sections:
-                if section in converted_code and converted_code[section].get("content"):
-                    if not merged_code[section]["content"]:
-                        merged_code[section] = converted_code[section]
-                    else:
-                        # Append content for non-unique sections (e.g., multiple entities)
-                        merged_code[section]["content"] += "\n\n" + converted_code[section]["content"]
+            converted_code = result.get("convertedCode", [])
+            for file in converted_code:
+                if file.get("content"):
+                    merged_code.append(file)
             
             notes = result.get("conversionNotes", "")
             if notes:
@@ -722,16 +765,15 @@ class CodeConverter:
         
         # Polish the merged code
         if target_language == "C#":
-            for section in sections:
-                if merged_code[section]["content"]:
-                    merged_code[section]["content"] = self._polish_code(merged_code[section]["content"], target_language)
+            for file in merged_code:
+                if file.get("content"):
+                    file["content"] = self._polish_code(file["content"], target_language)
         
         # Generate project files for C# Onion Architecture
         if target_language == "C#":
             project_files = self._generate_project_files(project_name)
             # Merge project files with existing code
-            for key, value in project_files.items():
-                merged_code[key] = value
+            merged_code.extend(project_files.values())
         
         all_notes.insert(0, f"The original code was processed in {len(results)} chunks due to its size and merged into a single codebase.")
         
@@ -854,12 +896,12 @@ class CodeConverter:
             logger.error(f"Error polishing code: {str(e)}")
             return polished  # Return original if polishing fails
     
-    def _validate_merged_code(self, merged_code: Dict[str, Any], target_language: str) -> List[str]:
+    def _validate_merged_code(self, merged_code: List[Dict[str, Any]], target_language: str) -> List[str]:
         """
         Validate the merged code for Onion Architecture compliance and common issues.
         
         Args:
-            merged_code: The merged code dictionary
+            merged_code: The merged code list
             target_language: The target programming language
             
         Returns:
@@ -885,21 +927,18 @@ class CodeConverter:
             "ProjectFile": "./"
         }
         
-        for section, expected_path in expected_paths.items():
-            if section in merged_code:
-                actual_path = merged_code[section].get("Path", "")
-                if actual_path != expected_path:
-                    issues.append(f"Incorrect path for {section}: expected {expected_path}, got {actual_path}")
-                
-                if not merged_code[section].get("FileName"):
-                    issues.append(f"Missing FileName for {section}")
-                
-                if not merged_code[section].get("content"):
-                    issues.append(f"Empty content for {section}")
+        for file in merged_code:
+            if file.get("Path", "") not in expected_paths.values():
+                issues.append(f"Incorrect path for {file['FileName']}: expected one of {list(expected_paths.values())}")
+            
+            if not file.get("FileName"):
+                issues.append(f"Missing FileName for {file['FileName']}")
+            
+            if not file.get("content"):
+                issues.append(f"Empty content for {file['FileName']}")
         
         # Check for Onion Architecture compliance
-        domain_code = merged_code.get("DomainEntity", {}).get("content", "") + \
-                     merged_code.get("DomainInterface", {}).get("content", "")
+        domain_code = [file.get("content", "") for file in merged_code if file.get("Path", "") in ["Domain/Entities/", "Domain/Interfaces/"]]
         
         # Check for forbidden dependencies in Domain layer
         forbidden_imports = [
@@ -914,38 +953,35 @@ class CodeConverter:
                 issues.append(f"Domain layer contains forbidden dependency: {forbidden}")
         
         # Check Application layer dependencies
-        app_service_code = merged_code.get("ApplicationService", {}).get("content", "")
-        if "DbContext" in app_service_code or "Repository" in app_service_code:
+        app_service_code = [file.get("content", "") for file in merged_code if file.get("Path", "") == "Application/Services/"]
+        if any("DbContext" in code or "Repository" in code for code in app_service_code):
             issues.append("Application layer contains direct references to Infrastructure layer")
         
         # Check dependency injection setup
-        program_code = merged_code.get("Program", {}).get("content", "")
+        program_code = [file.get("content", "") for file in merged_code if file.get("Path", "") == "./" and file.get("FileName", "") == "Program.cs"]
         if "AddScoped" not in program_code and "AddSingleton" not in program_code:
             issues.append("Program.cs missing dependency injection setup")
         
         # Check for proper namespace organization
-        for section in ["DomainEntity", "DomainInterface", "ApplicationService", 
-                       "ApplicationServiceInterface", "ApplicationDTO", 
-                       "InfrastructureRepository", "InfrastructureDbContext", 
-                       "PresentationController"]:
-            code = merged_code.get(section, {}).get("content", "")
+        for file in merged_code:
+            code = file.get("content", "")
             namespace_match = re.search(r'namespace\s+([A-Za-z0-9_.]+)', code)
             if code and not namespace_match:
-                issues.append(f"Missing namespace declaration in {section}")
+                issues.append(f"Missing namespace declaration in {file['FileName']}")
             elif namespace_match:
                 namespace = namespace_match.group(1)
-                expected_namespace = f"Company.Project.{section.split('Service')[0].split('DTO')[0]}"
+                expected_namespace = f"Company.Project.{file['FileName'].split('.')[0]}"
                 if not namespace.startswith("Company.Project"):
-                    issues.append(f"Invalid namespace in {section}: expected {expected_namespace}, got {namespace}")
+                    issues.append(f"Invalid namespace in {file['FileName']}: expected {expected_namespace}, got {namespace}")
         
         # Check for proper DbContext in Infrastructure layer
-        db_context = merged_code.get("InfrastructureDbContext", {}).get("content", "")
+        db_context = [file.get("content", "") for file in merged_code if file.get("Path", "") == "Infrastructure/Data/" and "DbContext" in file.get("content", "")]
         if db_context and "DbContext" not in db_context:
             issues.append("InfrastructureDbContext does not inherit from DbContext")
         
         # Check for API controller attributes
-        controller_code = merged_code.get("PresentationController", {}).get("content", "")
-        if controller_code and "[ApiController]" not in controller_code:
+        controller_code = [file.get("content", "") for file in merged_code if file.get("Path", "") == "Presentation/Controllers/" and "[ApiController]" not in file.get("content", "")]
+        if controller_code:
             issues.append("PresentationController missing [ApiController] attribute")
         
         return issues

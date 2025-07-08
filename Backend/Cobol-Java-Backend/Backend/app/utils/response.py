@@ -114,3 +114,13 @@ def extract_json_from_response(text):
                 "error": "JSON extraction failed",
                 "raw_text": text[:1000] + "..." if len(text) > 1000 else text
             }
+
+def extract_cobol_program_name(source_code: str, fallback: str = "TaskManagementSystem") -> str:
+    """
+    Extracts the PROGRAM-ID from COBOL code, or returns the fallback if not found.
+    """
+    import re
+    match = re.search(r'PROGRAM-ID\.\s*([A-Z0-9_-]+)\.', source_code, re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return fallback
