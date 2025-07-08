@@ -275,7 +275,7 @@ class AnalysisManager:
             }
             conversion_context["business_entities"].append(dotnet_entity)
         
-        # Extract conversion patterns with .NET equivalents
+        # Extract conversion patterns with .NET equivalentss
         for pattern in rag_results.get("conversion_patterns", []):
             dotnet_pattern = {
                 "pattern_type": pattern.get("pattern_type", ""),
