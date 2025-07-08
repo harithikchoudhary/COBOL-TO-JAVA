@@ -124,73 +124,19 @@ def convert_code():
         fallback_name = os.path.splitext(os.path.basename(cobol_filename))[0] if cobol_filename else "TaskManagementSystem"
         project_name = extract_cobol_program_name(source_code, fallback=fallback_name)
         
-        prompt = create_code_conversion_prompt(
-            source_language, "C#", source_code,
-            business_requirements, technical_requirements, db_setup_template
+        # Chunk the COBOL code
+        chunks = converter.chunk_code(source_code, source_language)
+        # Use the CodeConverter to perform the conversion and get structured output
+        result = converter.convert_code_chunks(
+            chunks, source_language, target_language,
+            business_requirements, technical_requirements, db_setup_template,
+            project_name=project_name
         )
 
-        prompt += """
-        IMPORTANT: Ensure the output follows .NET 8 Onion Architecture:
-        - Use consistent namespaces (Company.Project.[Layer])
-        - Include all necessary using statements
-        - Implement dependency injection in Program.cs
-        - Use Entity Framework Core for database operations only if detected
-        - Generate complete, executable code with no placeholders
-        """
-
-        conversion_messages = [
-            {
-                "role": "system",
-                "content": (
-                    f"You are an expert COBOL to .NET 8 converter specializing in Onion Architecture. "
-                    f"Convert COBOL code to idiomatic .NET 8, maintaining all business logic. "
-                    f"Include database setup only if COBOL code uses databases (EXEC SQL, FILE SECTION, VSAM). "
-                    f"Generate a complete .NET 8 application with: "
-                    f"1. Domain: Entities, interfaces, exceptions (no dependencies). "
-                    f"2. Application: Services, DTOs (depends on Domain). "
-                    f"3. Infrastructure: Repositories, DbContext (implements Application interfaces). "
-                    f"4. Presentation: Controllers (depends on Application). "
-                    f"Use dependency injection, proper namespaces (Company.Project.[Layer]), and Entity Framework Core for database operations. "
-                    f"Return JSON with the structure specified in the prompt."
-                )
-            },
-            {"role": "user", "content": prompt}
-        ]
-
-        log_processing_step("Calling Azure OpenAI for conversion", {
-            "model": AZURE_OPENAI_DEPLOYMENT_NAME,
-            "temperature": 0.1,
-            "max_tokens": 4000,
-            "prompt_length": len(prompt)
-        }, 5)
-
-        response = client.chat.completions.create(
-            model=AZURE_OPENAI_DEPLOYMENT_NAME,
-            messages=conversion_messages,
-            temperature=0.1,
-            max_tokens=4000,
-            response_format={"type": "json_object"}
-        )
-
-        log_gpt_interaction("Code Conversion", AZURE_OPENAI_DEPLOYMENT_NAME, 
-                          conversion_messages, response, 5)
-
-        log_processing_step("Parsing conversion response", {
-            "response_length": len(response.choices[0].message.content)
-        }, 6)
-        
-        conversion_content = response.choices[0].message.content.strip()
-        try:
-            conversion_json = json.loads(conversion_content)
-            logger.info("Conversion JSON parsed successfully")
-        except json.JSONDecodeError:
-            logger.warning("Failed to parse conversion JSON")
-            conversion_json = extract_json_from_response(conversion_content)
-
-        converted_code = conversion_json.get("convertedCode", {})
-        conversion_notes = conversion_json.get("conversionNotes", "")
-        potential_issues = conversion_json.get("potentialIssues", [])
-        database_used = conversion_json.get("databaseUsed", False)
+        converted_code = result.get("convertedCode", {})
+        conversion_notes = result.get("conversionNotes", "")
+        potential_issues = result.get("potentialIssues", [])
+        database_used = result.get("databaseUsed", False)
 
         cobol_filename = data.get("cobolFilename", "")
         
