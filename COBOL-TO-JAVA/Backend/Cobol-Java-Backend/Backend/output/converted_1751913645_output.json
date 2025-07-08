@@ -1,0 +1,208 @@
+{
+  "status": "success",
+  "convertedCode": {
+    "DomainEntity": {
+      "FileName": "Task.cs",
+      "Path": "Domain/Entities/",
+      "content": "namespace Company.Project.Domain.Entities;\n\npublic class Task\n{\n    public int TaskId { get; set; }\n    public string TaskTitle { get; set; } = string.Empty;\n    public string TaskStatus { get; set; } = string.Empty;\n}"
+    },
+    "DomainInterface": {
+      "FileName": "ITaskRepository.cs",
+      "Path": "Domain/Interfaces/",
+      "content": "namespace Company.Project.Domain.Interfaces;\n\npublic interface ITaskRepository\n{\n    void AddTask(Task task);\n    IEnumerable<Task> GetAllTasks();\n}"
+    },
+    "DomainExceptions": {
+      "FileName": "TaskException.cs",
+      "Path": "Domain/Exceptions/",
+      "content": "namespace Company.Project.Domain.Exceptions;\n\npublic class TaskException : Exception\n{\n    public TaskException(string message) : base(message) { }\n}"
+    },
+    "ApplicationServiceInterface": {
+      "FileName": "ITaskAppService.cs",
+      "Path": "Application/Interfaces/",
+      "content": "namespace Company.Project.Application.Interfaces;\n\npublic interface ITaskAppService\n{\n    void AddTask(TaskDTO taskDto);\n    IEnumerable<TaskDTO> GetAllTasks();\n}"
+    },
+    "ApplicationService": {
+      "FileName": "TaskAppService.cs",
+      "Path": "Application/Services/",
+      "content": "using Company.Project.Application.DTOs;\nusing Company.Project.Application.Interfaces;\nusing Company.Project.Domain.Entities;\nusing Company.Project.Domain.Interfaces;\n\nnamespace Company.Project.Application.Services;\n\npublic class TaskAppService : ITaskAppService\n{\n    private readonly ITaskRepository _taskRepository;\n\n    public TaskAppService(ITaskRepository taskRepository)\n    {\n        _taskRepository = taskRepository;\n    }\n\n    public void AddTask(TaskDTO taskDto)\n    {\n        var task = new Task\n        {\n            TaskId = taskDto.TaskId,\n            TaskTitle = taskDto.TaskTitle,\n            TaskStatus = taskDto.TaskStatus\n        };\n        _taskRepository.AddTask(task);\n    }\n\n    public IEnumerable<TaskDTO> GetAllTasks()\n    {\n        return _taskRepository.GetAllTasks().Select(task => new TaskDTO\n        {\n            TaskId = task.TaskId,\n            TaskTitle = task.TaskTitle,\n            TaskStatus = task.TaskStatus\n        });\n    }\n}"
+    },
+    "ApplicationDTO": {
+      "FileName": "TaskDTO.cs",
+      "Path": "Application/DTOs/",
+      "content": "namespace Company.Project.Application.DTOs;\n\npublic class TaskDTO\n{\n    public int TaskId { get; set; }\n    public string TaskTitle { get; set; } = string.Empty;\n    public string TaskStatus { get; set; } = string.Empty;\n}"
+    },
+    "InfrastructureRepository": {
+      "FileName": "TaskRepository.cs",
+      "Path": "Infrastructure/Repositories/",
+      "content": "using Company.Project.Domain.Entities;\nusing Company.Project.Domain.Interfaces;\nusing Microsoft.EntityFrameworkCore;\n\nnamespace Company.Project.Infrastructure.Repositories;\n\npublic class TaskRepository : ITaskRepository\n{\n    private readonly ApplicationDbContext _context;\n\n    public TaskRepository(ApplicationDbContext context)\n    {\n        _context = context;\n    }\n\n    public void AddTask(Task task)\n    {\n        _context.Tasks.Add(task);\n        _context.SaveChanges();\n    }\n\n    public IEnumerable<Task> GetAllTasks()\n    {\n        return _context.Tasks.ToList();\n    }\n}"
+    },
+    "InfrastructureDbContext": {
+      "FileName": "ApplicationDbContext.cs",
+      "Path": "Infrastructure/Data/",
+      "content": "using Company.Project.Domain.Entities;\nusing Microsoft.EntityFrameworkCore;\n\nnamespace Company.Project.Infrastructure.Data;\n\npublic class ApplicationDbContext : DbContext\n{\n    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }\n\n    public DbSet<Task> Tasks { get; set; }\n\n    protected override void OnModelCreating(ModelBuilder modelBuilder)\n    {\n        modelBuilder.Entity<Task>().HasKey(t => t.TaskId);\n        modelBuilder.Entity<Task>().Property(t => t.TaskTitle).HasMaxLength(30);\n        modelBuilder.Entity<Task>().Property(t => t.TaskStatus).HasMaxLength(10);\n    }\n}"
+    },
+    "PresentationController": {
+      "FileName": "TaskController.cs",
+      "Path": "Presentation/Controllers/",
+      "content": "using Company.Project.Application.DTOs;\nusing Company.Project.Application.Interfaces;\nusing Microsoft.AspNetCore.Mvc;\n\nnamespace Company.Project.Presentation.Controllers;\n\n[ApiController]\n[Route(\"api/[controller]\")]\npublic class TaskController : ControllerBase\n{\n    private readonly ITaskAppService _taskAppService;\n\n    public TaskController(ITaskAppService taskAppService)\n    {\n        _taskAppService = taskAppService;\n    }\n\n    [HttpPost]\n    public IActionResult AddTask([FromBody] TaskDTO taskDto)\n    {\n        _taskAppService.AddTask(taskDto);\n        return Ok(\"Task Added Successfully\");\n    }\n\n    [HttpGet]\n    public IActionResult GetAllTasks()\n    {\n        var tasks = _taskAppService.GetAllTasks();\n        return Ok(tasks);\n    }\n}"
+    },
+    "Program": {
+      "FileName": "Program.cs",
+      "Path": "Presentation/",
+      "content": "using Company.Project.Application.Interfaces;\nusing Company.Project.Application.Services;\nusing Company.Project.Infrastructure.Data;\nusing Company.Project.Infrastructure.Repositories;\nusing Microsoft.EntityFrameworkCore;\n\nvar builder = WebApplication.CreateBuilder(args);\n\n// Add services to the container.\nbuilder.Services.AddControllers();\nbuilder.Services.AddEndpointsApiExplorer();\nbuilder.Services.AddSwaggerGen();\n\n// Configure DbContext\nbuilder.Services.AddDbContext<ApplicationDbContext>(options =>\n    options.UseSqlServer(builder.Configuration.GetConnectionString(\"DefaultConnection\")));\n\n// Dependency Injection\nbuilder.Services.AddScoped<ITaskAppService, TaskAppService>();\nbuilder.Services.AddScoped<ITaskRepository, TaskRepository>();\n\nvar app = builder.Build();\n\n// Configure the HTTP request pipeline.\nif (app.Environment.IsDevelopment())\n{\n    app.UseSwagger();\n    app.UseSwaggerUI();\n}\n\napp.UseHttpsRedirection();\n\napp.UseAuthorization();\n\napp.MapControllers();\n\napp.Run();"
+    },
+    "AppSettings": {
+      "FileName": "appsettings.json",
+      "Path": "Presentation/",
+      "content": "{\n  \"ConnectionStrings\": {\n    \"DefaultConnection\": \"Server=(localdb)\\\\mssqllocaldb;Database=TaskManagementDb;Trusted_Connection=True;MultipleActiveResultSets=true\"\n  },\n  \"Logging\": {\n    \"LogLevel\": {\n      \"Default\": \"Information\",\n      \"Microsoft.AspNetCore\": \"Warning\"\n    }\n  },\n  \"AllowedHosts\": \"*\"\n}"
+    },
+    "DomainProject": {
+      "FileName": "Domain.csproj",
+      "Path": "Domain/",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n\n</Project>"
+    },
+    "ApplicationProject": {
+      "FileName": "Application.csproj",
+      "Path": "Application/",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <ProjectReference Include=\"..\\Domain\\Domain.csproj\" />\n  </ItemGroup>\n\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.Extensions.DependencyInjection\" Version=\"8.0.0\" />\n    <PackageReference Include=\"AutoMapper\" Version=\"12.0.0\" />\n  </ItemGroup>\n\n</Project>"
+    },
+    "InfrastructureProject": {
+      "FileName": "Infrastructure.csproj",
+      "Path": "Infrastructure/",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <ProjectReference Include=\"..\\Application\\Application.csproj\" />\n  </ItemGroup>\n\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore.SqlServer\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.Extensions.Logging\" Version=\"8.0.0\" />\n  </ItemGroup>\n\n</Project>"
+    },
+    "PresentationProject": {
+      "FileName": "Presentation.csproj",
+      "Path": "Presentation/",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk.Web\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <ProjectReference Include=\"..\\Application\\Application.csproj\" />\n  </ItemGroup>\n\n  <ItemGroup>\n    <PackageReference Include=\"Swashbuckle.AspNetCore\" Version=\"6.0.0\" />\n    <PackageReference Include=\"AutoMapper.Extensions.Microsoft.DependencyInjection\" Version=\"12.0.0\" />\n  </ItemGroup>\n\n</Project>"
+    },
+    "SolutionFile": {
+      "FileName": "TaskManagementSystem.sln",
+      "Path": "./",
+      "content": "Microsoft Visual Studio Solution File, Format Version 12.00\n# Visual Studio Version 17\nVisualStudioVersion = 17.0.31912.275\nMinimumVisualStudioVersion = 10.0.40219.1\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Domain\", \"Domain\\Domain.csproj\", \"{GUID1}\"\nEndProject\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Application\", \"Application\\Application.csproj\", \"{GUID2}\"\nEndProject\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Infrastructure\", \"Infrastructure\\Infrastructure.csproj\", \"{GUID3}\"\nEndProject\nProject(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Presentation\", \"Presentation\\Presentation.csproj\", \"{GUID4}\"\nEndProject\nGlobal\n\tGlobalSection(SolutionConfigurationPlatforms) = preSolution\n\t\tDebug|Any CPU = Debug|Any CPU\n\t\tRelease|Any CPU = Release|Any CPU\n\tEndGlobalSection\n\tGlobalSection(ProjectConfigurationPlatforms) = postSolution\n\t\t{GUID1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU\n\t\t{GUID1}.Debug|Any CPU.Build.0 = Debug|Any CPU\n\t\t{GUID1}.Release|Any CPU.ActiveCfg = Release|Any CPU\n\t\t{GUID1}.Release|Any CPU.Build.0 = Release|Any CPU\n\t\t{GUID2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU\n\t\t{GUID2}.Debug|Any CPU.Build.0 = Debug|Any CPU\n\t\t{GUID2}.Release|Any CPU.ActiveCfg = Release|Any CPU\n\t\t{GUID2}.Release|Any CPU.Build.0 = Release|Any CPU\n\t\t{GUID3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU\n\t\t{GUID3}.Debug|Any CPU.Build.0 = Debug|Any CPU\n\t\t{GUID3}.Release|Any CPU.ActiveCfg = Release|Any CPU\n\t\t{GUID3}.Release|Any CPU.Build.0 = Release|Any CPU\n\t\t{GUID4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU\n\t\t{GUID4}.Debug|Any CPU.Build.0 = Debug|Any CPU\n\t\t{GUID4}.Release|Any CPU.ActiveCfg = Release|Any CPU\n\t\t{GUID4}.Release|Any CPU.Build.0 = Release|Any CPU\n\tEndGlobalSection\nEndGlobal"
+    },
+    "Dependencies": {
+      "content": "Domain: No external dependencies\nApplication: Microsoft.Extensions.DependencyInjection, AutoMapper\nInfrastructure: Microsoft.EntityFrameworkCore, Microsoft.EntityFrameworkCore.SqlServer, Microsoft.Extensions.Logging\nPresentation: Microsoft.AspNetCore.App, Microsoft.EntityFrameworkCore.Design, Swashbuckle.AspNetCore, AutoMapper.Extensions.Microsoft.DependencyInjection"
+    }
+  },
+  "conversionNotes": "The COBOL code was converted to a .NET 8 application using Onion Architecture. The task management functionality was implemented using Entity Framework Core for data persistence. The COBOL table was mapped to a DbSet in the DbContext, and the task operations were encapsulated in a repository pattern. The application uses dependency injection to manage service and repository lifetimes.",
+  "potentialIssues": [
+    "The original COBOL code had a fixed limit of 100 tasks, which is not enforced in the C# version.",
+    "The task statuses are limited to 'Open' or 'Completed', which should be validated in the application layer.",
+    "The conversion assumes a local SQL Server database setup, which may need adjustment for different environments.",
+    "Application layer contains direct references to Infrastructure layer"
+  ],
+  "unitTests": "using System.Collections.Generic;\nusing System.Linq;\nusing Company.Project.Application.DTOs;\nusing Company.Project.Application.Services;\nusing Company.Project.Domain.Entities;\nusing Company.Project.Domain.Interfaces;\nusing Moq;\nusing Xunit;\n\nnamespace Company.Project.Tests.UnitTests.Application.Services\n{\n    public class TaskAppServiceTests\n    {\n        private readonly Mock<ITaskRepository> _mockTaskRepository;\n        private readonly TaskAppService _taskAppService;\n\n        public TaskAppServiceTests()\n        {\n            _mockTaskRepository = new Mock<ITaskRepository>();\n            _taskAppService = new TaskAppService(_mockTaskRepository.Object);\n        }\n\n        [Fact]\n        public void AddTask_ShouldAddTask_WhenTaskIsValid()\n        {\n            // Arrange\n            var taskDto = new TaskDTO { TaskId = 1, TaskTitle = \"Test Task\", TaskStatus = \"Open\" };\n            var task = new Task { TaskId = 1, TaskTitle = \"Test Task\", TaskStatus = \"Open\" };\n\n            // Act\n            _taskAppService.AddTask(taskDto);\n\n            // Assert\n            _mockTaskRepository.Verify(repo => repo.AddTask(It.Is<Task>(t => t.TaskId == task.TaskId && t.TaskTitle == task.TaskTitle && t.TaskStatus == task.TaskStatus)), Times.Once);\n        }\n\n        [Fact]\n        public void GetAllTasks_ShouldReturnAllTasks()\n        {\n            // Arrange\n            var tasks = new List<Task>\n            {\n                new Task { TaskId = 1, TaskTitle = \"Task 1\", TaskStatus = \"Open\" },\n                new Task { TaskId = 2, TaskTitle = \"Task 2\", TaskStatus = \"Completed\" }\n            };\n            _mockTaskRepository.Setup(repo => repo.GetAllTasks()).Returns(tasks);\n\n            // Act\n            var result = _taskAppService.GetAllTasks();\n\n            // Assert\n            Assert.Equal(2, result.Count());\n            Assert.Contains(result, t => t.TaskTitle == \"Task 1\" && t.TaskStatus == \"Open\");\n            Assert.Contains(result, t => t.TaskTitle == \"Task 2\" && t.TaskStatus == \"Completed\");\n        }\n\n        [Fact]\n        public void AddTask_ShouldThrowException_WhenTaskStatusIsInvalid()\n        {\n            // Arrange\n            var taskDto = new TaskDTO { TaskId = 1, TaskTitle = \"Test Task\", TaskStatus = \"InvalidStatus\" };\n\n            // Act & Assert\n            Assert.Throws<TaskException>(() => _taskAppService.AddTask(taskDto));\n        }\n    }\n}",
+  "unitTestDetails": {
+    "unitTestCode": "using System.Collections.Generic;\nusing System.Linq;\nusing Company.Project.Application.DTOs;\nusing Company.Project.Application.Services;\nusing Company.Project.Domain.Entities;\nusing Company.Project.Domain.Interfaces;\nusing Moq;\nusing Xunit;\n\nnamespace Company.Project.Tests.UnitTests.Application.Services\n{\n    public class TaskAppServiceTests\n    {\n        private readonly Mock<ITaskRepository> _mockTaskRepository;\n        private readonly TaskAppService _taskAppService;\n\n        public TaskAppServiceTests()\n        {\n            _mockTaskRepository = new Mock<ITaskRepository>();\n            _taskAppService = new TaskAppService(_mockTaskRepository.Object);\n        }\n\n        [Fact]\n        public void AddTask_ShouldAddTask_WhenTaskIsValid()\n        {\n            // Arrange\n            var taskDto = new TaskDTO { TaskId = 1, TaskTitle = \"Test Task\", TaskStatus = \"Open\" };\n            var task = new Task { TaskId = 1, TaskTitle = \"Test Task\", TaskStatus = \"Open\" };\n\n            // Act\n            _taskAppService.AddTask(taskDto);\n\n            // Assert\n            _mockTaskRepository.Verify(repo => repo.AddTask(It.Is<Task>(t => t.TaskId == task.TaskId && t.TaskTitle == task.TaskTitle && t.TaskStatus == task.TaskStatus)), Times.Once);\n        }\n\n        [Fact]\n        public void GetAllTasks_ShouldReturnAllTasks()\n        {\n            // Arrange\n            var tasks = new List<Task>\n            {\n                new Task { TaskId = 1, TaskTitle = \"Task 1\", TaskStatus = \"Open\" },\n                new Task { TaskId = 2, TaskTitle = \"Task 2\", TaskStatus = \"Completed\" }\n            };\n            _mockTaskRepository.Setup(repo => repo.GetAllTasks()).Returns(tasks);\n\n            // Act\n            var result = _taskAppService.GetAllTasks();\n\n            // Assert\n            Assert.Equal(2, result.Count());\n            Assert.Contains(result, t => t.TaskTitle == \"Task 1\" && t.TaskStatus == \"Open\");\n            Assert.Contains(result, t => t.TaskTitle == \"Task 2\" && t.TaskStatus == \"Completed\");\n        }\n\n        [Fact]\n        public void AddTask_ShouldThrowException_WhenTaskStatusIsInvalid()\n        {\n            // Arrange\n            var taskDto = new TaskDTO { TaskId = 1, TaskTitle = \"Test Task\", TaskStatus = \"InvalidStatus\" };\n\n            // Act & Assert\n            Assert.Throws<TaskException>(() => _taskAppService.AddTask(taskDto));\n        }\n    }\n}",
+    "testDescription": "This test suite verifies the functionality of the TaskAppService in the Application Layer. It includes tests for adding tasks with valid and invalid statuses, and retrieving all tasks. The tests ensure that tasks are correctly added and retrieved, and that exceptions are thrown for invalid task statuses.",
+    "coverage": "The unit tests cover the TaskAppService class, ensuring that all public methods are tested. The tests include positive cases for adding and retrieving tasks, as well as negative cases for invalid task statuses. The use of Moq allows for mocking the ITaskRepository dependency, ensuring isolated testing of the service logic."
+  },
+  "functionalTests": {
+    "functionalTests": [
+      {
+        "testID": "TC001",
+        "title": "Add New Task - Positive Scenario",
+        "description": "Verify that a user can successfully add a new task with a valid title and status.",
+        "preconditions": "The application is running and the user is authenticated.",
+        "testSteps": [
+          "Navigate to the 'Add Task' interface.",
+          "Enter a valid task title (e.g., 'Complete Report').",
+          "Select a valid task status ('Open' or 'Completed').",
+          "Submit the task."
+        ],
+        "expectedResults": "The task is added successfully, and a confirmation message is displayed.",
+        "priority": "High"
+      },
+      {
+        "testID": "TC002",
+        "title": "Add New Task - Negative Scenario",
+        "description": "Verify that the system prevents adding a task with an invalid status.",
+        "preconditions": "The application is running and the user is authenticated.",
+        "testSteps": [
+          "Navigate to the 'Add Task' interface.",
+          "Enter a valid task title (e.g., 'Complete Report').",
+          "Enter an invalid task status (e.g., 'In Progress').",
+          "Submit the task."
+        ],
+        "expectedResults": "The system displays an error message indicating that the status is invalid.",
+        "priority": "High"
+      },
+      {
+        "testID": "TC003",
+        "title": "View All Tasks",
+        "description": "Verify that a user can view a list of all tasks with their details.",
+        "preconditions": "The application is running and the user is authenticated.",
+        "testSteps": [
+          "Navigate to the 'View Tasks' interface.",
+          "Observe the list of tasks displayed."
+        ],
+        "expectedResults": "All tasks are displayed with their IDs, titles, and statuses.",
+        "priority": "High"
+      },
+      {
+        "testID": "TC004",
+        "title": "Add Task - Boundary Condition",
+        "description": "Verify that the system handles the maximum number of tasks (100) correctly.",
+        "preconditions": "The application is running, the user is authenticated, and there are 99 tasks already added.",
+        "testSteps": [
+          "Navigate to the 'Add Task' interface.",
+          "Enter a valid task title and status.",
+          "Submit the task."
+        ],
+        "expectedResults": "The task is added successfully, reaching the maximum limit of 100 tasks.",
+        "priority": "Medium"
+      },
+      {
+        "testID": "TC005",
+        "title": "Add Task - Exceed Maximum Limit",
+        "description": "Verify that the system prevents adding a task when the maximum limit of 100 tasks is reached.",
+        "preconditions": "The application is running, the user is authenticated, and there are already 100 tasks added.",
+        "testSteps": [
+          "Navigate to the 'Add Task' interface.",
+          "Enter a valid task title and status.",
+          "Submit the task."
+        ],
+        "expectedResults": "The system displays an error message indicating that the maximum task limit has been reached.",
+        "priority": "High"
+      },
+      {
+        "testID": "TC006",
+        "title": "Sequential Task ID Assignment",
+        "description": "Verify that task IDs are assigned sequentially.",
+        "preconditions": "The application is running and the user is authenticated.",
+        "testSteps": [
+          "Add a new task with a valid title and status.",
+          "Add another task with a valid title and status.",
+          "View the list of tasks."
+        ],
+        "expectedResults": "The task IDs are sequentially incremented.",
+        "priority": "Medium"
+      },
+      {
+        "testID": "TC007",
+        "title": "End-to-End Task Management",
+        "description": "Verify the complete process of adding, viewing, and managing tasks.",
+        "preconditions": "The application is running and the user is authenticated.",
+        "testSteps": [
+          "Add a new task with a valid title and status.",
+          "View the list of tasks to confirm the new task is added.",
+          "Update the status of an existing task.",
+          "View the list of tasks to confirm the status update."
+        ],
+        "expectedResults": "The task is added, displayed, and updated successfully.",
+        "priority": "High"
+      }
+    ],
+    "testStrategy": {
+      "approach": "The testing strategy involves validating all business requirements through comprehensive test cases. Both positive and negative scenarios are covered, including boundary conditions and edge cases. The tests are organized by feature and business functionality, ensuring thorough coverage of the task management system.",
+      "tools": "SpecFlow for BDD-style test scenarios, NUnit for test execution, and a CI/CD pipeline for automated testing.",
+      "scope": "The scope includes all functionalities related to task management, including adding, viewing, and managing tasks, as well as handling constraints and business rules.",
+      "riskManagement": "Potential risks include incorrect task status handling and exceeding task limits. These are mitigated through thorough testing of edge cases and constraints.",
+      "schedule": "Testing will be conducted in parallel with development, with a focus on continuous integration and delivery to ensure rapid feedback and issue resolution."
+    }
+  },
+  "sourceLanguage": "COBOL",
+  "targetLanguage": "C#",
+  "databaseUsed": true
+}
