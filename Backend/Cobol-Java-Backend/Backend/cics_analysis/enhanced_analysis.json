@@ -1,0 +1,3564 @@
+{
+  "analysis_results": {
+    "rag_results": {
+      "files": {
+        "BANKING.CBL": {
+          "filename": "BANKING.CBL",
+          "file_type": "cobol_program",
+          "size": 12760,
+          "lines": 456,
+          "program_id": "BANKING",
+          "divisions": [
+            {
+              "name": "IDENTIFICATION",
+              "line": 5
+            },
+            {
+              "name": "ENVIRONMENT",
+              "line": 12
+            },
+            {
+              "name": "DATA",
+              "line": 33
+            },
+            {
+              "name": "PROCEDURE",
+              "line": 140
+            }
+          ],
+          "data_items": [
+            {
+              "name": "ACCOUNT-RECORD",
+              "line": 36,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "TRANSACTION-RECORD",
+              "line": 48,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "AUDIT-RECORD",
+              "line": 62,
+              "pic": "X(",
+              "java_type": "String"
+            },
+            {
+              "name": "WS-TRANSACTION-DATA",
+              "line": 66,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "WS-ACCOUNT-WORK",
+              "line": 73,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "WS-ERROR-AREA",
+              "line": 81,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "WS-TSQ-DATA",
+              "line": 88,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "WS-MQ-DATA",
+              "line": 94,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "WS-CHANNEL-DATA",
+              "line": 100,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "WS-MAP-CONTROL",
+              "line": 107,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "WS-COUNTERS",
+              "line": 113,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "WS-FLAGS",
+              "line": 118,
+              "pic": null,
+              "java_type": "String"
+            },
+            {
+              "name": "DFHCOMMAREA",
+              "line": 125,
+              "pic": null,
+              "java_type": "String"
+            }
+          ],
+          "dependencies": {
+            "copy_books": [
+              "ACCOUNT-VALIDATION",
+              "TRANSACTION-TYPES",
+              "ERROR-CODES",
+              "SECURITY-CONTROL"
+            ],
+            "called_programs": [],
+            "file_references": [
+              "ACCOUNT-FILE",
+              "TRANS-FILE",
+              "AUDIT-FILE",
+              "ACCOUNT-FILE",
+              "TRANS-FILE",
+              "AUDIT-FILE",
+              "ACC"
+            ],
+            "vsam_files": [
+              "SELECT",
+              "SELECT"
+            ],
+            "jcl_references": []
+          },
+          "business_logic": [
+            {
+              "line": 5,
+              "statement": "IDENTIFICATION DIVISION.",
+              "type": "OTHER"
+            },
+            {
+              "line": 14,
+              "statement": "SOURCE-COMPUTER. IBM-Z15.",
+              "type": "OTHER"
+            },
+            {
+              "line": 15,
+              "statement": "OBJECT-COMPUTER. CICS-TS-V5R6.",
+              "type": "OTHER"
+            },
+            {
+              "line": 143,
+              "statement": "PERFORM INITIALIZE-TRANSACTION",
+              "type": "PERFORM"
+            },
+            {
+              "line": 146,
+              "statement": "PERFORM VALIDATE-USER-SESSION",
+              "type": "PERFORM"
+            },
+            {
+              "line": 150,
+              "statement": "WHEN '01' PERFORM ACCOUNT-INQUIRY",
+              "type": "OTHER"
+            },
+            {
+              "line": 151,
+              "statement": "WHEN '02' PERFORM ACCOUNT-TRANSFER",
+              "type": "OTHER"
+            },
+            {
+              "line": 152,
+              "statement": "WHEN '03' PERFORM TRANSACTION-HISTORY",
+              "type": "OTHER"
+            },
+            {
+              "line": 153,
+              "statement": "WHEN '04' PERFORM ACCOUNT-BALANCE-UPDATE",
+              "type": "OTHER"
+            },
+            {
+              "line": 154,
+              "statement": "WHEN '05' PERFORM BATCH-PROCESSING",
+              "type": "OTHER"
+            },
+            {
+              "line": 155,
+              "statement": "WHEN OTHER PERFORM INVALID-FUNCTION",
+              "type": "OTHER"
+            },
+            {
+              "line": 159,
+              "statement": "PERFORM FINALIZE-TRANSACTION",
+              "type": "PERFORM"
+            },
+            {
+              "line": 175,
+              "statement": "IF WS-AUDIT-FLAG = 'Y'",
+              "type": "IF"
+            },
+            {
+              "line": 176,
+              "statement": "PERFORM START-AUDIT-LOG",
+              "type": "PERFORM"
+            },
+            {
+              "line": 177,
+              "statement": "END-IF",
+              "type": "OTHER"
+            },
+            {
+              "line": 180,
+              "statement": "PERFORM INITIALIZE-TEMP-STORAGE",
+              "type": "PERFORM"
+            },
+            {
+              "line": 183,
+              "statement": "MOVE ZERO TO WS-ERROR-COUNT.",
+              "type": "MOVE"
+            },
+            {
+              "line": 202,
+              "statement": "MOVE LK-FROM-ACCOUNT TO ACC-NUMBER",
+              "type": "MOVE"
+            },
+            {
+              "line": 211,
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+              "type": "IF"
+            },
+            {
+              "line": 213,
+              "statement": "PERFORM STORE-ACCOUNT-IN-TSQ",
+              "type": "PERFORM"
+            },
+            {
+              "line": 215,
+              "statement": "PERFORM SEND-ACCOUNT-MAP",
+              "type": "PERFORM"
+            },
+            {
+              "line": 217,
+              "statement": "PERFORM HANDLE-FILE-ERROR",
+              "type": "PERFORM"
+            },
+            {
+              "line": 218,
+              "statement": "END-IF.",
+              "type": "OTHER"
+            },
+            {
+              "line": 222,
+              "statement": "PERFORM VALIDATE-TRANSFER-REQUEST",
+              "type": "PERFORM"
+            },
+            {
+              "line": 224,
+              "statement": "IF WS-VALID-TRANS-FLAG = 'Y'",
+              "type": "IF"
+            },
+            {
+              "line": 228,
+              "statement": "PERFORM DEBIT-FROM-ACCOUNT",
+              "type": "PERFORM"
+            },
+            {
+              "line": 229,
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+              "type": "IF"
+            },
+            {
+              "line": 230,
+              "statement": "PERFORM CREDIT-TO-ACCOUNT",
+              "type": "PERFORM"
+            },
+            {
+              "line": 231,
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+              "type": "IF"
+            },
+            {
+              "line": 232,
+              "statement": "PERFORM LOG-TRANSACTION",
+              "type": "PERFORM"
+            },
+            {
+              "line": 234,
+              "statement": "PERFORM NOTIFY-TRANSFER-COMPLETE",
+              "type": "PERFORM"
+            },
+            {
+              "line": 237,
+              "statement": "PERFORM HANDLE-CREDIT-ERROR",
+              "type": "PERFORM"
+            },
+            {
+              "line": 238,
+              "statement": "END-IF",
+              "type": "OTHER"
+            },
+            {
+              "line": 241,
+              "statement": "PERFORM HANDLE-DEBIT-ERROR",
+              "type": "PERFORM"
+            },
+            {
+              "line": 242,
+              "statement": "END-IF",
+              "type": "OTHER"
+            },
+            {
+              "line": 243,
+              "statement": "END-IF.",
+              "type": "OTHER"
+            },
+            {
+              "line": 246,
+              "statement": "MOVE LK-FROM-ACCOUNT TO ACC-NUMBER",
+              "type": "MOVE"
+            },
+            {
+              "line": 255,
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+              "type": "IF"
+            },
+            {
+              "line": 256,
+              "statement": "MOVE ACC-BALANCE TO WS-OLD-BALANCE",
+              "type": "MOVE"
+            },
+            {
+              "line": 259,
+              "statement": "IF ACC-BALANCE >= ZERO",
+              "type": "IF"
+            },
+            {
+              "line": 266,
+              "statement": "MOVE 'INSUFFICIENT_FUNDS' TO WS-ERROR-CODE",
+              "type": "MOVE"
+            },
+            {
+              "line": 267,
+              "statement": "MOVE DFHRESP(ERROR) TO WS-CICS-RESP",
+              "type": "MOVE"
+            },
+            {
+              "line": 268,
+              "statement": "END-IF",
+              "type": "OTHER"
+            },
+            {
+              "line": 269,
+              "statement": "END-IF.",
+              "type": "OTHER"
+            },
+            {
+              "line": 272,
+              "statement": "MOVE LK-TO-ACCOUNT TO ACC-NUMBER",
+              "type": "MOVE"
+            },
+            {
+              "line": 281,
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+              "type": "IF"
+            },
+            {
+              "line": 289,
+              "statement": "END-IF.",
+              "type": "OTHER"
+            },
+            {
+              "line": 294,
+              "statement": "MOVE FUNCTION CURRENT-DATE(1:8) TO TRANS-DATE",
+              "type": "MOVE"
+            },
+            {
+              "line": 295,
+              "statement": "MOVE FUNCTION CURRENT-DATE(9:6) TO TRANS-TIME",
+              "type": "MOVE"
+            },
+            {
+              "line": 297,
+              "statement": "MOVE WS-RECORD-COUNT TO TRANS-SEQ",
+              "type": "MOVE"
+            },
+            {
+              "line": 298,
+              "statement": "MOVE LK-FROM-ACCOUNT TO TRANS-FROM-ACC",
+              "type": "MOVE"
+            },
+            {
+              "line": 299,
+              "statement": "MOVE LK-TO-ACCOUNT TO TRANS-TO-ACC",
+              "type": "MOVE"
+            },
+            {
+              "line": 300,
+              "statement": "MOVE LK-AMOUNT TO TRANS-AMOUNT",
+              "type": "MOVE"
+            },
+            {
+              "line": 301,
+              "statement": "MOVE 'TRF' TO TRANS-TYPE",
+              "type": "MOVE"
+            },
+            {
+              "line": 302,
+              "statement": "MOVE 'C' TO TRANS-STATUS",
+              "type": "MOVE"
+            },
+            {
+              "line": 303,
+              "statement": "MOVE WS-USER-ID TO TRANS-USER-ID",
+              "type": "MOVE"
+            },
+            {
+              "line": 304,
+              "statement": "MOVE WS-TERMINAL-ID TO TRANS-TERMINAL",
+              "type": "MOVE"
+            },
+            {
+              "line": 314,
+              "statement": "PERFORM SEND-MQ-NOTIFICATION.",
+              "type": "PERFORM"
+            },
+            {
+              "line": 324,
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+              "type": "IF"
+            },
+            {
+              "line": 325,
+              "statement": "PERFORM READ-TRANSACTION-HISTORY",
+              "type": "PERFORM"
+            },
+            {
+              "line": 327,
+              "statement": "END-IF.",
+              "type": "OTHER"
+            },
+            {
+              "line": 330,
+              "statement": "MOVE 'N' TO WS-EOF-FLAG",
+              "type": "MOVE"
+            },
+            {
+              "line": 331,
+              "statement": "MOVE 1 TO WS-TSQ-ITEM",
+              "type": "MOVE"
+            },
+            {
+              "line": 333,
+              "statement": "PERFORM UNTIL WS-EOF-FLAG = 'Y'",
+              "type": "PERFORM"
+            },
+            {
+              "line": 341,
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+              "type": "IF"
+            },
+            {
+              "line": 342,
+              "statement": "PERFORM STORE-TRANSACTION-IN-TSQ",
+              "type": "PERFORM"
+            },
+            {
+              "line": 345,
+              "statement": "MOVE 'Y' TO WS-EOF-FLAG",
+              "type": "MOVE"
+            },
+            {
+              "line": 346,
+              "statement": "END-IF",
+              "type": "OTHER"
+            },
+            {
+              "line": 347,
+              "statement": "END-PERFORM",
+              "type": "OTHER"
+            },
+            {
+              "line": 350,
+              "statement": "PERFORM SEND-HISTORY-MAP.",
+              "type": "PERFORM"
+            },
+            {
+              "line": 378,
+              "statement": "PERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'",
+              "type": "PERFORM"
+            },
+            {
+              "line": 388,
+              "statement": "IF SQLCODE = 0",
+              "type": "IF"
+            },
+            {
+              "line": 389,
+              "statement": "PERFORM FORMAT-REPORT-LINE",
+              "type": "PERFORM"
+            },
+            {
+              "line": 390,
+              "statement": "PERFORM WRITE-REPORT-LINE",
+              "type": "PERFORM"
+            },
+            {
+              "line": 392,
+              "statement": "MOVE 'Y' TO WS-EOF-FLAG",
+              "type": "MOVE"
+            },
+            {
+              "line": 393,
+              "statement": "END-IF.",
+              "type": "OTHER"
+            },
+            {
+              "line": 407,
+              "statement": "MOVE LENGTH OF ACCOUNT-RECORD TO WS-TSQ-LENGTH",
+              "type": "MOVE"
+            },
+            {
+              "line": 416,
+              "statement": "SEND-MQ-NOTIFICATION.",
+              "type": "OTHER"
+            },
+            {
+              "line": 417,
+              "statement": "MOVE 'TRANSFER-COMPLETE' TO WS-MQ-MESSAGE",
+              "type": "MOVE"
+            },
+            {
+              "line": 418,
+              "statement": "MOVE 100 TO WS-MQ-LENGTH",
+              "type": "MOVE"
+            },
+            {
+              "line": 437,
+              "statement": "MOVE 'FILE-ERROR' TO WS-ERROR-CODE",
+              "type": "MOVE"
+            },
+            {
+              "line": 438,
+              "statement": "PERFORM LOG-ERROR.",
+              "type": "PERFORM"
+            },
+            {
+              "line": 452,
+              "statement": "IF WS-AUDIT-FLAG = 'Y'",
+              "type": "IF"
+            },
+            {
+              "line": 453,
+              "statement": "PERFORM END-AUDIT-LOG",
+              "type": "PERFORM"
+            },
+            {
+              "line": 454,
+              "statement": "END-IF.",
+              "type": "OTHER"
+            }
+          ],
+          "sql_statements": [
+            {
+              "line": 368,
+              "statement": "EXEC SQL"
+            },
+            {
+              "line": 376,
+              "statement": "EXEC SQL OPEN ACCOUNT-CURSOR END-EXEC"
+            },
+            {
+              "line": 380,
+              "statement": "EXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC."
+            },
+            {
+              "line": 383,
+              "statement": "EXEC SQL"
+            }
+          ]
+        },
+        "ACCOUNT-VALIDATION.CPY": {
+          "filename": "ACCOUNT-VALIDATION.CPY",
+          "file_type": "copybook",
+          "size": 336,
+          "lines": 8,
+          "program_id": null,
+          "divisions": [],
+          "data_items": [
+            {
+              "name": "ACCOUNT-VALIDATION-RECORD",
+              "line": 2,
+              "pic": null,
+              "java_type": "String"
+            }
+          ],
+          "dependencies": {
+            "copy_books": [],
+            "called_programs": [],
+            "file_references": [],
+            "vsam_files": [],
+            "jcl_references": []
+          },
+          "business_logic": [],
+          "sql_statements": []
+        },
+        "BANKING.JCL": {
+          "filename": "BANKING.JCL",
+          "file_type": "job_control",
+          "size": 3347,
+          "lines": 116,
+          "program_id": null,
+          "divisions": [],
+          "data_items": [],
+          "dependencies": {
+            "copy_books": [],
+            "called_programs": [],
+            "file_references": [],
+            "vsam_files": [
+              "DSNAME",
+              "DSNAME",
+              "ALLOCATE",
+              "DELETE",
+              "DEFINE",
+              "DELETE",
+              "DEFINE"
+            ],
+            "jcl_references": []
+          },
+          "business_logic": [
+            {
+              "line": 2,
+              "statement": "//         MSGLEVEL=(1,1),NOTIFY=&SYSUID",
+              "type": "OTHER"
+            }
+          ],
+          "sql_statements": []
+        }
+      },
+      "connections": {
+        "BANKING.CBL": {
+          "depends_on": [
+            "ACCOUNT-VALIDATION.CPY"
+          ],
+          "used_by": [],
+          "connection_type": [
+            "ACCOUNT-VALIDATION.CPY:COPY"
+          ]
+        },
+        "ACCOUNT-VALIDATION.CPY": {
+          "depends_on": [],
+          "used_by": [
+            "BANKING.CBL"
+          ],
+          "connection_type": []
+        },
+        "BANKING.JCL": {
+          "depends_on": [],
+          "used_by": [],
+          "connection_type": []
+        }
+      },
+      "dependencies": {},
+      "field_mappings": {
+        "ACCOUNT-RECORD": {
+          "cobol_name": "ACCOUNT-RECORD",
+          "java_name": "accountRecord",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "TRANSACTION-RECORD": {
+          "cobol_name": "TRANSACTION-RECORD",
+          "java_name": "transactionRecord",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "AUDIT-RECORD": {
+          "cobol_name": "AUDIT-RECORD",
+          "java_name": "auditRecord",
+          "java_type": "String",
+          "pic_clause": "X("
+        },
+        "WS-TRANSACTION-DATA": {
+          "cobol_name": "WS-TRANSACTION-DATA",
+          "java_name": "wsTransactionData",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "WS-ACCOUNT-WORK": {
+          "cobol_name": "WS-ACCOUNT-WORK",
+          "java_name": "wsAccountWork",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "WS-ERROR-AREA": {
+          "cobol_name": "WS-ERROR-AREA",
+          "java_name": "wsErrorArea",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "WS-TSQ-DATA": {
+          "cobol_name": "WS-TSQ-DATA",
+          "java_name": "wsTsqData",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "WS-MQ-DATA": {
+          "cobol_name": "WS-MQ-DATA",
+          "java_name": "wsMqData",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "WS-CHANNEL-DATA": {
+          "cobol_name": "WS-CHANNEL-DATA",
+          "java_name": "wsChannelData",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "WS-MAP-CONTROL": {
+          "cobol_name": "WS-MAP-CONTROL",
+          "java_name": "wsMapControl",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "WS-COUNTERS": {
+          "cobol_name": "WS-COUNTERS",
+          "java_name": "wsCounters",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "WS-FLAGS": {
+          "cobol_name": "WS-FLAGS",
+          "java_name": "wsFlags",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "DFHCOMMAREA": {
+          "cobol_name": "DFHCOMMAREA",
+          "java_name": "dfhcommarea",
+          "java_type": "String",
+          "pic_clause": null
+        },
+        "ACCOUNT-VALIDATION-RECORD": {
+          "cobol_name": "ACCOUNT-VALIDATION-RECORD",
+          "java_name": "accountValidationRecord",
+          "java_type": "String",
+          "pic_clause": null
+        }
+      },
+      "business_entities": [
+        {
+          "name": "ACCOUNT-RECORD",
+          "source_file": "BANKING.CBL",
+          "line": 36,
+          "java_class_name": "AccountRecord",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "TRANSACTION-RECORD",
+          "source_file": "BANKING.CBL",
+          "line": 48,
+          "java_class_name": "TransactionRecord",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "AUDIT-RECORD",
+          "source_file": "BANKING.CBL",
+          "line": 62,
+          "java_class_name": "AuditRecord",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-TRANSACTION-DATA",
+          "source_file": "BANKING.CBL",
+          "line": 66,
+          "java_class_name": "WsTransactionData",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-ACCOUNT-WORK",
+          "source_file": "BANKING.CBL",
+          "line": 73,
+          "java_class_name": "WsAccountWork",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-ERROR-AREA",
+          "source_file": "BANKING.CBL",
+          "line": 81,
+          "java_class_name": "WsErrorArea",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-TSQ-DATA",
+          "source_file": "BANKING.CBL",
+          "line": 88,
+          "java_class_name": "WsTsqData",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-MQ-DATA",
+          "source_file": "BANKING.CBL",
+          "line": 94,
+          "java_class_name": "WsMqData",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-CHANNEL-DATA",
+          "source_file": "BANKING.CBL",
+          "line": 100,
+          "java_class_name": "WsChannelData",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-MAP-CONTROL",
+          "source_file": "BANKING.CBL",
+          "line": 107,
+          "java_class_name": "WsMapControl",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-COUNTERS",
+          "source_file": "BANKING.CBL",
+          "line": 113,
+          "java_class_name": "WsCounters",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "WS-FLAGS",
+          "source_file": "BANKING.CBL",
+          "line": 118,
+          "java_class_name": "WsFlags",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "DFHCOMMAREA",
+          "source_file": "BANKING.CBL",
+          "line": 125,
+          "java_class_name": "Dfhcommarea",
+          "fields": [],
+          "estimated_complexity": "medium"
+        },
+        {
+          "name": "ACCOUNT-VALIDATION-RECORD",
+          "source_file": "ACCOUNT-VALIDATION.CPY",
+          "line": 2,
+          "java_class_name": "AccountValidationRecord",
+          "fields": [],
+          "estimated_complexity": "simple"
+        }
+      ],
+      "conversion_patterns": [
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 ACCOUNT-RECORD",
+          "java_equivalent": "public class AccountRecord",
+          "context": "Convert COBOL record ACCOUNT-RECORD to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 TRANSACTION-RECORD",
+          "java_equivalent": "public class TransactionRecord",
+          "context": "Convert COBOL record TRANSACTION-RECORD to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 AUDIT-RECORD",
+          "java_equivalent": "public class AuditRecord",
+          "context": "Convert COBOL record AUDIT-RECORD to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-TRANSACTION-DATA",
+          "java_equivalent": "public class WsTransactionData",
+          "context": "Convert COBOL record WS-TRANSACTION-DATA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-ACCOUNT-WORK",
+          "java_equivalent": "public class WsAccountWork",
+          "context": "Convert COBOL record WS-ACCOUNT-WORK to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-ERROR-AREA",
+          "java_equivalent": "public class WsErrorArea",
+          "context": "Convert COBOL record WS-ERROR-AREA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-TSQ-DATA",
+          "java_equivalent": "public class WsTsqData",
+          "context": "Convert COBOL record WS-TSQ-DATA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-MQ-DATA",
+          "java_equivalent": "public class WsMqData",
+          "context": "Convert COBOL record WS-MQ-DATA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-CHANNEL-DATA",
+          "java_equivalent": "public class WsChannelData",
+          "context": "Convert COBOL record WS-CHANNEL-DATA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-MAP-CONTROL",
+          "java_equivalent": "public class WsMapControl",
+          "context": "Convert COBOL record WS-MAP-CONTROL to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-COUNTERS",
+          "java_equivalent": "public class WsCounters",
+          "context": "Convert COBOL record WS-COUNTERS to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-FLAGS",
+          "java_equivalent": "public class WsFlags",
+          "context": "Convert COBOL record WS-FLAGS to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 DFHCOMMAREA",
+          "java_equivalent": "public class Dfhcommarea",
+          "context": "Convert COBOL record DFHCOMMAREA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 ACCOUNT-VALIDATION-RECORD",
+          "java_equivalent": "public class AccountValidationRecord",
+          "context": "Convert COBOL record ACCOUNT-VALIDATION-RECORD to Java class",
+          "source_file": "ACCOUNT-VALIDATION.CPY"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD ACCOUNT-FILE",
+          "java_equivalent": "// Repository pattern for ACCOUNT-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD TRANS-FILE",
+          "java_equivalent": "// Repository pattern for TRANS-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD AUDIT-FILE",
+          "java_equivalent": "// Repository pattern for AUDIT-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD ACCOUNT-FILE",
+          "java_equivalent": "// Repository pattern for ACCOUNT-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD TRANS-FILE",
+          "java_equivalent": "// Repository pattern for TRANS-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD AUDIT-FILE",
+          "java_equivalent": "// Repository pattern for AUDIT-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD ACC",
+          "java_equivalent": "// Repository pattern for ACC",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM INITIALIZE-TRANSACTION",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM VALIDATE-USER-SESSION",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM FINALIZE-TRANSACTION",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-AUDIT-FLAG = 'Y'",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM START-AUDIT-LOG",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM INITIALIZE-TEMP-STORAGE",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM STORE-ACCOUNT-IN-TSQ",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM SEND-ACCOUNT-MAP",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM HANDLE-FILE-ERROR",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM VALIDATE-TRANSFER-REQUEST",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-VALID-TRANS-FLAG = 'Y'",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM DEBIT-FROM-ACCOUNT",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM CREDIT-TO-ACCOUNT",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM LOG-TRANSACTION",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM NOTIFY-TRANSFER-COMPLETE",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM HANDLE-CREDIT-ERROR",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM HANDLE-DEBIT-ERROR",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF ACC-BALANCE >= ZERO",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM SEND-MQ-NOTIFICATION.",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM READ-TRANSACTION-HISTORY",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM UNTIL WS-EOF-FLAG = 'Y'",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM STORE-TRANSACTION-IN-TSQ",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM SEND-HISTORY-MAP.",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF SQLCODE = 0",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM FORMAT-REPORT-LINE",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM WRITE-REPORT-LINE",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM LOG-ERROR.",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-AUDIT-FLAG = 'Y'",
+          "java_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM END-AUDIT-LOG",
+          "java_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        }
+      ]
+    },
+    "cics_results": {
+      "programs": {
+        "BANKING.CBL": {
+          "description": "COBOL CICS program",
+          "program_id": "BANKING",
+          "copybooks": [
+            "ACCOUNT-VALIDATION.cpy",
+            "ERROR-CODES.cpy",
+            "SECURITY-CONTROL.cpy",
+            "TRANSACTION-TYPES.cpy"
+          ],
+          "control_includes": [],
+          "file_descriptors": [
+            {
+              "name": "ACCOUNT-FILE",
+              "line": 69,
+              "type": "Sequential"
+            },
+            {
+              "name": "TRANS-FILE",
+              "line": 93,
+              "type": "Sequential"
+            },
+            {
+              "name": "AUDIT-FILE",
+              "line": 121,
+              "type": "Sequential"
+            }
+          ],
+          "cics_commands": [
+            {
+              "line": 343,
+              "verb": "RETURN",
+              "command_type": "RETURN",
+              "parameters": {
+                "TRANSID": "BANK",
+                "COMMAREA": "DFHCOMMAREA",
+                "USERID": "WS-USER-ID",
+                "TERMID": "WS-TERMINAL-ID"
+              },
+              "raw_block": "EXEC CICS RETURN  TRANSID('BANK')  COMMAREA(DFHCOMMAREA)  END-EXEC.    INITIALIZE-TRANSACTION.  *> Get terminal and user information  EXEC CICS ASSIGN  USERID(WS-USER-ID)  TERMID(WS-TERMINAL-ID)  END-EXEC",
+              "dotnet_service": "ITransactionService",
+              "dotnet_method": "CompleteTransactionAsync",
+              "conversion_hint": "Transaction completion",
+              "ai_conversion": "public class CicsTransaction\n{\n    private string DFHCOMMAREA;\n    private string WS_USER_ID;\n    private string WS_TERMINAL_ID;\n\n    public void Execute()\n    {\n        // Simulate CICS RETURN\n        ReturnTransaction(\"BANK\", DFHCOMMAREA);\n\n        // Initialize transaction\n        InitializeTransaction();\n\n        // Simulate CICS ASSIGN\n        AssignUserAndTerminal(out WS_USER_ID, out WS_TERMINAL_ID);\n    }\n\n    private void ReturnTransaction(string transId, string commArea)\n    {\n        // Logic to handle transaction return\n    }\n\n    private void InitializeTransaction()\n    {\n        // Logic to initialize transaction\n    }\n\n    private void AssignUserAndTerminal(out string userId, out string terminalId)\n    {\n        // Logic to assign user and terminal information\n        userId = \"SampleUserId\"; // Replace with actual logic\n        terminalId = \"SampleTerminalId\"; // Replace with actual logic\n    }\n}",
+              "complexity_score": 4,
+              "performance_impact": "low",
+              "security_considerations": [
+                "Validate and sanitize COMMAREA payload"
+              ]
+            },
+            {
+              "line": 381,
+              "verb": "LINK",
+              "command_type": "LINK",
+              "parameters": {
+                "PROGRAM": "AUTHCHK",
+                "COMMAREA": "LK-USER-ID",
+                "LENGTH": "8"
+              },
+              "raw_block": "EXEC CICS LINK  PROGRAM('AUTHCHK')  COMMAREA(LK-USER-ID)  LENGTH(8)  END-EXEC",
+              "dotnet_service": "IMediator",
+              "dotnet_method": "SendAsync",
+              "conversion_hint": "MediatR command/query pattern",
+              "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"AUTHCHK\";\n        byte[] commArea = Encoding.ASCII.GetBytes(\"LK-USER-ID\".PadRight(8));\n        \n        // Assuming a method LinkProgram exists to handle the LINK operation\n        LinkProgram(programName, commArea);\n    }\n\n    private void LinkProgram(string programName, byte[] commArea)\n    {\n        // Implementation for linking to the program\n        // This is a placeholder for the actual logic to call the external program\n        Console.WriteLine($\"Linking to program: {programName} with commarea: {BitConverter.ToString(commArea)}\");\n    }\n}",
+              "complexity_score": 3,
+              "performance_impact": "high",
+              "security_considerations": [
+                "Validate and sanitize COMMAREA payload",
+                "Ensure linked program is authorized"
+              ]
+            },
+            {
+              "line": 417,
+              "verb": "LINK",
+              "command_type": "LINK",
+              "parameters": {
+                "PROGRAM": "SESSVAL",
+                "CHANNEL": "WS-CHANNEL-NAME",
+                "CONTAINER": "WS-CONTAINER-NAME",
+                "FILE": "ACCOUNTS",
+                "INTO": "ACCOUNT-RECORD",
+                "RIDFLD": "ACC-KEY",
+                "RESP": "WS-CICS-RESP"
+              },
+              "raw_block": "EXEC CICS LINK  PROGRAM('SESSVAL')  CHANNEL(WS-CHANNEL-NAME)  CONTAINER(WS-CONTAINER-NAME)  END-EXEC.    ACCOUNT-INQUIRY.  *> Read account information  MOVE LK-FROM-ACCOUNT TO ACC-NUMBER    EXEC CICS READ  FILE('ACCOUNTS')  INTO(ACCOUNT-RECORD)  RIDFLD(ACC-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+              "dotnet_service": "IMediator",
+              "dotnet_method": "SendAsync",
+              "conversion_hint": "MediatR command/query pattern",
+              "ai_conversion": "using System;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"SESSVAL\";\n        string channelName = \"WS-CHANNEL-NAME\";\n        string containerName = \"WS-CONTAINER-NAME\";\n        string fileName = \"ACCOUNTS\";\n        string accountRecord = string.Empty;\n        string accKey = \"ACC-KEY\";\n        int cicsResponse = 0;\n\n        // Simulate CICS LINK command\n        LinkToProgram(programName, channelName, containerName);\n\n        // Simulate account inquiry\n        string accNumber = \"LK-FROM-ACCOUNT\";\n        accKey = accNumber;\n\n        // Simulate CICS READ command\n        ReadAccountInformation(fileName, ref accountRecord, accKey, ref cicsResponse);\n    }\n\n    private void LinkToProgram(string program, string channel, string container)\n    {\n        // Logic to link to the program\n        Console.WriteLine($\"Linking to program: {program}, Channel: {channel}, Container: {container}\");\n    }\n\n    private void ReadAccountInformation(string file, ref string accountRecord, string ridFld, ref int resp)\n    {\n        // Logic to read account information\n        Console.WriteLine($\"Reading from file: {file}, RIDFLD: {ridFld}\");\n        accountRecord = \"Sample Account Record\"; // Simulated data\n        resp = 0; // Simulated response code\n    }\n}",
+              "complexity_score": 8,
+              "performance_impact": "high",
+              "security_considerations": [
+                "Ensure container data is authenticated",
+                "Ensure linked program is authorized"
+              ]
+            },
+            {
+              "line": 465,
+              "verb": "SYNCPOINT",
+              "command_type": "",
+              "parameters": {
+                "DFHRESP": "NORMAL"
+              },
+              "raw_block": "EXEC CICS SYNCPOINT ROLLBACK END-EXEC    PERFORM DEBIT-FROM-ACCOUNT  IF WS-CICS-RESP = DFHRESP(NORMAL)  PERFORM CREDIT-TO-ACCOUNT  IF WS-CICS-RESP = DFHRESP(NORMAL)  PERFORM LOG-TRANSACTION  EXEC CICS SYNCPOINT END-EXEC",
+              "dotnet_service": "",
+              "dotnet_method": "",
+              "conversion_hint": "",
+              "ai_conversion": "try\n{\n    // Perform debit from account\n    DebitFromAccount();\n    \n    if (WsCicsResp == Dfhresp.Normal)\n    {\n        // Perform credit to account\n        CreditToAccount();\n        \n        if (WsCicsResp == Dfhresp.Normal)\n        {\n            // Perform log transaction\n            LogTransaction();\n            \n            // Commit the transaction\n            CommitTransaction();\n        }\n    }\n}\ncatch (Exception ex)\n{\n    // Rollback the transaction in case of an error\n    RollbackTransaction();\n    throw;\n}",
+              "complexity_score": 2,
+              "performance_impact": "low",
+              "security_considerations": []
+            },
+            {
+              "line": 471,
+              "verb": "SYNCPOINT",
+              "command_type": "",
+              "parameters": {},
+              "raw_block": "EXEC CICS SYNCPOINT END-EXEC  PERFORM NOTIFY-TRANSFER-COMPLETE  ELSE  EXEC CICS SYNCPOINT ROLLBACK END-EXEC",
+              "dotnet_service": "",
+              "dotnet_method": "",
+              "conversion_hint": "",
+              "ai_conversion": "try\n{\n    // Commit the transaction\n    CommitTransaction();\n\n    // Perform the equivalent of NOTIFY-TRANSFER-COMPLETE\n    NotifyTransferComplete();\n}\ncatch (Exception)\n{\n    // Rollback the transaction in case of an error\n    RollbackTransaction();\n}\n\nvoid CommitTransaction()\n{\n    // Implementation for committing the transaction\n}\n\nvoid NotifyTransferComplete()\n{\n    // Implementation for notifying transfer completion\n}\n\nvoid RollbackTransaction()\n{\n    // Implementation for rolling back the transaction\n}",
+              "complexity_score": 0,
+              "performance_impact": "low",
+              "security_considerations": []
+            },
+            {
+              "line": 479,
+              "verb": "SYNCPOINT",
+              "command_type": "",
+              "parameters": {},
+              "raw_block": "EXEC CICS SYNCPOINT ROLLBACK END-EXEC  PERFORM HANDLE-CREDIT-ERROR  END-IF  ELSE  EXEC CICS SYNCPOINT ROLLBACK END-EXEC",
+              "dotnet_service": "",
+              "dotnet_method": "",
+              "conversion_hint": "",
+              "ai_conversion": "try\n{\n    // Perform syncpoint rollback logic here\n}\ncatch (Exception)\n{\n    // Handle credit error\n}",
+              "complexity_score": 0,
+              "performance_impact": "low",
+              "security_considerations": []
+            },
+            {
+              "line": 505,
+              "verb": "SYNCPOINT",
+              "command_type": "READ",
+              "parameters": {
+                "FILE": "ACCOUNTS",
+                "INTO": "ACCOUNT-RECORD",
+                "RIDFLD": "ACC-KEY",
+                "RESP": "WS-CICS-RESP"
+              },
+              "raw_block": "EXEC CICS SYNCPOINT ROLLBACK END-EXEC  PERFORM HANDLE-DEBIT-ERROR  END-IF  END-IF.    DEBIT-FROM-ACCOUNT.  MOVE LK-FROM-ACCOUNT TO ACC-NUMBER    EXEC CICS READ UPDATE  FILE('ACCOUNTS')  INTO(ACCOUNT-RECORD)  RIDFLD(ACC-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+              "dotnet_service": "IRepositoryService",
+              "dotnet_method": "ReadAsync",
+              "conversion_hint": "Entity Framework repository pattern",
+              "ai_conversion": "try\n{\n    // Begin transaction\n    using (var transaction = new TransactionScope())\n    {\n        // Read the account record\n        var accountRecord = ReadAccountRecord(\"ACCOUNTS\", accKey, out var response);\n\n        if (response == CicsResponse.Success)\n        {\n            // Perform debit from account\n            DebitFromAccount(accountRecord);\n\n            // Commit the transaction\n            transaction.Complete();\n        }\n        else\n        {\n            // Handle error\n            HandleDebitError();\n        }\n    }\n}\ncatch (Exception ex)\n{\n    // Handle exception\n    HandleDebitError();\n}\n\nAccountRecord ReadAccountRecord(string fileName, string recordId, out CicsResponse response)\n{\n    // Simulate reading from a file\n    response = CicsResponse.Success;\n    return new AccountRecord();\n}\n\nvoid DebitFromAccount(AccountRecord accountRecord)\n{\n    // Simulate debiting from account\n}\n\nvoid HandleDebitError()\n{\n    // Simulate error handling\n}\n\nenum CicsResponse\n{\n    Success,\n    Error\n}\n\nclass AccountRecord\n{\n    // Simulate account record structure\n}",
+              "complexity_score": 5,
+              "performance_impact": "medium",
+              "security_considerations": []
+            },
+            {
+              "line": 527,
+              "verb": "REWRITE",
+              "command_type": "WRITE",
+              "parameters": {
+                "FILE": "ACCOUNTS",
+                "FROM": "ACCOUNT-RECORD",
+                "RESP": "WS-CICS-RESP"
+              },
+              "raw_block": "EXEC CICS REWRITE  FILE('ACCOUNTS')  FROM(ACCOUNT-RECORD)  RESP(WS-CICS-RESP)  END-EXEC",
+              "dotnet_service": "IRepositoryService",
+              "dotnet_method": "CreateAsync",
+              "conversion_hint": "Entity Framework Add operation",
+              "ai_conversion": "try\n{\n    // Assuming ACCOUNT_RECORD is a byte array or similar structure\n    var accountRecord = GetAccountRecord(); // Method to retrieve the account record data\n    var fileName = \"ACCOUNTS\";\n\n    // Open the file for writing\n    using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Write))\n    {\n        // Write the account record to the file\n        fileStream.Write(accountRecord, 0, accountRecord.Length);\n    }\n\n    // Set response code to indicate success\n    var wsCicsResp = 0; // Assuming 0 indicates success\n}\ncatch (Exception ex)\n{\n    // Handle exceptions and set response code to indicate failure\n    var wsCicsResp = -1; // Assuming -1 indicates failure\n    // Log or handle the exception as needed\n}",
+              "complexity_score": 3,
+              "performance_impact": "medium",
+              "security_considerations": []
+            },
+            {
+              "line": 557,
+              "verb": "READ",
+              "command_type": "READ",
+              "parameters": {
+                "FILE": "ACCOUNTS",
+                "INTO": "ACCOUNT-RECORD",
+                "RIDFLD": "ACC-KEY",
+                "RESP": "WS-CICS-RESP"
+              },
+              "raw_block": "EXEC CICS READ UPDATE  FILE('ACCOUNTS')  INTO(ACCOUNT-RECORD)  RIDFLD(ACC-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+              "dotnet_service": "IRepositoryService",
+              "dotnet_method": "ReadAsync",
+              "conversion_hint": "Entity Framework repository pattern",
+              "ai_conversion": "try\n{\n    // Assuming a method GetAccountRecord that reads from a data source\n    var accountRecord = GetAccountRecord(\"ACCOUNTS\", ACC_KEY);\n\n    if (accountRecord != null)\n    {\n        ACCOUNT_RECORD = accountRecord;\n        WS_CICS_RESP = 0; // Success response code\n    }\n    else\n    {\n        WS_CICS_RESP = 1; // Not found response code\n    }\n}\ncatch (Exception ex)\n{\n    WS_CICS_RESP = 2; // Error response code\n    // Log exception or handle error\n}",
+              "complexity_score": 4,
+              "performance_impact": "medium",
+              "security_considerations": []
+            },
+            {
+              "line": 575,
+              "verb": "REWRITE",
+              "command_type": "WRITE",
+              "parameters": {
+                "FILE": "ACCOUNTS",
+                "FROM": "ACCOUNT-RECORD",
+                "RESP": "WS-CICS-RESP"
+              },
+              "raw_block": "EXEC CICS REWRITE  FILE('ACCOUNTS')  FROM(ACCOUNT-RECORD)  RESP(WS-CICS-RESP)  END-EXEC",
+              "dotnet_service": "IRepositoryService",
+              "dotnet_method": "CreateAsync",
+              "conversion_hint": "Entity Framework Add operation",
+              "ai_conversion": "try\n{\n    // Assuming ACCOUNT-RECORD is a byte array or similar data structure\n    byte[] accountRecord = GetAccountRecord(); // Method to get the account record data\n\n    // Assuming a method to rewrite the record in the file\n    RewriteRecordInFile(\"ACCOUNTS\", accountRecord);\n}\ncatch (Exception ex)\n{\n    int wsCicsResp = GetCicsResponseCode(ex); // Method to map exception to a CICS response code\n    // Handle the response code as needed\n}",
+              "complexity_score": 3,
+              "performance_impact": "medium",
+              "security_considerations": []
+            },
+            {
+              "line": 621,
+              "verb": "ASKTIME",
+              "command_type": "WRITE",
+              "parameters": {
+                "ABSTIME": "TRANS-DATE",
+                "DATE": "9:6",
+                "FILE": "TRANSACTIONS",
+                "FROM": "TRANSACTION-RECORD",
+                "RIDFLD": "TRANS-KEY",
+                "RESP": "WS-CICS-RESP"
+              },
+              "raw_block": "EXEC CICS ASKTIME ABSTIME(TRANS-DATE) END-EXEC  MOVE FUNCTION CURRENT-DATE(1:8) TO TRANS-DATE  MOVE FUNCTION CURRENT-DATE(9:6) TO TRANS-TIME  ADD 1 TO WS-RECORD-COUNT  MOVE WS-RECORD-COUNT TO TRANS-SEQ  MOVE LK-FROM-ACCOUNT TO TRANS-FROM-ACC  MOVE LK-TO-ACCOUNT TO TRANS-TO-ACC  MOVE LK-AMOUNT TO TRANS-AMOUNT  MOVE 'TRF' TO TRANS-TYPE  MOVE 'C' TO TRANS-STATUS  MOVE WS-USER-ID TO TRANS-USER-ID  MOVE WS-TERMINAL-ID TO TRANS-TERMINAL    EXEC CICS WRITE  FILE('TRANSACTIONS')  FROM(TRANSACTION-RECORD)  RIDFLD(TRANS-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+              "dotnet_service": "IRepositoryService",
+              "dotnet_method": "CreateAsync",
+              "conversion_hint": "Entity Framework Add operation",
+              "ai_conversion": "using System;\n\npublic class TransactionProcessor\n{\n    private DateTime transDate;\n    private int wsRecordCount;\n    private string transKey;\n    private string transFromAcc;\n    private string transToAcc;\n    private decimal transAmount;\n    private string transType;\n    private string transStatus;\n    private string transUserId;\n    private string transTerminal;\n    private int wsCicsResp;\n\n    public void ProcessTransaction()\n    {\n        // Get current date and time\n        transDate = DateTime.Now;\n\n        // Increment record count\n        wsRecordCount++;\n\n        // Set transaction details\n        transKey = wsRecordCount.ToString();\n        transFromAcc = \"LK-FROM-ACCOUNT\";\n        transToAcc = \"LK-TO-ACCOUNT\";\n        transAmount = 100.00m; // Example amount\n        transType = \"TRF\";\n        transStatus = \"C\";\n        transUserId = \"WS-USER-ID\";\n        transTerminal = \"WS-TERMINAL-ID\";\n\n        // Write transaction record\n        WriteTransactionRecord();\n    }\n\n    private void WriteTransactionRecord()\n    {\n        // Simulate writing to a file or database\n        // This is where you would implement the actual write logic\n        Console.WriteLine(\"Transaction written:\");\n        Console.WriteLine($\"Date: {transDate}\");\n        Console.WriteLine($\"From Account: {transFromAcc}\");\n        Console.WriteLine($\"To Account: {transToAcc}\");\n        Console.WriteLine($\"Amount: {transAmount}\");\n        Console.WriteLine($\"Type: {transType}\");\n        Console.WriteLine($\"Status: {transStatus}\");\n        Console.WriteLine($\"User ID: {transUserId}\");\n        Console.WriteLine($\"Terminal: {transTerminal}\");\n        Console.WriteLine($\"Response: {wsCicsResp}\");\n    }\n}",
+              "complexity_score": 8,
+              "performance_impact": "medium",
+              "security_considerations": []
+            },
+            {
+              "line": 643,
+              "verb": "STARTBR",
+              "command_type": "",
+              "parameters": {
+                "FILE": "TRANSACTIONS",
+                "RIDFLD": "LK-FROM-ACCOUNT",
+                "RESP": "WS-CICS-RESP"
+              },
+              "raw_block": "EXEC CICS STARTBR  FILE('TRANSACTIONS')  RIDFLD(LK-FROM-ACCOUNT)  RESP(WS-CICS-RESP)  END-EXEC",
+              "dotnet_service": "",
+              "dotnet_method": "",
+              "conversion_hint": "",
+              "ai_conversion": "using System;\n\npublic class CicsTransaction\n{\n    public void StartBrowse()\n    {\n        try\n        {\n            // Assuming a method to start browsing the file\n            StartBrowseFile(\"TRANSACTIONS\", LK_FROM_ACCOUNT);\n        }\n        catch (Exception ex)\n        {\n            WS_CICS_RESP = ex.Message;\n        }\n    }\n\n    private void StartBrowseFile(string fileName, string ridField)\n    {\n        // Implementation for starting the browse on the file\n        // This is a placeholder for the actual logic\n    }\n\n    private string LK_FROM_ACCOUNT; // This should be initialized with the appropriate value\n    private string WS_CICS_RESP;\n}",
+              "complexity_score": 3,
+              "performance_impact": "low",
+              "security_considerations": []
+            },
+            {
+              "line": 677,
+              "verb": "ENDBR",
+              "command_type": "",
+              "parameters": {
+                "FILE": "TRANSACTIONS",
+                "INTO": "TRANSACTION-RECORD",
+                "RIDFLD": "TRANS-KEY",
+                "RESP": "WS-CICS-RESP"
+              },
+              "raw_block": "EXEC CICS ENDBR FILE('TRANSACTIONS') END-EXEC  END-IF.    READ-TRANSACTION-HISTORY.  MOVE 'N' TO WS-EOF-FLAG  MOVE 1 TO WS-TSQ-ITEM    PERFORM UNTIL WS-EOF-FLAG = 'Y'  EXEC CICS READNEXT  FILE('TRANSACTIONS')  INTO(TRANSACTION-RECORD)  RIDFLD(TRANS-KEY)  RESP(WS-CICS-RESP)  END-EXEC",
+              "dotnet_service": "",
+              "dotnet_method": "",
+              "conversion_hint": "",
+              "ai_conversion": "bool wsEofFlag = false;\nint wsTsqItem = 1;\nTransactionRecord transactionRecord = new TransactionRecord();\nstring transKey = string.Empty;\nint wsCicsResp = 0;\n\n// End browse logic\nEndBrowse(\"TRANSACTIONS\");\n\n// Read transaction history logic\nReadTransactionHistory();\n\nwhile (!wsEofFlag)\n{\n    wsEofFlag = ReadNextTransaction(\"TRANSACTIONS\", ref transactionRecord, ref transKey, ref wsCicsResp);\n    wsTsqItem++;\n}\n\n// Method to end browse\nvoid EndBrowse(string fileName)\n{\n    // Logic to end browse on the file\n}\n\n// Method to read transaction history\nvoid ReadTransactionHistory()\n{\n    // Logic to read transaction history\n}\n\n// Method to read next transaction\nbool ReadNextTransaction(string fileName, ref TransactionRecord record, ref string key, ref int response)\n{\n    // Logic to read next transaction\n    // Return true if end of file, otherwise false\n    return false;\n}\n\n// TransactionRecord class definition\nclass TransactionRecord\n{\n    // Define properties for transaction record\n}",
+              "complexity_score": 5,
+              "performance_impact": "low",
+              "security_considerations": []
+            },
+            {
+              "line": 715,
+              "verb": "GET",
+              "command_type": "",
+              "parameters": {
+                "CONTAINER": "WS-CONTAINER-NAME",
+                "CHANNEL": "WS-CHANNEL-NAME",
+                "INTO": "WS-CONTAINER-DATA",
+                "FLENGTH": "WS-CONTAINER-LENGTH"
+              },
+              "raw_block": "EXEC CICS GET CONTAINER(WS-CONTAINER-NAME)  CHANNEL(WS-CHANNEL-NAME)  INTO(WS-CONTAINER-DATA)  FLENGTH(WS-CONTAINER-LENGTH)  END-EXEC",
+              "dotnet_service": "",
+              "dotnet_method": "",
+              "conversion_hint": "",
+              "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsContainerHandler\n{\n    public byte[] GetContainerData(string containerName, string channelName, out int containerLength)\n    {\n        // Simulate fetching data from a CICS container\n        byte[] containerData = FetchDataFromContainer(containerName, channelName);\n        containerLength = containerData.Length;\n        return containerData;\n    }\n\n    private byte[] FetchDataFromContainer(string containerName, string channelName)\n    {\n        // Placeholder for actual CICS interaction logic\n        // For demonstration, returning a sample byte array\n        return Encoding.UTF8.GetBytes(\"Sample container data\");\n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        var handler = new CicsContainerHandler();\n        int containerLength;\n        byte[] containerData = handler.GetContainerData(\"WS-CONTAINER-NAME\", \"WS-CHANNEL-NAME\", out containerLength);\n\n        // Assuming WS-CONTAINER-DATA is a byte array\n        byte[] WS_CONTAINER_DATA = containerData;\n        int WS_CONTAINER_LENGTH = containerLength;\n\n        // Output the results\n        Console.WriteLine(\"Container Data: \" + Encoding.UTF8.GetString(WS_CONTAINER_DATA));\n        Console.WriteLine(\"Container Length: \" + WS_CONTAINER_LENGTH);\n    }\n}",
+              "complexity_score": 4,
+              "performance_impact": "low",
+              "security_considerations": [
+                "Ensure container data is authenticated"
+              ]
+            },
+            {
+              "line": 747,
+              "verb": "LINK",
+              "command_type": "LINK",
+              "parameters": {
+                "PROGRAM": "BATCHPRC",
+                "CHANNEL": "WS-CHANNEL-NAME"
+              },
+              "raw_block": "EXEC CICS LINK  PROGRAM('BATCHPRC')  CHANNEL(WS-CHANNEL-NAME)  END-EXEC.    *> SQL Operations for reporting  GENERATE-ACCOUNT-REPORT.  EXEC SQL  DECLARE ACCOUNT-CURSOR CURSOR FOR  SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE  FROM ACCOUNTS  WHERE ACC_STATUS = 'A'  ORDER BY ACC_BALANCE DESC  END-EXEC",
+              "dotnet_service": "IMediator",
+              "dotnet_method": "SendAsync",
+              "conversion_hint": "MediatR command/query pattern",
+              "ai_conversion": "using System;\nusing System.Data.SqlClient;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        // Simulate the LINK command to call the program BATCHPRC\n        CallBatchProcess();\n\n        // SQL Operations for reporting\n        GenerateAccountReport();\n    }\n\n    private void CallBatchProcess()\n    {\n        // Logic to call the external program BATCHPRC\n        Console.WriteLine(\"Calling external program BATCHPRC with channel WS-CHANNEL-NAME\");\n        // Implement the actual call logic here\n    }\n\n    private void GenerateAccountReport()\n    {\n        string connectionString = \"your_connection_string_here\";\n        string query = @\"\n            SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE\n            FROM ACCOUNTS\n            WHERE ACC_STATUS = 'A'\n            ORDER BY ACC_BALANCE DESC\";\n\n        using (SqlConnection connection = new SqlConnection(connectionString))\n        {\n            SqlCommand command = new SqlCommand(query, connection);\n            connection.Open();\n\n            using (SqlDataReader reader = command.ExecuteReader())\n            {\n                while (reader.Read())\n                {\n                    Console.WriteLine($\"Account Number: {reader[\"ACC_NUMBER\"]}, \" +\n                                      $\"Holder Name: {reader[\"ACC_HOLDER_NAME\"]}, \" +\n                                      $\"Balance: {reader[\"ACC_BALANCE\"]}, \" +\n                                      $\"Type: {reader[\"ACC_TYPE\"]}\");\n                }\n            }\n        }\n    }\n}",
+              "complexity_score": 3,
+              "performance_impact": "high",
+              "security_considerations": [
+                "Ensure container data is authenticated",
+                "Ensure linked program is authorized"
+              ]
+            },
+            {
+              "line": 899,
+              "verb": "WRITEQ",
+              "command_type": "WRITEQ_TS",
+              "parameters": {
+                "QUEUE": "AUDIT",
+                "FROM": "TRANSACTION-START",
+                "LENGTH": "17",
+                "ITEM": "WS-TSQ-ITEM",
+                "RESP": "WS-CICS-RESP",
+                "MAPSET": "WS-MAPSET",
+                "MAP": "WS-MAP-NAME",
+                "CURSOR": "WS-CURSOR-POS"
+              },
+              "raw_block": "EXEC CICS WRITEQ TS  QUEUE(WS-TSQ-NAME)  FROM('SESSION-START')  LENGTH(13)  ITEM(WS-TSQ-ITEM)  RESP(WS-CICS-RESP)  END-EXEC.    STORE-ACCOUNT-IN-TSQ.  ADD 1 TO WS-TSQ-ITEM  MOVE LENGTH OF ACCOUNT-RECORD TO WS-TSQ-LENGTH    EXEC CICS WRITEQ TS  QUEUE(WS-TSQ-NAME)  FROM(ACCOUNT-RECORD)  LENGTH(WS-TSQ-LENGTH)  ITEM(WS-TSQ-ITEM)  END-EXEC.    SEND-MQ-NOTIFICATION.  MOVE 'TRANSFER-COMPLETE' TO WS-MQ-MESSAGE  MOVE 100 TO WS-MQ-LENGTH    EXEC CICS WRITEQ TD  QUEUE(WS-MQ-QUEUE)  FROM(WS-MQ-MESSAGE)  LENGTH(WS-MQ-LENGTH)  END-EXEC.    SEND-ACCOUNT-MAP.  EXEC CICS SEND  MAPSET(WS-MAPSET)  MAP(WS-MAP-NAME)  FROM(ACCOUNT-RECORD)  ERASE  CURSOR(WS-CURSOR-POS)  END-EXEC.    HANDLE-FILE-ERROR.  ADD 1 TO WS-ERROR-COUNT  MOVE 'FILE-ERROR' TO WS-ERROR-CODE  PERFORM LOG-ERROR.    START-AUDIT-LOG.  EXEC CICS WRITEQ TD  QUEUE('AUDIT')  FROM('TRANSACTION-START')  LENGTH(17)  END-EXEC.    FINALIZE-TRANSACTION.  EXEC CICS DELETEQ TS  QUEUE(WS-TSQ-NAME)  END-EXEC",
+              "dotnet_service": "ICacheService",
+              "dotnet_method": "WriteToTempStorageAsync",
+              "conversion_hint": "Redis/MemoryCache implementation",
+              "ai_conversion": "using System;\nusing System.Collections.Generic;\n\npublic class CicsTransaction\n{\n    private string WS_TSQ_NAME = \"WS-TSQ-NAME\";\n    private string WS_MQ_QUEUE = \"WS-MQ-QUEUE\";\n    private string WS_MAPSET = \"WS-MAPSET\";\n    private string WS_MAP_NAME = \"WS-MAP-NAME\";\n    private int WS_CURSOR_POS = 0;\n    private int WS_TSQ_ITEM = 0;\n    private int WS_TSQ_LENGTH = 0;\n    private int WS_MQ_LENGTH = 100;\n    private int WS_ERROR_COUNT = 0;\n    private string WS_ERROR_CODE = string.Empty;\n    private string WS_CICS_RESP = string.Empty;\n    private string ACCOUNT_RECORD = \"ACCOUNT-RECORD\";\n    private string WS_MQ_MESSAGE = \"TRANSFER-COMPLETE\";\n\n    public void ExecuteTransaction()\n    {\n        WriteQueueTS(WS_TSQ_NAME, \"SESSION-START\", 13, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        StoreAccountInTSQ();\n        WS_TSQ_ITEM++;\n        WS_TSQ_LENGTH = ACCOUNT_RECORD.Length;\n        WriteQueueTS(WS_TSQ_NAME, ACCOUNT_RECORD, WS_TSQ_LENGTH, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        SendMQNotification();\n        WriteQueueTD(WS_MQ_QUEUE, WS_MQ_MESSAGE, WS_MQ_LENGTH);\n        SendAccountMap();\n        HandleFileError();\n        StartAuditLog();\n        FinalizeTransaction();\n    }\n\n    private void WriteQueueTS(string queue, string from, int length, int item, ref string resp)\n    {\n        // Simulate CICS WRITEQ TS operation\n        Console.WriteLine($\"WRITEQ TS: Queue={queue}, From={from}, Length={length}, Item={item}\");\n    }\n\n    private void StoreAccountInTSQ()\n    {\n        // Simulate storing account in TSQ\n        Console.WriteLine(\"Store account in TSQ.\");\n    }\n\n    private void SendMQNotification()\n    {\n        // Simulate sending MQ notification\n        Console.WriteLine(\"Send MQ notification.\");\n    }\n\n    private void WriteQueueTD(string queue, string from, int length)\n    {\n        // Simulate CICS WRITEQ TD operation\n        Console.WriteLine($\"WRITEQ TD: Queue={queue}, From={from}, Length={length}\");\n    }\n\n    private void SendAccountMap()\n    {\n        // Sim",
+              "complexity_score": 12,
+              "performance_impact": "medium",
+              "security_considerations": []
+            }
+          ],
+          "sql_blocks": [
+            {
+              "original_sql": "EXEC SQL OPEN ACCOUNT-CURSOR END-EXEC\n\n\n\nPERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'\n\n\n\nEXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.",
+              "line_number": 759,
+              "sql_type": "SELECT",
+              "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL OPEN ACCOUNT-CURSOR END-EXEC\n\n\n\nPERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'\n\n\n\nEXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.",
+              "entity_framework_hint": "Repository pattern",
+              "complexity": "HIGH"
+            },
+            {
+              "original_sql": "EXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.\n\n\n\nPROCESS-REPORT-RECORDS.\n\nEXEC SQL\n\nFETCH ACCOUNT-CURSOR\n\nINTO :ACC-NUMBER, :ACC-HOLDER-NAME, :ACC-BALANCE, :ACC-TYPE\n\nEND-EXEC",
+              "line_number": 771,
+              "sql_type": "SELECT",
+              "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.\n\n\n\nPROCESS-REPORT-RECORDS.\n\nEXEC SQL\n\nFETCH ACCOUNT-CURSOR\n\nINTO :ACC-NUMBER, :ACC-HOLDER-NAME, :ACC-BALANCE, :ACC-TYPE\n\nEND-EXEC",
+              "entity_framework_hint": "Repository pattern",
+              "complexity": "HIGH"
+            }
+          ],
+          "business_logic": [],
+          "procedures": [
+            {
+              "name": "INITIALIZE-TRANSACTION",
+              "line": 285,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task InitializeTransactionAsync()"
+            },
+            {
+              "name": "VALIDATE-USER-SESSION",
+              "line": 291,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task ValidateUserSessionAsync()"
+            },
+            {
+              "name": "ACCOUNT-INQUIRY",
+              "line": 299,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task AccountInquiryAsync()"
+            },
+            {
+              "name": "ACCOUNT-TRANSFER",
+              "line": 301,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task AccountTransferAsync()"
+            },
+            {
+              "name": "TRANSACTION-HISTORY",
+              "line": 303,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task TransactionHistoryAsync()"
+            },
+            {
+              "name": "ACCOUNT-BALANCE-UPDATE",
+              "line": 305,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task AccountBalanceUpdateAsync()"
+            },
+            {
+              "name": "BATCH-PROCESSING",
+              "line": 307,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task BatchProcessingAsync()"
+            },
+            {
+              "name": "INVALID-FUNCTION",
+              "line": 309,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task InvalidFunctionAsync()"
+            },
+            {
+              "name": "FINALIZE-TRANSACTION",
+              "line": 317,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task FinalizeTransactionAsync()"
+            },
+            {
+              "name": "START-AUDIT-LOG",
+              "line": 351,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task StartAuditLogAsync()"
+            },
+            {
+              "name": "INITIALIZE-TEMP-STORAGE",
+              "line": 359,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task InitializeTempStorageAsync()"
+            },
+            {
+              "name": "STORE-ACCOUNT-IN-TSQ",
+              "line": 425,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task StoreAccountInTsqAsync()"
+            },
+            {
+              "name": "SEND-ACCOUNT-MAP",
+              "line": 429,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task SendAccountMapAsync()"
+            },
+            {
+              "name": "HANDLE-FILE-ERROR",
+              "line": 433,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task HandleFileErrorAsync()"
+            },
+            {
+              "name": "VALIDATE-TRANSFER-REQUEST",
+              "line": 443,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task ValidateTransferRequestAsync()"
+            },
+            {
+              "name": "SEND-MQ-NOTIFICATION",
+              "line": 627,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task SendMqNotificationAsync()"
+            },
+            {
+              "name": "READ-TRANSACTION-HISTORY",
+              "line": 649,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task ReadTransactionHistoryAsync()"
+            },
+            {
+              "name": "STORE-TRANSACTION-IN-TSQ",
+              "line": 683,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task StoreTransactionInTsqAsync()"
+            },
+            {
+              "name": "SEND-HISTORY-MAP",
+              "line": 699,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task SendHistoryMapAsync()"
+            },
+            {
+              "name": "FORMAT-REPORT-LINE",
+              "line": 777,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task FormatReportLineAsync()"
+            },
+            {
+              "name": "WRITE-REPORT-LINE",
+              "line": 779,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task WriteReportLineAsync()"
+            },
+            {
+              "name": "END-AUDIT-LOG",
+              "line": 905,
+              "type": "PERFORM",
+              "dotnet_equivalent": "private async Task EndAuditLogAsync()"
+            }
+          ],
+          "data_movements": [
+            {
+              "line": 365,
+              "statement": "MOVE ZERO TO WS-ERROR-COUNT.",
+              "type": "MOVE",
+              "dotnet_hint": "Property assignment or mapping"
+            },
+            {
+              "line": 511,
+              "statement": "MOVE ACC-BALANCE TO WS-OLD-BALANCE",
+              "type": "MOVE",
+              "dotnet_hint": "Property assignment or mapping"
+            },
+            {
+              "line": 531,
+              "statement": "MOVE 'INSUFFICIENT_FUNDS' TO WS-ERROR-CODE",
+              "type": "MOVE",
+              "dotnet_hint": "Property assignment or mapping"
+            },
+            {
+              "line": 533,
+              "statement": "MOVE DFHRESP(ERROR) TO WS-CICS-RESP",
+              "type": "MOVE",
+              "dotnet_hint": "Property assignment or mapping"
+            },
+            {
+              "line": 543,
+              "statement": "MOVE LK-TO-ACCOUNT TO ACC-NUMBER",
+              "type": "MOVE",
+              "dotnet_hint": "Property assignment or mapping"
+            },
+            {
+              "line": 689,
+              "statement": "MOVE 'Y' TO WS-EOF-FLAG",
+              "type": "MOVE",
+              "dotnet_hint": "Property assignment or mapping"
+            },
+            {
+              "line": 783,
+              "statement": "MOVE 'Y' TO WS-EOF-FLAG",
+              "type": "MOVE",
+              "dotnet_hint": "Property assignment or mapping"
+            }
+          ],
+          "conditional_logic": [
+            {
+              "condition": "WS-AUDIT-FLAG = 'Y'",
+              "line": 349,
+              "complexity": "low"
+            },
+            {
+              "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+              "line": 421,
+              "complexity": "low"
+            },
+            {
+              "condition": "WS-VALID-TRANS-FLAG = 'Y'",
+              "line": 447,
+              "complexity": "low"
+            },
+            {
+              "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+              "line": 509,
+              "complexity": "low"
+            },
+            {
+              "condition": "ACC-BALANCE >= ZERO",
+              "line": 517,
+              "complexity": "low"
+            },
+            {
+              "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+              "line": 561,
+              "complexity": "low"
+            },
+            {
+              "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+              "line": 647,
+              "complexity": "low"
+            },
+            {
+              "condition": "WS-CICS-RESP = DFHRESP(NORMAL)",
+              "line": 681,
+              "complexity": "low"
+            },
+            {
+              "condition": "SQLCODE = 0",
+              "line": 775,
+              "complexity": "low"
+            },
+            {
+              "condition": "WS-AUDIT-FLAG = 'Y'",
+              "line": 903,
+              "complexity": "low"
+            }
+          ],
+          "state_mechanisms": {
+            "TSQ_queues": [
+              "AUDIT"
+            ],
+            "TDQ_queues": [],
+            "COMMAREAs": [
+              "DFHCOMMAREA",
+              "LK-USER-ID"
+            ],
+            "CHANNELS": [
+              "WS-CHANNEL-NAME"
+            ],
+            "CONTAINERS": [
+              "WS-CONTAINER-NAME"
+            ],
+            "MAPSETS": [
+              "WS-MAPSET"
+            ],
+            "TRANSIDS": [
+              "BANK"
+            ]
+          },
+          "performance_indicators": {
+            "file_operations": 3,
+            "database_operations": 2,
+            "network_operations": 1,
+            "loops": 22,
+            "conditions": 10
+          },
+          "error_handling": [
+            {
+              "line": 161,
+              "type": "error_handling",
+              "statement": "01  WS-ERROR-AREA."
+            },
+            {
+              "line": 163,
+              "type": "error_handling",
+              "statement": "05  WS-ERROR-CODE        PIC X(8)."
+            },
+            {
+              "line": 165,
+              "type": "error_handling",
+              "statement": "05  WS-ERROR-MESSAGE     PIC X(80)."
+            },
+            {
+              "line": 167,
+              "type": "error_handling",
+              "statement": "05  WS-CICS-RESP         PIC S9(8) COMP."
+            },
+            {
+              "line": 169,
+              "type": "error_handling",
+              "statement": "05  WS-CICS-RESP2        PIC S9(8) COMP."
+            },
+            {
+              "line": 229,
+              "type": "error_handling",
+              "statement": "05  WS-ERROR-COUNT       PIC S9(4) COMP VALUE ZERO."
+            },
+            {
+              "line": 263,
+              "type": "error_handling",
+              "statement": "05  LK-ERROR-MESSAGE     PIC X(80)."
+            },
+            {
+              "line": 273,
+              "type": "error_handling",
+              "statement": "COPY ERROR-CODES."
+            },
+            {
+              "line": 365,
+              "type": "error_handling",
+              "statement": "MOVE ZERO TO WS-ERROR-COUNT."
+            },
+            {
+              "line": 421,
+              "type": "error_handling",
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+            },
+            {
+              "line": 433,
+              "type": "error_handling",
+              "statement": "PERFORM HANDLE-FILE-ERROR"
+            },
+            {
+              "line": 509,
+              "type": "error_handling",
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+            },
+            {
+              "line": 531,
+              "type": "error_handling",
+              "statement": "MOVE 'INSUFFICIENT_FUNDS' TO WS-ERROR-CODE"
+            },
+            {
+              "line": 533,
+              "type": "error_handling",
+              "statement": "MOVE DFHRESP(ERROR) TO WS-CICS-RESP"
+            },
+            {
+              "line": 561,
+              "type": "error_handling",
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+            },
+            {
+              "line": 647,
+              "type": "error_handling",
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+            },
+            {
+              "line": 681,
+              "type": "error_handling",
+              "statement": "IF WS-CICS-RESP = DFHRESP(NORMAL)"
+            }
+          ],
+          "security_aspects": [],
+          "metadata": {
+            "total_lines": 0,
+            "cics_commands_count": 16,
+            "sql_blocks_count": 2,
+            "business_logic_statements": 0,
+            "procedures_count": 22,
+            "complexity_score": 20,
+            "modernization_score": 1
+          },
+          "dotnet_suggestions": {
+            "service_name": "BankingService",
+            "controller_name": "BankingController",
+            "required_services": [
+              "ICacheService",
+              "IMediator",
+              "IRepositoryService",
+              "ITransactionService"
+            ],
+            "suggested_patterns": [
+              "Mediator (MediatR)",
+              "Command/Write Model",
+              "Strategy or Template Method"
+            ],
+            "performance_considerations": [
+              "Batch operations instead of loops"
+            ],
+            "security_recommendations": [
+              "Use HTTPS for all endpoints",
+              "Implement authentication & authorization",
+              "Log sensitive operations"
+            ]
+          }
+        }
+      },
+      "copybooks": {
+        "ACCOUNT-VALIDATION.CPY": {
+          "description": "COBOL copybook defining a data structure",
+          "fields": [
+            {
+              "level": "05",
+              "name": "VALID-ACC-NUMBER",
+              "pic": "9(14).",
+              "line_number": 5,
+              "cobol_type": "numeric_decimal",
+              "dotnet_property": {
+                "name": "ValidAccNumber",
+                "type": "decimal",
+                "original_name": "VALID-ACC-NUMBER",
+                "pic_clause": "9(14)."
+              },
+              "java_property": {
+                "name": "validAccNumber",
+                "type": "BigDecimal",
+                "original_name": "VALID-ACC-NUMBER",
+                "pic_clause": "9(14)."
+              },
+              "validation_hints": [
+                "Numeric"
+              ],
+              "is_key_field": true,
+              "is_required": true
+            },
+            {
+              "level": "05",
+              "name": "VALID-ACC-TYPE",
+              "pic": "X(2).",
+              "line_number": 7,
+              "cobol_type": "alphanumeric",
+              "dotnet_property": {
+                "name": "ValidAccType",
+                "type": "string",
+                "original_name": "VALID-ACC-TYPE",
+                "pic_clause": "X(2)."
+              },
+              "java_property": {
+                "name": "validAccType",
+                "type": "String",
+                "original_name": "VALID-ACC-TYPE",
+                "pic_clause": "X(2)."
+              },
+              "validation_hints": [
+                "MaxLength=2"
+              ],
+              "is_key_field": true,
+              "is_required": true
+            },
+            {
+              "level": "05",
+              "name": "VALID-STATUS",
+              "pic": "X.",
+              "line_number": 9,
+              "cobol_type": "alphanumeric",
+              "dotnet_property": {
+                "name": "ValidStatus",
+                "type": "string",
+                "original_name": "VALID-STATUS",
+                "pic_clause": "X."
+              },
+              "java_property": {
+                "name": "validStatus",
+                "type": "String",
+                "original_name": "VALID-STATUS",
+                "pic_clause": "X."
+              },
+              "validation_hints": [
+                "MaxLength=variable"
+              ],
+              "is_key_field": true,
+              "is_required": false
+            },
+            {
+              "level": "05",
+              "name": "VALID-DAILY-LIMIT",
+              "pic": "S9(11)V99",
+              "line_number": 11,
+              "cobol_type": "numeric_decimal",
+              "dotnet_property": {
+                "name": "ValidDailyLimit",
+                "type": "decimal",
+                "original_name": "VALID-DAILY-LIMIT",
+                "pic_clause": "S9(11)V99"
+              },
+              "java_property": {
+                "name": "validDailyLimit",
+                "type": "BigDecimal",
+                "original_name": "VALID-DAILY-LIMIT",
+                "pic_clause": "S9(11)V99"
+              },
+              "validation_hints": [
+                "Numeric"
+              ],
+              "is_key_field": true,
+              "is_required": true
+            },
+            {
+              "level": "05",
+              "name": "VALID-MIN-BALANCE",
+              "pic": "S9(11)V99",
+              "line_number": 13,
+              "cobol_type": "numeric_decimal",
+              "dotnet_property": {
+                "name": "ValidMinBalance",
+                "type": "decimal",
+                "original_name": "VALID-MIN-BALANCE",
+                "pic_clause": "S9(11)V99"
+              },
+              "java_property": {
+                "name": "validMinBalance",
+                "type": "BigDecimal",
+                "original_name": "VALID-MIN-BALANCE",
+                "pic_clause": "S9(11)V99"
+              },
+              "validation_hints": [
+                "Numeric"
+              ],
+              "is_key_field": true,
+              "is_required": true
+            },
+            {
+              "level": "05",
+              "name": "VALID-OVERDRAFT",
+              "pic": "S9(11)V99",
+              "line_number": 15,
+              "cobol_type": "numeric_decimal",
+              "dotnet_property": {
+                "name": "ValidOverdraft",
+                "type": "decimal",
+                "original_name": "VALID-OVERDRAFT",
+                "pic_clause": "S9(11)V99"
+              },
+              "java_property": {
+                "name": "validOverdraft",
+                "type": "BigDecimal",
+                "original_name": "VALID-OVERDRAFT",
+                "pic_clause": "S9(11)V99"
+              },
+              "validation_hints": [
+                "Numeric"
+              ],
+              "is_key_field": true,
+              "is_required": true
+            }
+          ],
+          "total_fields": 6,
+          "complexity_score": 6,
+          "suggested_dotnet_class": "AccountValidation",
+          "entity_type": "Entity",
+          "has_key_fields": true
+        }
+      },
+      "control_includes": {},
+      "jcl_files": {
+        "BANKING.JCL": {
+          "description": "JCL job control file",
+          "jobs": [
+            "BANKJOB"
+          ],
+          "steps": [
+            {
+              "name": "COMPILE",
+              "line": 19,
+              "dotnet_equivalent": "Background Service or Azure Function"
+            },
+            {
+              "name": "LINK",
+              "line": 39,
+              "dotnet_equivalent": "Background Service or Azure Function"
+            },
+            {
+              "name": "CICSDEF",
+              "line": 77,
+              "dotnet_equivalent": "Background Service or Azure Function"
+            },
+            {
+              "name": "VSAM",
+              "line": 171,
+              "dotnet_equivalent": "Background Service or Azure Function"
+            }
+          ],
+          "datasets": [
+            "SYS1.PROCLIB",
+            "BANK.COPYBOOK.LIBRARY",
+            "CICS.COPYBOOK.LIBRARY",
+            "DB2.COPYBOOK.LIBRARY",
+            "BANK.SOURCE.LIBRARY",
+            "CICS.SDFHLOAD",
+            "DB2.SDSNLOAD",
+            "BANK.LOAD.LIBRARY",
+            "BANK.LOAD.LIBRARY",
+            "CICS.SDFHLOAD",
+            "CICS.DFHCSD"
+          ],
+          "programs": [
+            "IEWL",
+            "DFHCSDUP",
+            "IDCAMS"
+          ],
+          "dotnet_equivalent": "Azure Functions, Background Services, or Docker containers",
+          "complexity_score": 7
+        }
+      },
+      "bms_maps": {},
+      "summary": {
+        "total_programs": 1,
+        "total_copybooks": 1,
+        "total_control_includes": 0,
+        "total_jcl_files": 1,
+        "total_bms_maps": 0
+      },
+      "project_metadata": {
+        "analysis_timestamp": "2025-07-08T15:09:00.868017",
+        "total_files": 3,
+        "business_domain": "BANKING",
+        "cics_transaction_flow": [],
+        "data_flow_analysis": {},
+        "integration_points": []
+      },
+      "cross_references": {
+        "program_to_copybook": {
+          "BANKING.CBL": [
+            "ACCOUNT-VALIDATION.cpy",
+            "ERROR-CODES.cpy",
+            "SECURITY-CONTROL.cpy",
+            "TRANSACTION-TYPES.cpy"
+          ]
+        },
+        "program_to_program": {},
+        "data_dependencies": []
+      },
+      "transaction_flows": [
+        {
+          "program": "BANKING.CBL",
+          "entry_point": "BANKING",
+          "cics_operations": 16,
+          "data_operations": 2,
+          "complexity": 20
+        }
+      ],
+      "ai_insights": {
+        "business_domain": "BANKING",
+        "integration_patterns": [
+          "Synchronous request-response",
+          "Asynchronous messaging"
+        ],
+        "data_flows": [
+          {
+            "source": "CICS application",
+            "destination": "DB2 database",
+            "type": "SQL operations",
+            "count": 2
+          },
+          {
+            "source": "External systems",
+            "destination": "CICS application",
+            "type": "CICS commands",
+            "count": 16
+          }
+        ],
+        "modernization_recommendations": [
+          "Implement API gateways to expose CICS transactions as RESTful services",
+          "Migrate SQL operations to a microservices architecture for better scalability",
+          "Adopt containerization for CICS applications to improve deployment flexibility"
+        ],
+        "risk_assessment": {
+          "legacy_dependency": "High",
+          "data_integrity": "Medium",
+          "system_availability": "High",
+          "security": "Medium"
+        }
+      },
+      "enhancement_timestamp": "2025-07-08T15:09:43.701582"
+    },
+    "conversion_context": {
+      "business_entities": [
+        {
+          "cobol_name": "ACCOUNT-RECORD",
+          "dotnet_class": "AccountRecord",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "TRANSACTION-RECORD",
+          "dotnet_class": "TransactionRecord",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "AUDIT-RECORD",
+          "dotnet_class": "AuditRecord",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-TRANSACTION-DATA",
+          "dotnet_class": "WsTransactionData",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-ACCOUNT-WORK",
+          "dotnet_class": "WsAccountWork",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-ERROR-AREA",
+          "dotnet_class": "WsErrorArea",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-TSQ-DATA",
+          "dotnet_class": "WsTsqData",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-MQ-DATA",
+          "dotnet_class": "WsMqData",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-CHANNEL-DATA",
+          "dotnet_class": "WsChannelData",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-MAP-CONTROL",
+          "dotnet_class": "WsMapControl",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-COUNTERS",
+          "dotnet_class": "WsCounters",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "WS-FLAGS",
+          "dotnet_class": "WsFlags",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "DFHCOMMAREA",
+          "dotnet_class": "Dfhcommarea",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "BANKING.CBL",
+          "complexity": "medium"
+        },
+        {
+          "cobol_name": "ACCOUNT-VALIDATION-RECORD",
+          "dotnet_class": "AccountValidationRecord",
+          "namespace": "BankingApp.Domain.Entities",
+          "source_file": "ACCOUNT-VALIDATION.CPY",
+          "complexity": "simple"
+        }
+      ],
+      "conversion_patterns": [
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 ACCOUNT-RECORD",
+          "dotnet_equivalent": "public class AccountRecord",
+          "context": "Convert COBOL record ACCOUNT-RECORD to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 TRANSACTION-RECORD",
+          "dotnet_equivalent": "public class TransactionRecord",
+          "context": "Convert COBOL record TRANSACTION-RECORD to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 AUDIT-RECORD",
+          "dotnet_equivalent": "public class AuditRecord",
+          "context": "Convert COBOL record AUDIT-RECORD to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-TRANSACTION-DATA",
+          "dotnet_equivalent": "public class WsTransactionData",
+          "context": "Convert COBOL record WS-TRANSACTION-DATA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-ACCOUNT-WORK",
+          "dotnet_equivalent": "public class WsAccountWork",
+          "context": "Convert COBOL record WS-ACCOUNT-WORK to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-ERROR-AREA",
+          "dotnet_equivalent": "public class WsErrorArea",
+          "context": "Convert COBOL record WS-ERROR-AREA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-TSQ-DATA",
+          "dotnet_equivalent": "public class WsTsqData",
+          "context": "Convert COBOL record WS-TSQ-DATA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-MQ-DATA",
+          "dotnet_equivalent": "public class WsMqData",
+          "context": "Convert COBOL record WS-MQ-DATA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-CHANNEL-DATA",
+          "dotnet_equivalent": "public class WsChannelData",
+          "context": "Convert COBOL record WS-CHANNEL-DATA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-MAP-CONTROL",
+          "dotnet_equivalent": "public class WsMapControl",
+          "context": "Convert COBOL record WS-MAP-CONTROL to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-COUNTERS",
+          "dotnet_equivalent": "public class WsCounters",
+          "context": "Convert COBOL record WS-COUNTERS to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 WS-FLAGS",
+          "dotnet_equivalent": "public class WsFlags",
+          "context": "Convert COBOL record WS-FLAGS to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 DFHCOMMAREA",
+          "dotnet_equivalent": "public class Dfhcommarea",
+          "context": "Convert COBOL record DFHCOMMAREA to Java class",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "data_structure",
+          "cobol_pattern": "01 ACCOUNT-VALIDATION-RECORD",
+          "dotnet_equivalent": "public class AccountValidationRecord",
+          "context": "Convert COBOL record ACCOUNT-VALIDATION-RECORD to Java class",
+          "source_file": "ACCOUNT-VALIDATION.CPY"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD ACCOUNT-FILE",
+          "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for ACCOUNT-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD TRANS-FILE",
+          "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for TRANS-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD AUDIT-FILE",
+          "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for AUDIT-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD ACCOUNT-FILE",
+          "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for ACCOUNT-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD TRANS-FILE",
+          "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for TRANS-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD AUDIT-FILE",
+          "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for AUDIT-FILE",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "file_operation",
+          "cobol_pattern": "FD ACC",
+          "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for ACC",
+          "context": "Convert file operations to repository pattern",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM INITIALIZE-TRANSACTION",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM VALIDATE-USER-SESSION",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM FINALIZE-TRANSACTION",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-AUDIT-FLAG = 'Y'",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM START-AUDIT-LOG",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM INITIALIZE-TEMP-STORAGE",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM STORE-ACCOUNT-IN-TSQ",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM SEND-ACCOUNT-MAP",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM HANDLE-FILE-ERROR",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM VALIDATE-TRANSFER-REQUEST",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-VALID-TRANS-FLAG = 'Y'",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM DEBIT-FROM-ACCOUNT",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM CREDIT-TO-ACCOUNT",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM LOG-TRANSACTION",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM NOTIFY-TRANSFER-COMPLETE",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM HANDLE-CREDIT-ERROR",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM HANDLE-DEBIT-ERROR",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF ACC-BALANCE >= ZERO",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM SEND-MQ-NOTIFICATION.",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM READ-TRANSACTION-HISTORY",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM UNTIL WS-EOF-FLAG = 'Y'",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM STORE-TRANSACTION-IN-TSQ",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM SEND-HISTORY-MAP.",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF SQLCODE = 0",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM FORMAT-REPORT-LINE",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM WRITE-REPORT-LINE",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM LOG-ERROR.",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "IF WS-AUDIT-FLAG = 'Y'",
+          "dotnet_equivalent": "// IF converted to Java",
+          "context": "Convert IF statement to Java",
+          "source_file": "BANKING.CBL"
+        },
+        {
+          "pattern_type": "business_logic",
+          "cobol_pattern": "PERFORM END-AUDIT-LOG",
+          "dotnet_equivalent": "// PERFORM converted to Java",
+          "context": "Convert PERFORM statement to Java",
+          "source_file": "BANKING.CBL"
+        }
+      ],
+      "dependencies": {},
+      "cics_patterns": [
+        {
+          "command_type": "RETURN",
+          "dotnet_service": "ITransactionService",
+          "microservice_pattern": "Generic Business Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "LINK",
+          "dotnet_service": "IMediator",
+          "microservice_pattern": "Service Orchestrator",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "LINK",
+          "dotnet_service": "IMediator",
+          "microservice_pattern": "Service Orchestrator",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "",
+          "dotnet_service": "",
+          "microservice_pattern": "Generic Business Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "",
+          "dotnet_service": "",
+          "microservice_pattern": "Generic Business Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "",
+          "dotnet_service": "",
+          "microservice_pattern": "Generic Business Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "READ",
+          "dotnet_service": "IRepositoryService",
+          "microservice_pattern": "Data Access Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "WRITE",
+          "dotnet_service": "IRepositoryService",
+          "microservice_pattern": "Data Persistence Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "READ",
+          "dotnet_service": "IRepositoryService",
+          "microservice_pattern": "Data Access Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "WRITE",
+          "dotnet_service": "IRepositoryService",
+          "microservice_pattern": "Data Persistence Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "WRITE",
+          "dotnet_service": "IRepositoryService",
+          "microservice_pattern": "Data Persistence Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "",
+          "dotnet_service": "",
+          "microservice_pattern": "Generic Business Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "",
+          "dotnet_service": "",
+          "microservice_pattern": "Generic Business Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "",
+          "dotnet_service": "",
+          "microservice_pattern": "Generic Business Service",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "LINK",
+          "dotnet_service": "IMediator",
+          "microservice_pattern": "Service Orchestrator",
+          "program": "BANKING.CBL"
+        },
+        {
+          "command_type": "WRITEQ_TS",
+          "dotnet_service": "ICacheService",
+          "microservice_pattern": "Caching Service",
+          "program": "BANKING.CBL"
+        }
+      ],
+      "architecture_recommendations": [
+        "Implement Clean Architecture with Domain-Driven Design",
+        "Use Entity Framework Core for data persistence",
+        "Implement CQRS pattern for read/write separation",
+        "Use MediatR for decoupled command/query handling",
+        "Implement event sourcing for audit trails",
+        "Use decimal type for all financial calculations",
+        "Implement strict validation for financial transactions"
+      ],
+      "project_namespace": "BankingApp",
+      "technology_stack": {
+        "database_usage": true,
+        "messaging_patterns": [],
+        "caching_patterns": [
+          "Redis",
+          "In-Memory Caching"
+        ],
+        "security_patterns": [
+          "JWT Authentication",
+          "Role-based Authorization"
+        ],
+        "recommended_packages": [
+          "Microsoft.EntityFrameworkCore",
+          "Microsoft.AspNetCore.Authentication.JwtBearer",
+          "Swashbuckle.AspNetCore",
+          "Serilog.AspNetCore",
+          "StackExchange.Redis"
+        ]
+      }
+    }
+  },
+  "conversion_context": {
+    "business_entities": [
+      {
+        "cobol_name": "ACCOUNT-RECORD",
+        "dotnet_class": "AccountRecord",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "TRANSACTION-RECORD",
+        "dotnet_class": "TransactionRecord",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "AUDIT-RECORD",
+        "dotnet_class": "AuditRecord",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-TRANSACTION-DATA",
+        "dotnet_class": "WsTransactionData",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-ACCOUNT-WORK",
+        "dotnet_class": "WsAccountWork",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-ERROR-AREA",
+        "dotnet_class": "WsErrorArea",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-TSQ-DATA",
+        "dotnet_class": "WsTsqData",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-MQ-DATA",
+        "dotnet_class": "WsMqData",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-CHANNEL-DATA",
+        "dotnet_class": "WsChannelData",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-MAP-CONTROL",
+        "dotnet_class": "WsMapControl",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-COUNTERS",
+        "dotnet_class": "WsCounters",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "WS-FLAGS",
+        "dotnet_class": "WsFlags",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "DFHCOMMAREA",
+        "dotnet_class": "Dfhcommarea",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "BANKING.CBL",
+        "complexity": "medium"
+      },
+      {
+        "cobol_name": "ACCOUNT-VALIDATION-RECORD",
+        "dotnet_class": "AccountValidationRecord",
+        "namespace": "BankingApp.Domain.Entities",
+        "source_file": "ACCOUNT-VALIDATION.CPY",
+        "complexity": "simple"
+      }
+    ],
+    "conversion_patterns": [
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 ACCOUNT-RECORD",
+        "dotnet_equivalent": "public class AccountRecord",
+        "context": "Convert COBOL record ACCOUNT-RECORD to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 TRANSACTION-RECORD",
+        "dotnet_equivalent": "public class TransactionRecord",
+        "context": "Convert COBOL record TRANSACTION-RECORD to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 AUDIT-RECORD",
+        "dotnet_equivalent": "public class AuditRecord",
+        "context": "Convert COBOL record AUDIT-RECORD to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-TRANSACTION-DATA",
+        "dotnet_equivalent": "public class WsTransactionData",
+        "context": "Convert COBOL record WS-TRANSACTION-DATA to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-ACCOUNT-WORK",
+        "dotnet_equivalent": "public class WsAccountWork",
+        "context": "Convert COBOL record WS-ACCOUNT-WORK to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-ERROR-AREA",
+        "dotnet_equivalent": "public class WsErrorArea",
+        "context": "Convert COBOL record WS-ERROR-AREA to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-TSQ-DATA",
+        "dotnet_equivalent": "public class WsTsqData",
+        "context": "Convert COBOL record WS-TSQ-DATA to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-MQ-DATA",
+        "dotnet_equivalent": "public class WsMqData",
+        "context": "Convert COBOL record WS-MQ-DATA to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-CHANNEL-DATA",
+        "dotnet_equivalent": "public class WsChannelData",
+        "context": "Convert COBOL record WS-CHANNEL-DATA to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-MAP-CONTROL",
+        "dotnet_equivalent": "public class WsMapControl",
+        "context": "Convert COBOL record WS-MAP-CONTROL to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-COUNTERS",
+        "dotnet_equivalent": "public class WsCounters",
+        "context": "Convert COBOL record WS-COUNTERS to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 WS-FLAGS",
+        "dotnet_equivalent": "public class WsFlags",
+        "context": "Convert COBOL record WS-FLAGS to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 DFHCOMMAREA",
+        "dotnet_equivalent": "public class Dfhcommarea",
+        "context": "Convert COBOL record DFHCOMMAREA to Java class",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "data_structure",
+        "cobol_pattern": "01 ACCOUNT-VALIDATION-RECORD",
+        "dotnet_equivalent": "public class AccountValidationRecord",
+        "context": "Convert COBOL record ACCOUNT-VALIDATION-RECORD to Java class",
+        "source_file": "ACCOUNT-VALIDATION.CPY"
+      },
+      {
+        "pattern_type": "file_operation",
+        "cobol_pattern": "FD ACCOUNT-FILE",
+        "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for ACCOUNT-FILE",
+        "context": "Convert file operations to repository pattern",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "file_operation",
+        "cobol_pattern": "FD TRANS-FILE",
+        "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for TRANS-FILE",
+        "context": "Convert file operations to repository pattern",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "file_operation",
+        "cobol_pattern": "FD AUDIT-FILE",
+        "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for AUDIT-FILE",
+        "context": "Convert file operations to repository pattern",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "file_operation",
+        "cobol_pattern": "FD ACCOUNT-FILE",
+        "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for ACCOUNT-FILE",
+        "context": "Convert file operations to repository pattern",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "file_operation",
+        "cobol_pattern": "FD TRANS-FILE",
+        "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for TRANS-FILE",
+        "context": "Convert file operations to repository pattern",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "file_operation",
+        "cobol_pattern": "FD AUDIT-FILE",
+        "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for AUDIT-FILE",
+        "context": "Convert file operations to repository pattern",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "file_operation",
+        "cobol_pattern": "FD ACC",
+        "dotnet_equivalent": "// Repository pattern with Entity Framework Core with Entity Framework for ACC",
+        "context": "Convert file operations to repository pattern",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM INITIALIZE-TRANSACTION",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM VALIDATE-USER-SESSION",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM FINALIZE-TRANSACTION",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-AUDIT-FLAG = 'Y'",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM START-AUDIT-LOG",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM INITIALIZE-TEMP-STORAGE",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM STORE-ACCOUNT-IN-TSQ",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM SEND-ACCOUNT-MAP",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM HANDLE-FILE-ERROR",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM VALIDATE-TRANSFER-REQUEST",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-VALID-TRANS-FLAG = 'Y'",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM DEBIT-FROM-ACCOUNT",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM CREDIT-TO-ACCOUNT",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM LOG-TRANSACTION",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM NOTIFY-TRANSFER-COMPLETE",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM HANDLE-CREDIT-ERROR",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM HANDLE-DEBIT-ERROR",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF ACC-BALANCE >= ZERO",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM SEND-MQ-NOTIFICATION.",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM READ-TRANSACTION-HISTORY",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM UNTIL WS-EOF-FLAG = 'Y'",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-CICS-RESP = DFHRESP(NORMAL)",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM STORE-TRANSACTION-IN-TSQ",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM SEND-HISTORY-MAP.",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF SQLCODE = 0",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM FORMAT-REPORT-LINE",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM WRITE-REPORT-LINE",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM LOG-ERROR.",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "IF WS-AUDIT-FLAG = 'Y'",
+        "dotnet_equivalent": "// IF converted to Java",
+        "context": "Convert IF statement to Java",
+        "source_file": "BANKING.CBL"
+      },
+      {
+        "pattern_type": "business_logic",
+        "cobol_pattern": "PERFORM END-AUDIT-LOG",
+        "dotnet_equivalent": "// PERFORM converted to Java",
+        "context": "Convert PERFORM statement to Java",
+        "source_file": "BANKING.CBL"
+      }
+    ],
+    "dependencies": {},
+    "cics_patterns": [
+      {
+        "command_type": "RETURN",
+        "dotnet_service": "ITransactionService",
+        "microservice_pattern": "Generic Business Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "LINK",
+        "dotnet_service": "IMediator",
+        "microservice_pattern": "Service Orchestrator",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "LINK",
+        "dotnet_service": "IMediator",
+        "microservice_pattern": "Service Orchestrator",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "",
+        "dotnet_service": "",
+        "microservice_pattern": "Generic Business Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "",
+        "dotnet_service": "",
+        "microservice_pattern": "Generic Business Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "",
+        "dotnet_service": "",
+        "microservice_pattern": "Generic Business Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "READ",
+        "dotnet_service": "IRepositoryService",
+        "microservice_pattern": "Data Access Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "WRITE",
+        "dotnet_service": "IRepositoryService",
+        "microservice_pattern": "Data Persistence Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "READ",
+        "dotnet_service": "IRepositoryService",
+        "microservice_pattern": "Data Access Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "WRITE",
+        "dotnet_service": "IRepositoryService",
+        "microservice_pattern": "Data Persistence Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "WRITE",
+        "dotnet_service": "IRepositoryService",
+        "microservice_pattern": "Data Persistence Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "",
+        "dotnet_service": "",
+        "microservice_pattern": "Generic Business Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "",
+        "dotnet_service": "",
+        "microservice_pattern": "Generic Business Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "",
+        "dotnet_service": "",
+        "microservice_pattern": "Generic Business Service",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "LINK",
+        "dotnet_service": "IMediator",
+        "microservice_pattern": "Service Orchestrator",
+        "program": "BANKING.CBL"
+      },
+      {
+        "command_type": "WRITEQ_TS",
+        "dotnet_service": "ICacheService",
+        "microservice_pattern": "Caching Service",
+        "program": "BANKING.CBL"
+      }
+    ],
+    "architecture_recommendations": [
+      "Implement Clean Architecture with Domain-Driven Design",
+      "Use Entity Framework Core for data persistence",
+      "Implement CQRS pattern for read/write separation",
+      "Use MediatR for decoupled command/query handling",
+      "Implement event sourcing for audit trails",
+      "Use decimal type for all financial calculations",
+      "Implement strict validation for financial transactions"
+    ],
+    "project_namespace": "BankingApp",
+    "technology_stack": {
+      "database_usage": true,
+      "messaging_patterns": [],
+      "caching_patterns": [
+        "Redis",
+        "In-Memory Caching"
+      ],
+      "security_patterns": [
+        "JWT Authentication",
+        "Role-based Authorization"
+      ],
+      "recommended_packages": [
+        "Microsoft.EntityFrameworkCore",
+        "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "Swashbuckle.AspNetCore",
+        "Serilog.AspNetCore",
+        "StackExchange.Redis"
+      ]
+    }
+  },
+  "project_files_count": 3,
+  "timestamp": "2025-07-08T15:09:43.728177"
+}
