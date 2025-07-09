@@ -81,3 +81,7 @@ Thumbs.db
 
 Backend/Cobol-Java-Backend/Backend/output/
 output/
+uploads/
+cic_analysis/
+rag_storage/
+documents/
