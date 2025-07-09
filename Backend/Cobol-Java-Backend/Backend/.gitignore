@@ -77,3 +77,7 @@ Thumbs.db
 # Environment variables
 .env 
 /venv/
+
+
+Backend/Cobol-Java-Backend/Backend/output/
+output/

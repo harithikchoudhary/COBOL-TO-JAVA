@@ -1,12 +1,12 @@
 # COBOL Project Analysis Summary with Dual RAG
 
-Generated: 2025-07-08 15:09:00
+Generated: 2025-07-09 11:26:18
 
 ## Project Overview
 
-- **Total Files:** 3
-- **Business Entities:** 14
-- **Total Connections:** 1
+- **Total Files:** 1
+- **Business Entities:** 19
+- **Total Connections:** 0
 
 ## RAG System Status
 
@@ -17,20 +17,16 @@ Generated: 2025-07-08 15:09:00
 
 ## File Dependencies
 
-### BANKING.CBL
-**Depends on:**
-- ACCOUNT-VALIDATION.CPY
-
 ## Business Entities
 
-- **ACCOUNT-RECORD** → `AccountRecord` (from BANKING.CBL)
-- **TRANSACTION-RECORD** → `TransactionRecord` (from BANKING.CBL)
-- **AUDIT-RECORD** → `AuditRecord` (from BANKING.CBL)
-- **WS-TRANSACTION-DATA** → `WsTransactionData` (from BANKING.CBL)
-- **WS-ACCOUNT-WORK** → `WsAccountWork` (from BANKING.CBL)
-- **WS-ERROR-AREA** → `WsErrorArea` (from BANKING.CBL)
-- **WS-TSQ-DATA** → `WsTsqData` (from BANKING.CBL)
-- **WS-MQ-DATA** → `WsMqData` (from BANKING.CBL)
-- **WS-CHANNEL-DATA** → `WsChannelData` (from BANKING.CBL)
-- **WS-MAP-CONTROL** → `WsMapControl` (from BANKING.CBL)
-- ... and 4 more
+- **WS-EMPLOYEE-RECORD** → `WsEmployeeRecord` (from cobol_code.cbl)
+- **WS-DB-CONNECTION** → `WsDbConnection` (from cobol_code.cbl)
+- **WS-FLAGS** → `WsFlags` (from cobol_code.cbl)
+- **WS-COUNTERS** → `WsCounters` (from cobol_code.cbl)
+- **WS-ERROR-HANDLING** → `WsErrorHandling` (from cobol_code.cbl)
+- **WS-SEARCH-CRITERIA** → `WsSearchCriteria` (from cobol_code.cbl)
+- **WS-USER-INPUT** → `WsUserInput` (from cobol_code.cbl)
+- **WS-DISPLAY-VARIABLES** → `WsDisplayVariables` (from cobol_code.cbl)
+- **HV-EMP-ID** → `HvEmpId` (from cobol_code.cbl)
+- **HV-EMP-FIRST-NAME** → `HvEmpFirstName` (from cobol_code.cbl)
+- ... and 9 more

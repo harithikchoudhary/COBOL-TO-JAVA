@@ -257,8 +257,8 @@ Use this analysis context to provide more accurate and specific requirements.
                           f"Output your analysis in JSON format with the following structure:\n"
                           f"{{\n"
                           f'  "technicalRequirements": [\n'
-                          f'    {{"id": "TR1", "description": "Technical requirement description", "complexity": "High/Medium/Low", "category": "CICS/Database/Architecture/etc"}},\n'
-                          f'    {{"id": "TR2", "description": "Another technical requirement", "complexity": "High/Medium/Low", "category": "category"}}\n'
+                          f'    {{"id": "TR1", "description": "Technical requirement description"}},\n'
+                          f'    {{"id": "TR2", "description": "Another technical requirement"}}\n'
                           f'  ],\n'
                           f"}}"
             },

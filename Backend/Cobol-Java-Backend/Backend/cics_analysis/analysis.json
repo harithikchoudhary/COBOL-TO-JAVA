@@ -42,7 +42,7 @@
           "dotnet_service": "ITransactionService",
           "dotnet_method": "CompleteTransactionAsync",
           "conversion_hint": "Transaction completion",
-          "ai_conversion": "public class CicsTransaction\n{\n    private string DFHCOMMAREA;\n    private string WS_USER_ID;\n    private string WS_TERMINAL_ID;\n\n    public void Execute()\n    {\n        // Simulate CICS RETURN\n        ReturnTransaction(\"BANK\", DFHCOMMAREA);\n\n        // Initialize transaction\n        InitializeTransaction();\n\n        // Simulate CICS ASSIGN\n        AssignUserAndTerminal(out WS_USER_ID, out WS_TERMINAL_ID);\n    }\n\n    private void ReturnTransaction(string transId, string commArea)\n    {\n        // Logic to handle transaction return\n    }\n\n    private void InitializeTransaction()\n    {\n        // Logic to initialize transaction\n    }\n\n    private void AssignUserAndTerminal(out string userId, out string terminalId)\n    {\n        // Logic to assign user and terminal information\n        userId = \"SampleUserId\"; // Replace with actual logic\n        terminalId = \"SampleTerminalId\"; // Replace with actual logic\n    }\n}",
+          "ai_conversion": "public void ReturnTransaction()\n{\n    // Simulate CICS RETURN with TRANSID and COMMAREA\n    string transId = \"BANK\";\n    byte[] commArea = DFHCOMMAREA;\n\n    // Initialize transaction\n    InitializeTransaction();\n\n    // Get terminal and user information\n    string userId = WS_USER_ID;\n    string termId = WS_TERMINAL_ID;\n\n    // Logic to handle the return transaction\n    HandleReturnTransaction(transId, commArea, userId, termId);\n}\n\nprivate void InitializeTransaction()\n{\n    // Logic to initialize the transaction\n}\n\nprivate void HandleReturnTransaction(string transId, byte[] commArea, string userId, string termId)\n{\n    // Logic to handle the return transaction\n}",
           "complexity_score": 4,
           "performance_impact": "low",
           "security_considerations": [
@@ -62,7 +62,7 @@
           "dotnet_service": "IMediator",
           "dotnet_method": "SendAsync",
           "conversion_hint": "MediatR command/query pattern",
-          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"AUTHCHK\";\n        byte[] commArea = Encoding.ASCII.GetBytes(\"LK-USER-ID\".PadRight(8));\n        \n        // Assuming a method LinkProgram exists to handle the LINK operation\n        LinkProgram(programName, commArea);\n    }\n\n    private void LinkProgram(string programName, byte[] commArea)\n    {\n        // Implementation for linking to the program\n        // This is a placeholder for the actual logic to call the external program\n        Console.WriteLine($\"Linking to program: {programName} with commarea: {BitConverter.ToString(commArea)}\");\n    }\n}",
+          "ai_conversion": "using System;\nusing System.Runtime.InteropServices;\n\npublic class CicsLink\n{\n    [DllImport(\"cicsapi.dll\", CallingConvention = CallingConvention.StdCall)]\n    private static extern int CicsLink(string programName, ref byte[] commArea, int length);\n\n    public static void ExecuteLink()\n    {\n        string programName = \"AUTHCHK\";\n        byte[] commArea = new byte[8];\n        // Assuming LK-USER-ID is a string or byte array, populate commArea accordingly\n        // Example: Encoding.ASCII.GetBytes(\"LK-USER-ID\").CopyTo(commArea, 0);\n\n        int length = 8;\n        int result = CicsLink(programName, ref commArea, length);\n\n        if (result != 0)\n        {\n            throw new Exception(\"CICS LINK command failed with error code: \" + result);\n        }\n\n        // Process commArea if needed\n    }\n}",
           "complexity_score": 3,
           "performance_impact": "high",
           "security_considerations": [
@@ -87,7 +87,7 @@
           "dotnet_service": "IMediator",
           "dotnet_method": "SendAsync",
           "conversion_hint": "MediatR command/query pattern",
-          "ai_conversion": "using System;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"SESSVAL\";\n        string channelName = \"WS-CHANNEL-NAME\";\n        string containerName = \"WS-CONTAINER-NAME\";\n        string fileName = \"ACCOUNTS\";\n        string accountRecord = string.Empty;\n        string accKey = \"ACC-KEY\";\n        int cicsResponse = 0;\n\n        // Simulate CICS LINK command\n        LinkToProgram(programName, channelName, containerName);\n\n        // Simulate account inquiry\n        string accNumber = \"LK-FROM-ACCOUNT\";\n        accKey = accNumber;\n\n        // Simulate CICS READ command\n        ReadAccountInformation(fileName, ref accountRecord, accKey, ref cicsResponse);\n    }\n\n    private void LinkToProgram(string program, string channel, string container)\n    {\n        // Logic to link to the program\n        Console.WriteLine($\"Linking to program: {program}, Channel: {channel}, Container: {container}\");\n    }\n\n    private void ReadAccountInformation(string file, ref string accountRecord, string ridFld, ref int resp)\n    {\n        // Logic to read account information\n        Console.WriteLine($\"Reading from file: {file}, RIDFLD: {ridFld}\");\n        accountRecord = \"Sample Account Record\"; // Simulated data\n        resp = 0; // Simulated response code\n    }\n}",
+          "ai_conversion": "using System;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"SESSVAL\";\n        string channelName = \"WS-CHANNEL-NAME\";\n        string containerName = \"WS-CONTAINER-NAME\";\n        string fileName = \"ACCOUNTS\";\n        string accountRecord = string.Empty;\n        string accKey = \"ACC-KEY\";\n        int cicsResponse = 0;\n\n        // Simulate CICS LINK command\n        LinkToProgram(programName, channelName, containerName);\n\n        // Simulate account inquiry\n        string accNumber = \"LK-FROM-ACCOUNT\";\n        accountRecord = ReadAccountInformation(fileName, accKey, ref cicsResponse);\n    }\n\n    private void LinkToProgram(string program, string channel, string container)\n    {\n        // Logic to link to the specified program with channel and container\n        Console.WriteLine($\"Linking to program {program} with channel {channel} and container {container}\");\n    }\n\n    private string ReadAccountInformation(string file, string ridfld, ref int resp)\n    {\n        // Logic to read account information from the specified file\n        Console.WriteLine($\"Reading from file {file} with RIDFLD {ridfld}\");\n        resp = 0; // Simulate a successful response\n        return \"ACCOUNT-RECORD\"; // Simulate account record data\n    }\n}",
           "complexity_score": 8,
           "performance_impact": "high",
           "security_considerations": [
@@ -106,7 +106,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "try\n{\n    // Perform debit from account\n    DebitFromAccount();\n    \n    if (WsCicsResp == Dfhresp.Normal)\n    {\n        // Perform credit to account\n        CreditToAccount();\n        \n        if (WsCicsResp == Dfhresp.Normal)\n        {\n            // Perform log transaction\n            LogTransaction();\n            \n            // Commit the transaction\n            CommitTransaction();\n        }\n    }\n}\ncatch (Exception ex)\n{\n    // Rollback the transaction in case of an error\n    RollbackTransaction();\n    throw;\n}",
+          "ai_conversion": "try\n{\n    // Perform rollback\n    PerformDebitFromAccount();\n    \n    if (WsCicsResp == Dfhresp.Normal)\n    {\n        PerformCreditToAccount();\n        \n        if (WsCicsResp == Dfhresp.Normal)\n        {\n            PerformLogTransaction();\n        }\n    }\n\n    // Commit transaction\n}\ncatch (Exception ex)\n{\n    // Handle exception\n}",
           "complexity_score": 2,
           "performance_impact": "low",
           "security_considerations": []
@@ -134,7 +134,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "try\n{\n    // Perform syncpoint rollback logic here\n}\ncatch (Exception)\n{\n    // Handle credit error\n}",
+          "ai_conversion": "try\n{\n    // Perform operations that require a syncpoint\n\n    // If an error occurs, rollback\n    throw new Exception(\"Simulated error\");\n}\ncatch (Exception)\n{\n    // Rollback logic\n    HandleCreditError();\n}\n\nvoid HandleCreditError()\n{\n    // Handle credit error logic\n}",
           "complexity_score": 0,
           "performance_impact": "low",
           "security_considerations": []
@@ -153,7 +153,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "ReadAsync",
           "conversion_hint": "Entity Framework repository pattern",
-          "ai_conversion": "try\n{\n    // Begin transaction\n    using (var transaction = new TransactionScope())\n    {\n        // Read the account record\n        var accountRecord = ReadAccountRecord(\"ACCOUNTS\", accKey, out var response);\n\n        if (response == CicsResponse.Success)\n        {\n            // Perform debit from account\n            DebitFromAccount(accountRecord);\n\n            // Commit the transaction\n            transaction.Complete();\n        }\n        else\n        {\n            // Handle error\n            HandleDebitError();\n        }\n    }\n}\ncatch (Exception ex)\n{\n    // Handle exception\n    HandleDebitError();\n}\n\nAccountRecord ReadAccountRecord(string fileName, string recordId, out CicsResponse response)\n{\n    // Simulate reading from a file\n    response = CicsResponse.Success;\n    return new AccountRecord();\n}\n\nvoid DebitFromAccount(AccountRecord accountRecord)\n{\n    // Simulate debiting from account\n}\n\nvoid HandleDebitError()\n{\n    // Simulate error handling\n}\n\nenum CicsResponse\n{\n    Success,\n    Error\n}\n\nclass AccountRecord\n{\n    // Simulate account record structure\n}",
+          "ai_conversion": "try\n{\n    // Begin transaction\n    using (var transaction = new TransactionScope())\n    {\n        // Read the account record\n        var accountRecord = ReadAccountRecord(\"ACCOUNTS\", accKey);\n\n        // Perform debit operation\n        DebitFromAccount(accountRecord);\n\n        // Complete the transaction\n        transaction.Complete();\n    }\n}\ncatch (Exception ex)\n{\n    // Handle error\n    HandleDebitError(ex);\n}\n\nprivate AccountRecord ReadAccountRecord(string fileName, string recordId)\n{\n    // Logic to read the account record from the database\n    // This is a placeholder for the actual database read operation\n    return new AccountRecord();\n}\n\nprivate void DebitFromAccount(AccountRecord accountRecord)\n{\n    // Logic to debit from the account\n    // This is a placeholder for the actual debit operation\n}\n\nprivate void HandleDebitError(Exception ex)\n{\n    // Logic to handle errors during the debit operation\n    // This is a placeholder for the actual error handling\n}",
           "complexity_score": 5,
           "performance_impact": "medium",
           "security_considerations": []
@@ -171,7 +171,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "CreateAsync",
           "conversion_hint": "Entity Framework Add operation",
-          "ai_conversion": "try\n{\n    // Assuming ACCOUNT_RECORD is a byte array or similar structure\n    var accountRecord = GetAccountRecord(); // Method to retrieve the account record data\n    var fileName = \"ACCOUNTS\";\n\n    // Open the file for writing\n    using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Write))\n    {\n        // Write the account record to the file\n        fileStream.Write(accountRecord, 0, accountRecord.Length);\n    }\n\n    // Set response code to indicate success\n    var wsCicsResp = 0; // Assuming 0 indicates success\n}\ncatch (Exception ex)\n{\n    // Handle exceptions and set response code to indicate failure\n    var wsCicsResp = -1; // Assuming -1 indicates failure\n    // Log or handle the exception as needed\n}",
+          "ai_conversion": "try\n{\n    // Assuming 'accountsFile' is an instance of a file handler class for 'ACCOUNTS'\n    accountsFile.Rewrite(accountRecord);\n}\ncatch (Exception ex)\n{\n    wsCicsResp = ex.Message; // Assuming 'wsCicsResp' is a string to capture response\n}",
           "complexity_score": 3,
           "performance_impact": "medium",
           "security_considerations": []
@@ -190,7 +190,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "ReadAsync",
           "conversion_hint": "Entity Framework repository pattern",
-          "ai_conversion": "try\n{\n    // Assuming a method GetAccountRecord that reads from a data source\n    var accountRecord = GetAccountRecord(\"ACCOUNTS\", ACC_KEY);\n\n    if (accountRecord != null)\n    {\n        ACCOUNT_RECORD = accountRecord;\n        WS_CICS_RESP = 0; // Success response code\n    }\n    else\n    {\n        WS_CICS_RESP = 1; // Not found response code\n    }\n}\ncatch (Exception ex)\n{\n    WS_CICS_RESP = 2; // Error response code\n    // Log exception or handle error\n}",
+          "ai_conversion": "try\n{\n    // Assuming a method GetAccountRecord exists to read from the \"ACCOUNTS\" file\n    ACCOUNT_RECORD accountRecord = GetAccountRecord(ACC_KEY);\n\n    // If the record is found, process it\n    if (accountRecord != null)\n    {\n        // Update the accountRecord as needed\n    }\n    else\n    {\n        WS_CICS_RESP = \"Record not found\";\n    }\n}\ncatch (Exception ex)\n{\n    WS_CICS_RESP = ex.Message;\n}",
           "complexity_score": 4,
           "performance_impact": "medium",
           "security_considerations": []
@@ -208,7 +208,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "CreateAsync",
           "conversion_hint": "Entity Framework Add operation",
-          "ai_conversion": "try\n{\n    // Assuming ACCOUNT-RECORD is a byte array or similar data structure\n    byte[] accountRecord = GetAccountRecord(); // Method to get the account record data\n\n    // Assuming a method to rewrite the record in the file\n    RewriteRecordInFile(\"ACCOUNTS\", accountRecord);\n}\ncatch (Exception ex)\n{\n    int wsCicsResp = GetCicsResponseCode(ex); // Method to map exception to a CICS response code\n    // Handle the response code as needed\n}",
+          "ai_conversion": "try\n{\n    // Assuming ACCOUNT_RECORD is a byte array or similar structure\n    var accountRecord = GetAccountRecord(); // Method to retrieve the account record data\n\n    // Assuming a method to rewrite the record in the file\n    RewriteRecordInFile(\"ACCOUNTS\", accountRecord);\n\n    // Set response code to indicate success\n    wsCicsResp = 0; // Assuming 0 indicates success\n}\ncatch (Exception ex)\n{\n    // Set response code to indicate failure\n    wsCicsResp = 1; // Assuming 1 indicates failure\n    // Log or handle the exception as needed\n}",
           "complexity_score": 3,
           "performance_impact": "medium",
           "security_considerations": []
@@ -229,7 +229,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "CreateAsync",
           "conversion_hint": "Entity Framework Add operation",
-          "ai_conversion": "using System;\n\npublic class TransactionProcessor\n{\n    private DateTime transDate;\n    private int wsRecordCount;\n    private string transKey;\n    private string transFromAcc;\n    private string transToAcc;\n    private decimal transAmount;\n    private string transType;\n    private string transStatus;\n    private string transUserId;\n    private string transTerminal;\n    private int wsCicsResp;\n\n    public void ProcessTransaction()\n    {\n        // Get current date and time\n        transDate = DateTime.Now;\n\n        // Increment record count\n        wsRecordCount++;\n\n        // Set transaction details\n        transKey = wsRecordCount.ToString();\n        transFromAcc = \"LK-FROM-ACCOUNT\";\n        transToAcc = \"LK-TO-ACCOUNT\";\n        transAmount = 100.00m; // Example amount\n        transType = \"TRF\";\n        transStatus = \"C\";\n        transUserId = \"WS-USER-ID\";\n        transTerminal = \"WS-TERMINAL-ID\";\n\n        // Write transaction record\n        WriteTransactionRecord();\n    }\n\n    private void WriteTransactionRecord()\n    {\n        // Simulate writing to a file or database\n        // This is where you would implement the actual write logic\n        Console.WriteLine(\"Transaction written:\");\n        Console.WriteLine($\"Date: {transDate}\");\n        Console.WriteLine($\"From Account: {transFromAcc}\");\n        Console.WriteLine($\"To Account: {transToAcc}\");\n        Console.WriteLine($\"Amount: {transAmount}\");\n        Console.WriteLine($\"Type: {transType}\");\n        Console.WriteLine($\"Status: {transStatus}\");\n        Console.WriteLine($\"User ID: {transUserId}\");\n        Console.WriteLine($\"Terminal: {transTerminal}\");\n        Console.WriteLine($\"Response: {wsCicsResp}\");\n    }\n}",
+          "ai_conversion": "using System;\n\npublic class TransactionProcessor\n{\n    private DateTime currentDate;\n    private int wsRecordCount;\n    private string transDate;\n    private string transTime;\n    private string transSeq;\n    private string transFromAcc;\n    private string transToAcc;\n    private decimal transAmount;\n    private string transType;\n    private string transStatus;\n    private string transUserId;\n    private string transTerminal;\n    private string transKey;\n    private string wsCicsResp;\n\n    public void ProcessTransaction()\n    {\n        // Simulate EXEC CICS ASKTIME\n        currentDate = DateTime.Now;\n        transDate = currentDate.ToString(\"yyyyMMdd\");\n        transTime = currentDate.ToString(\"HHmmss\");\n\n        // Simulate MOVE and ADD operations\n        wsRecordCount++;\n        transSeq = wsRecordCount.ToString();\n        transFromAcc = \"LK-FROM-ACCOUNT\"; // Replace with actual value\n        transToAcc = \"LK-TO-ACCOUNT\"; // Replace with actual value\n        transAmount = 100.00m; // Replace with actual value\n        transType = \"TRF\";\n        transStatus = \"C\";\n        transUserId = \"WS-USER-ID\"; // Replace with actual value\n        transTerminal = \"WS-TERMINAL-ID\"; // Replace with actual value\n\n        // Simulate EXEC CICS WRITE\n        WriteTransactionRecord();\n    }\n\n    private void WriteTransactionRecord()\n    {\n        // Simulate writing to a file or database\n        // Replace with actual file or database write logic\n        Console.WriteLine(\"Transaction Record Written:\");\n        Console.WriteLine($\"Date: {transDate}\");\n        Console.WriteLine($\"Time: {transTime}\");\n        Console.WriteLine($\"Sequence: {transSeq}\");\n        Console.WriteLine($\"From Account: {transFromAcc}\");\n        Console.WriteLine($\"To Account: {transToAcc}\");\n        Console.WriteLine($\"Amount: {transAmount}\");\n        Console.WriteLine($\"Type: {transType}\");\n        Console.WriteLine($\"Status: {transStatus}\");\n        Console.WriteLine($\"User ID: {transUserId}\");\n        Console.WriteLine($\"Terminal: {transTerminal}\");\n        Console.WriteLine($\"Response: {wsCicsResp}\");\n    }\n}",
           "complexity_score": 8,
           "performance_impact": "medium",
           "security_considerations": []
@@ -247,7 +247,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "using System;\n\npublic class CicsTransaction\n{\n    public void StartBrowse()\n    {\n        try\n        {\n            // Assuming a method to start browsing the file\n            StartBrowseFile(\"TRANSACTIONS\", LK_FROM_ACCOUNT);\n        }\n        catch (Exception ex)\n        {\n            WS_CICS_RESP = ex.Message;\n        }\n    }\n\n    private void StartBrowseFile(string fileName, string ridField)\n    {\n        // Implementation for starting the browse on the file\n        // This is a placeholder for the actual logic\n    }\n\n    private string LK_FROM_ACCOUNT; // This should be initialized with the appropriate value\n    private string WS_CICS_RESP;\n}",
+          "ai_conversion": "using System;\n\npublic class CicsTransaction\n{\n    public void StartBrowse()\n    {\n        try\n        {\n            // Assuming a method StartBrowseTransaction exists to handle the operation\n            StartBrowseTransaction(\"TRANSACTIONS\", LK_FROM_ACCOUNT);\n        }\n        catch (Exception ex)\n        {\n            WS_CICS_RESP = ex.Message;\n        }\n    }\n\n    private void StartBrowseTransaction(string fileName, string ridField)\n    {\n        // Implementation for starting a browse on the file\n        // This is a placeholder for actual logic\n    }\n\n    private string LK_FROM_ACCOUNT = \"SomeAccountIdentifier\"; // Example RIDFLD value\n    private string WS_CICS_RESP;\n}",
           "complexity_score": 3,
           "performance_impact": "low",
           "security_considerations": []
@@ -266,7 +266,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "bool wsEofFlag = false;\nint wsTsqItem = 1;\nTransactionRecord transactionRecord = new TransactionRecord();\nstring transKey = string.Empty;\nint wsCicsResp = 0;\n\n// End browse logic\nEndBrowse(\"TRANSACTIONS\");\n\n// Read transaction history logic\nReadTransactionHistory();\n\nwhile (!wsEofFlag)\n{\n    wsEofFlag = ReadNextTransaction(\"TRANSACTIONS\", ref transactionRecord, ref transKey, ref wsCicsResp);\n    wsTsqItem++;\n}\n\n// Method to end browse\nvoid EndBrowse(string fileName)\n{\n    // Logic to end browse on the file\n}\n\n// Method to read transaction history\nvoid ReadTransactionHistory()\n{\n    // Logic to read transaction history\n}\n\n// Method to read next transaction\nbool ReadNextTransaction(string fileName, ref TransactionRecord record, ref string key, ref int response)\n{\n    // Logic to read next transaction\n    // Return true if end of file, otherwise false\n    return false;\n}\n\n// TransactionRecord class definition\nclass TransactionRecord\n{\n    // Define properties for transaction record\n}",
+          "ai_conversion": "bool wsEofFlag = false;\nint wsTsqItem = 1;\nTransactionRecord transactionRecord = new TransactionRecord();\nstring transKey = string.Empty;\nint wsCicsResp = 0;\n\n// End browse operation\nEndBrowse(\"TRANSACTIONS\");\n\n// Read transaction history\nReadTransactionHistory();\n\nwsEofFlag = false;\nwsTsqItem = 1;\n\nwhile (!wsEofFlag)\n{\n    // Read next record\n    wsCicsResp = ReadNext(\"TRANSACTIONS\", ref transactionRecord, ref transKey);\n\n    // Check response code and set EOF flag if necessary\n    if (wsCicsResp == EndOfFileResponseCode)\n    {\n        wsEofFlag = true;\n    }\n}\n\n// Method stubs for CICS operations\nvoid EndBrowse(string fileName)\n{\n    // Implementation for ending browse\n}\n\nvoid ReadTransactionHistory()\n{\n    // Implementation for reading transaction history\n}\n\nint ReadNext(string fileName, ref TransactionRecord record, ref string key)\n{\n    // Implementation for reading next record\n    // Return response code\n    return 0;\n}\n\nclass TransactionRecord\n{\n    // Define fields for transaction record\n}",
           "complexity_score": 5,
           "performance_impact": "low",
           "security_considerations": []
@@ -285,7 +285,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsContainerHandler\n{\n    public byte[] GetContainerData(string containerName, string channelName, out int containerLength)\n    {\n        // Simulate fetching data from a CICS container\n        byte[] containerData = FetchDataFromContainer(containerName, channelName);\n        containerLength = containerData.Length;\n        return containerData;\n    }\n\n    private byte[] FetchDataFromContainer(string containerName, string channelName)\n    {\n        // Placeholder for actual CICS interaction logic\n        // For demonstration, returning a sample byte array\n        return Encoding.UTF8.GetBytes(\"Sample container data\");\n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        var handler = new CicsContainerHandler();\n        int containerLength;\n        byte[] containerData = handler.GetContainerData(\"WS-CONTAINER-NAME\", \"WS-CHANNEL-NAME\", out containerLength);\n\n        // Assuming WS-CONTAINER-DATA is a byte array\n        byte[] WS_CONTAINER_DATA = containerData;\n        int WS_CONTAINER_LENGTH = containerLength;\n\n        // Output the results\n        Console.WriteLine(\"Container Data: \" + Encoding.UTF8.GetString(WS_CONTAINER_DATA));\n        Console.WriteLine(\"Container Length: \" + WS_CONTAINER_LENGTH);\n    }\n}",
+          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsContainerHandler\n{\n    public void GetContainerData(string containerName, string channelName, out byte[] containerData, out int containerLength)\n    {\n        // Simulate fetching data from a CICS container\n        // This is a placeholder for actual CICS interaction logic\n        containerData = Encoding.UTF8.GetBytes(\"Sample data from container\");\n        containerLength = containerData.Length;\n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        string wsContainerName = \"WS-CONTAINER-NAME\";\n        string wsChannelName = \"WS-CHANNEL-NAME\";\n        byte[] wsContainerData;\n        int wsContainerLength;\n\n        CicsContainerHandler handler = new CicsContainerHandler();\n        handler.GetContainerData(wsContainerName, wsChannelName, out wsContainerData, out wsContainerLength);\n\n        Console.WriteLine(\"Container Data: \" + Encoding.UTF8.GetString(wsContainerData));\n        Console.WriteLine(\"Container Length: \" + wsContainerLength);\n    }\n}",
           "complexity_score": 4,
           "performance_impact": "low",
           "security_considerations": [
@@ -304,7 +304,7 @@
           "dotnet_service": "IMediator",
           "dotnet_method": "SendAsync",
           "conversion_hint": "MediatR command/query pattern",
-          "ai_conversion": "using System;\nusing System.Data.SqlClient;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        // Simulate the LINK command to call the program BATCHPRC\n        CallBatchProcess();\n\n        // SQL Operations for reporting\n        GenerateAccountReport();\n    }\n\n    private void CallBatchProcess()\n    {\n        // Logic to call the external program BATCHPRC\n        Console.WriteLine(\"Calling external program BATCHPRC with channel WS-CHANNEL-NAME\");\n        // Implement the actual call logic here\n    }\n\n    private void GenerateAccountReport()\n    {\n        string connectionString = \"your_connection_string_here\";\n        string query = @\"\n            SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE\n            FROM ACCOUNTS\n            WHERE ACC_STATUS = 'A'\n            ORDER BY ACC_BALANCE DESC\";\n\n        using (SqlConnection connection = new SqlConnection(connectionString))\n        {\n            SqlCommand command = new SqlCommand(query, connection);\n            connection.Open();\n\n            using (SqlDataReader reader = command.ExecuteReader())\n            {\n                while (reader.Read())\n                {\n                    Console.WriteLine($\"Account Number: {reader[\"ACC_NUMBER\"]}, \" +\n                                      $\"Holder Name: {reader[\"ACC_HOLDER_NAME\"]}, \" +\n                                      $\"Balance: {reader[\"ACC_BALANCE\"]}, \" +\n                                      $\"Type: {reader[\"ACC_TYPE\"]}\");\n                }\n            }\n        }\n    }\n}",
+          "ai_conversion": "using System;\nusing System.Data.SqlClient;\n\npublic class CICSLinkExample\n{\n    public void ExecuteLink()\n    {\n        // Simulate the LINK to the program \"BATCHPRC\" with channel \"WS-CHANNEL-NAME\"\n        CallBatchProcess(\"WS-CHANNEL-NAME\");\n\n        // SQL Operations for reporting\n        GenerateAccountReport();\n    }\n\n    private void CallBatchProcess(string channelName)\n    {\n        // Placeholder for the logic to call the batch process\n        Console.WriteLine($\"Calling batch process 'BATCHPRC' with channel '{channelName}'\");\n    }\n\n    private void GenerateAccountReport()\n    {\n        string connectionString = \"your_connection_string_here\";\n        string query = @\"\n            SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE\n            FROM ACCOUNTS\n            WHERE ACC_STATUS = 'A'\n            ORDER BY ACC_BALANCE DESC\";\n\n        using (SqlConnection connection = new SqlConnection(connectionString))\n        {\n            SqlCommand command = new SqlCommand(query, connection);\n            connection.Open();\n\n            using (SqlDataReader reader = command.ExecuteReader())\n            {\n                while (reader.Read())\n                {\n                    string accountNumber = reader[\"ACC_NUMBER\"].ToString();\n                    string accountHolderName = reader[\"ACC_HOLDER_NAME\"].ToString();\n                    decimal accountBalance = (decimal)reader[\"ACC_BALANCE\"];\n                    string accountType = reader[\"ACC_TYPE\"].ToString();\n\n                    Console.WriteLine($\"Account Number: {accountNumber}, Holder: {accountHolderName}, Balance: {accountBalance}, Type: {accountType}\");\n                }\n            }\n        }\n    }\n}",
           "complexity_score": 3,
           "performance_impact": "high",
           "security_considerations": [
@@ -330,7 +330,7 @@
           "dotnet_service": "ICacheService",
           "dotnet_method": "WriteToTempStorageAsync",
           "conversion_hint": "Redis/MemoryCache implementation",
-          "ai_conversion": "using System;\nusing System.Collections.Generic;\n\npublic class CicsTransaction\n{\n    private string WS_TSQ_NAME = \"WS-TSQ-NAME\";\n    private string WS_MQ_QUEUE = \"WS-MQ-QUEUE\";\n    private string WS_MAPSET = \"WS-MAPSET\";\n    private string WS_MAP_NAME = \"WS-MAP-NAME\";\n    private int WS_CURSOR_POS = 0;\n    private int WS_TSQ_ITEM = 0;\n    private int WS_TSQ_LENGTH = 0;\n    private int WS_MQ_LENGTH = 100;\n    private int WS_ERROR_COUNT = 0;\n    private string WS_ERROR_CODE = string.Empty;\n    private string WS_CICS_RESP = string.Empty;\n    private string ACCOUNT_RECORD = \"ACCOUNT-RECORD\";\n    private string WS_MQ_MESSAGE = \"TRANSFER-COMPLETE\";\n\n    public void ExecuteTransaction()\n    {\n        WriteQueueTS(WS_TSQ_NAME, \"SESSION-START\", 13, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        StoreAccountInTSQ();\n        WS_TSQ_ITEM++;\n        WS_TSQ_LENGTH = ACCOUNT_RECORD.Length;\n        WriteQueueTS(WS_TSQ_NAME, ACCOUNT_RECORD, WS_TSQ_LENGTH, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        SendMQNotification();\n        WriteQueueTD(WS_MQ_QUEUE, WS_MQ_MESSAGE, WS_MQ_LENGTH);\n        SendAccountMap();\n        HandleFileError();\n        StartAuditLog();\n        FinalizeTransaction();\n    }\n\n    private void WriteQueueTS(string queue, string from, int length, int item, ref string resp)\n    {\n        // Simulate CICS WRITEQ TS operation\n        Console.WriteLine($\"WRITEQ TS: Queue={queue}, From={from}, Length={length}, Item={item}\");\n    }\n\n    private void StoreAccountInTSQ()\n    {\n        // Simulate storing account in TSQ\n        Console.WriteLine(\"Store account in TSQ.\");\n    }\n\n    private void SendMQNotification()\n    {\n        // Simulate sending MQ notification\n        Console.WriteLine(\"Send MQ notification.\");\n    }\n\n    private void WriteQueueTD(string queue, string from, int length)\n    {\n        // Simulate CICS WRITEQ TD operation\n        Console.WriteLine($\"WRITEQ TD: Queue={queue}, From={from}, Length={length}\");\n    }\n\n    private void SendAccountMap()\n    {\n        // Sim",
+          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsTransaction\n{\n    private string WS_TSQ_NAME = \"YourTSQName\";\n    private string WS_MQ_QUEUE = \"YourMQQueue\";\n    private string WS_MAPSET = \"YourMapSet\";\n    private string WS_MAP_NAME = \"YourMapName\";\n    private int WS_CURSOR_POS = 0;\n    private int WS_TSQ_ITEM = 0;\n    private int WS_CICS_RESP = 0;\n    private int WS_ERROR_COUNT = 0;\n    private string WS_ERROR_CODE = string.Empty;\n    private string ACCOUNT_RECORD = \"YourAccountRecord\";\n    private int WS_TSQ_LENGTH = 0;\n    private string WS_MQ_MESSAGE = string.Empty;\n    private int WS_MQ_LENGTH = 0;\n\n    public void Execute()\n    {\n        // Store account in TSQ\n        WriteQTS(WS_TSQ_NAME, \"SESSION-START\", 13, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        WS_TSQ_ITEM++;\n        WS_TSQ_LENGTH = ACCOUNT_RECORD.Length;\n        WriteQTS(WS_TSQ_NAME, ACCOUNT_RECORD, WS_TSQ_LENGTH, WS_TSQ_ITEM, ref WS_CICS_RESP);\n\n        // Send MQ Notification\n        WS_MQ_MESSAGE = \"TRANSFER-COMPLETE\";\n        WS_MQ_LENGTH = 100;\n        WriteQTD(WS_MQ_QUEUE, WS_MQ_MESSAGE, WS_MQ_LENGTH);\n\n        // Send Account Map\n        SendMap(WS_MAPSET, WS_MAP_NAME, ACCOUNT_RECORD, WS_CURSOR_POS);\n\n        // Handle File Error\n        WS_ERROR_COUNT++;\n        WS_ERROR_CODE = \"FILE-ERROR\";\n        LogError();\n\n        // Start Audit Log\n        WriteQTD(\"AUDIT\", \"TRANSACTION-START\", 17);\n\n        // Finalize Transaction\n        DeleteQTS(WS_TSQ_NAME);\n    }\n\n    private void WriteQTS(string queue, string from, int length, int item, ref int resp)\n    {\n        // Simulate CICS WRITEQ TS\n        Console.WriteLine($\"WRITEQ TS: Queue={queue}, From={from}, Length={length}, Item={item}\");\n    }\n\n    private void WriteQTD(string queue, string from, int length)\n    {\n        // Simulate CICS WRITEQ TD\n        Console.WriteLine($\"WRITEQ TD: Queue={queue}, From={from}, Length={length}\");",
           "complexity_score": 12,
           "performance_impact": "medium",
           "security_considerations": []
@@ -734,6 +734,790 @@
           "Log sensitive operations"
         ]
       }
+    },
+    "cobol_code.cbl": {
+      "description": "COBOL CICS program",
+      "program_id": "DBCONNECT",
+      "copybooks": [],
+      "control_includes": [],
+      "file_descriptors": [],
+      "cics_commands": [],
+      "sql_blocks": [
+        {
+          "original_sql": "EXEC SQL\n\nINCLUDE SQLCA\n\nEND-EXEC.",
+          "line_number": 53,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nINCLUDE SQLCA\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL BEGIN DECLARE SECTION END-EXEC.\n\n\n\n01 HV-EMP-ID                   PIC 9(5).\n\n01 HV-EMP-FIRST-NAME           PIC X(20).\n\n01 HV-EMP-LAST-NAME            PIC X(20).\n\n01 HV-EMP-DEPT                 PIC X(15).\n\n01 HV-EMP-POSITION             PIC X(20).\n\n01 HV-EMP-SALARY               PIC 9(7)V99.\n\n01 HV-EMP-HIRE-DATE            PIC X(10).\n\n01 HV-DB-USER                  PIC X(20).\n\n01 HV-DB-PASSWORD              PIC X(20).\n\n01 HV-SEARCH-DEPT              PIC X(15).\n\n01 HV-MIN-SALARY               PIC 9(7)V99.\n\n\n\nEXEC SQL END DECLARE SECTION END-EXEC.",
+          "line_number": 195,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL BEGIN DECLARE SECTION END-EXEC.\n\n\n\n01 HV-EMP-ID                   PIC 9(5).\n\n01 HV-EMP-FIRST-NAME           PIC X(20).\n\n01 HV-EMP-LAST-NAME            PIC X(20).\n\n01 HV-EMP-DEPT                 PIC X(15).\n\n01 HV-EMP-POSITION             PIC X(20).\n\n01 HV-EMP-SALARY               PIC 9(7)V99.\n\n01 HV-EMP-HIRE-DATE            PIC X(10).\n\n01 HV-DB-USER                  PIC X(20).\n\n01 HV-DB-PASSWORD              PIC X(20).\n\n01 HV-SEARCH-DEPT              PIC X(15).\n\n01 HV-MIN-SALARY               PIC 9(7)V99.\n\n\n\nEXEC SQL END DECLARE SECTION END-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL END DECLARE SECTION END-EXEC.\n\n\n\n*-----------------------------------------------------------------\n\n* Cursor Declarations\n\n*-----------------------------------------------------------------\n\nEXEC SQL\n\nDECLARE EMP_CURSOR CURSOR FOR\n\nSELECT EMP_ID, FIRST_NAME, LAST_NAME, DEPARTMENT,\n\nPOSITION, SALARY, HIRE_DATE\n\nFROM EMPLOYEES\n\nORDER BY EMP_ID\n\nEND-EXEC.",
+          "line_number": 217,
+          "sql_type": "CURSOR",
+          "dotnet_equivalent": "var results = await _context.EntitySet.ToListAsync();",
+          "entity_framework_hint": "LINQ Query with projection",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nDECLARE DEPT_CURSOR CURSOR FOR\n\nSELECT EMP_ID, FIRST_NAME, LAST_NAME, DEPARTMENT,\n\nPOSITION, SALARY, HIRE_DATE\n\nFROM EMPLOYEES\n\nWHERE DEPARTMENT = :HV-SEARCH-DEPT\n\nAND SALARY >= :HV-MIN-SALARY\n\nORDER BY SALARY DESC\n\nEND-EXEC.",
+          "line_number": 237,
+          "sql_type": "CURSOR",
+          "dotnet_equivalent": "var results = await _context.EntitySet.ToListAsync();",
+          "entity_framework_hint": "LINQ Query with projection",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCONNECT TO :WS-DB-NAME\n\nUSER :HV-DB-USER\n\nUSING :HV-DB-PASSWORD\n\nEND-EXEC.",
+          "line_number": 335,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCONNECT TO :WS-DB-NAME\n\nUSER :HV-DB-USER\n\nUSING :HV-DB-PASSWORD\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nOPEN EMP_CURSOR\n\nEND-EXEC.",
+          "line_number": 479,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nOPEN EMP_CURSOR\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCLOSE EMP_CURSOR\n\nEND-EXEC",
+          "line_number": 511,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCLOSE EMP_CURSOR\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nFETCH EMP_CURSOR INTO\n\n:HV-EMP-ID,\n\n:HV-EMP-FIRST-NAME,\n\n:HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT,\n\n:HV-EMP-POSITION,\n\n:HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE\n\nEND-EXEC.",
+          "line_number": 543,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nFETCH EMP_CURSOR INTO\n\n:HV-EMP-ID,\n\n:HV-EMP-FIRST-NAME,\n\n:HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT,\n\n:HV-EMP-POSITION,\n\n:HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nOPEN DEPT_CURSOR\n\nEND-EXEC.",
+          "line_number": 629,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nOPEN DEPT_CURSOR\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCLOSE DEPT_CURSOR\n\nEND-EXEC",
+          "line_number": 661,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCLOSE DEPT_CURSOR\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nFETCH DEPT_CURSOR INTO\n\n:HV-EMP-ID,\n\n:HV-EMP-FIRST-NAME,\n\n:HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT,\n\n:HV-EMP-POSITION,\n\n:HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE\n\nEND-EXEC.",
+          "line_number": 693,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nFETCH DEPT_CURSOR INTO\n\n:HV-EMP-ID,\n\n:HV-EMP-FIRST-NAME,\n\n:HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT,\n\n:HV-EMP-POSITION,\n\n:HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE\n\nEND-EXEC.",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "HIGH"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nINSERT INTO EMPLOYEES\n\n(EMP_ID, FIRST_NAME, LAST_NAME, DEPARTMENT,\n\nPOSITION, SALARY, HIRE_DATE)\n\nVALUES\n\n(:HV-EMP-ID, :HV-EMP-FIRST-NAME, :HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT, :HV-EMP-POSITION, :HV-EMP-SALARY,\n\n:HV-EMP-HIRE-DATE)\n\nEND-EXEC.",
+          "line_number": 825,
+          "sql_type": "INSERT",
+          "dotnet_equivalent": "await _context.EntitySet.AddAsync(entity); await _context.SaveChangesAsync();",
+          "entity_framework_hint": "Add + SaveChanges pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "line_number": 847,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "line_number": 855,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nSELECT FIRST_NAME, LAST_NAME, DEPARTMENT,\n\nPOSITION, SALARY, HIRE_DATE\n\nINTO :HV-EMP-FIRST-NAME, :HV-EMP-LAST-NAME,\n\n:HV-EMP-DEPT, :HV-EMP-POSITION,\n\n:HV-EMP-SALARY, :HV-EMP-HIRE-DATE\n\nFROM EMPLOYEES\n\nWHERE EMP_ID = :HV-EMP-ID\n\nEND-EXEC.",
+          "line_number": 903,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "var results = await _context.EntitySet.ToListAsync();",
+          "entity_framework_hint": "LINQ Query with projection",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nUPDATE EMPLOYEES\n\nSET DEPARTMENT = :HV-EMP-DEPT,\n\nPOSITION = :HV-EMP-POSITION,\n\nSALARY = :HV-EMP-SALARY\n\nWHERE EMP_ID = :HV-EMP-ID\n\nEND-EXEC",
+          "line_number": 1005,
+          "sql_type": "UPDATE",
+          "dotnet_equivalent": "_context.EntitySet.Update(entity); await _context.SaveChangesAsync();",
+          "entity_framework_hint": "Update + SaveChanges pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "line_number": 1027,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "line_number": 1035,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nSELECT FIRST_NAME, LAST_NAME\n\nINTO :HV-EMP-FIRST-NAME, :HV-EMP-LAST-NAME\n\nFROM EMPLOYEES\n\nWHERE EMP_ID = :HV-EMP-ID\n\nEND-EXEC.",
+          "line_number": 1091,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "var results = await _context.EntitySet.ToListAsync();",
+          "entity_framework_hint": "LINQ Query with projection",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nDELETE FROM EMPLOYEES\n\nWHERE EMP_ID = :HV-EMP-ID\n\nEND-EXEC",
+          "line_number": 1123,
+          "sql_type": "DELETE",
+          "dotnet_equivalent": "_context.EntitySet.Remove(entity); await _context.SaveChangesAsync();",
+          "entity_framework_hint": "Remove + SaveChanges pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "line_number": 1145,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nCOMMIT WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "line_number": 1153,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nROLLBACK WORK\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        },
+        {
+          "original_sql": "EXEC SQL\n\nDISCONNECT CURRENT\n\nEND-EXEC",
+          "line_number": 1225,
+          "sql_type": "SELECT",
+          "dotnet_equivalent": "// TODO: Convert SQL: EXEC SQL\n\nDISCONNECT CURRENT\n\nEND-EXEC",
+          "entity_framework_hint": "Repository pattern",
+          "complexity": "MEDIUM"
+        }
+      ],
+      "business_logic": [],
+      "procedures": [
+        {
+          "name": "1000-INITIALIZE",
+          "line": 259,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 1000InitializeAsync()"
+        },
+        {
+          "name": "2000-PROCESS-USER-CHOICE",
+          "line": 265,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 2000ProcessUserChoiceAsync()"
+        },
+        {
+          "name": "9000-TERMINATE",
+          "line": 273,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 9000TerminateAsync()"
+        },
+        {
+          "name": "1100-CONNECT-TO-DB",
+          "line": 303,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 1100ConnectToDbAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 339,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "2100-DISPLAY-MENU",
+          "line": 369,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 2100DisplayMenuAsync()"
+        },
+        {
+          "name": "3000-RETRIEVE-ALL-EMPLOYEES",
+          "line": 379,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 3000RetrieveAllEmployeesAsync()"
+        },
+        {
+          "name": "3100-RETRIEVE-BY-CRITERIA",
+          "line": 383,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 3100RetrieveByCriteriaAsync()"
+        },
+        {
+          "name": "4000-INSERT-EMPLOYEE",
+          "line": 387,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 4000InsertEmployeeAsync()"
+        },
+        {
+          "name": "5000-UPDATE-EMPLOYEE",
+          "line": 391,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 5000UpdateEmployeeAsync()"
+        },
+        {
+          "name": "6000-DELETE-EMPLOYEE",
+          "line": 395,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 6000DeleteEmployeeAsync()"
+        },
+        {
+          "name": "ANOTHER",
+          "line": 413,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task AnotherAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 483,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "3050-FETCH-EMPLOYEE-RECORD",
+          "line": 495,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 3050FetchEmployeeRecordAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 577,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 633,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "3150-FETCH-DEPT-RECORD",
+          "line": 645,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 3150FetchDeptRecordAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 727,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 829,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 907,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1009,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1047,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1095,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1127,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1171,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        },
+        {
+          "name": "8000-CHECK-SQL-STATUS",
+          "line": 1229,
+          "type": "PERFORM",
+          "dotnet_equivalent": "private async Task 8000CheckSqlStatusAsync()"
+        }
+      ],
+      "data_movements": [
+        {
+          "line": 297,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 299,
+          "statement": "MOVE \"N\" TO WS-DB-CONNECTED.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 321,
+          "statement": "MOVE WS-DB-USER TO HV-DB-USER.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 323,
+          "statement": "MOVE WS-DB-PASSWORD TO HV-DB-PASSWORD.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 345,
+          "statement": "MOVE \"Y\" TO WS-DB-CONNECTED",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 399,
+          "statement": "MOVE \"N\" TO WS-CONTINUE-CHOICE",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 471,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 553,
+          "statement": "MOVE HV-EMP-SALARY TO WS-FORMATTED-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 573,
+          "statement": "MOVE \"Y\" TO WS-END-OF-DATA",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 613,
+          "statement": "MOVE WS-SEARCH-DEPT TO HV-SEARCH-DEPT.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 615,
+          "statement": "MOVE WS-SEARCH-MIN-SALARY TO HV-MIN-SALARY.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 621,
+          "statement": "MOVE \"N\" TO WS-END-OF-DATA.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 703,
+          "statement": "MOVE HV-EMP-SALARY TO WS-FORMATTED-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 723,
+          "statement": "MOVE \"Y\" TO WS-END-OF-DATA",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 793,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 795,
+          "statement": "MOVE WS-EMP-FIRST-NAME TO HV-EMP-FIRST-NAME.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 797,
+          "statement": "MOVE WS-EMP-LAST-NAME TO HV-EMP-LAST-NAME.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 799,
+          "statement": "MOVE WS-EMP-DEPT TO HV-EMP-DEPT.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 801,
+          "statement": "MOVE WS-EMP-POSITION TO HV-EMP-POSITION.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 803,
+          "statement": "MOVE WS-EMP-SALARY TO HV-EMP-SALARY.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 805,
+          "statement": "MOVE WS-EMP-HIRE-DATE TO HV-EMP-HIRE-DATE.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 883,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 913,
+          "statement": "MOVE HV-EMP-FIRST-NAME TO WS-EMP-FIRST-NAME",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 915,
+          "statement": "MOVE HV-EMP-LAST-NAME TO WS-EMP-LAST-NAME",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 917,
+          "statement": "MOVE HV-EMP-DEPT TO WS-EMP-DEPT",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 919,
+          "statement": "MOVE HV-EMP-POSITION TO WS-EMP-POSITION",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 921,
+          "statement": "MOVE HV-EMP-SALARY TO WS-EMP-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 923,
+          "statement": "MOVE HV-EMP-HIRE-DATE TO WS-EMP-HIRE-DATE",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 955,
+          "statement": "MOVE HV-EMP-DEPT TO WS-EMP-DEPT",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 967,
+          "statement": "MOVE HV-EMP-POSITION TO WS-EMP-POSITION",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 979,
+          "statement": "MOVE HV-EMP-SALARY TO WS-EMP-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 985,
+          "statement": "MOVE WS-EMP-DEPT TO HV-EMP-DEPT",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 987,
+          "statement": "MOVE WS-EMP-POSITION TO HV-EMP-POSITION",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 989,
+          "statement": "MOVE WS-EMP-SALARY TO HV-EMP-SALARY",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 1077,
+          "statement": "MOVE WS-EMP-ID TO HV-EMP-ID.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 1187,
+          "statement": "MOVE SQLCODE TO WS-SQL-STATUS.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        },
+        {
+          "line": 1189,
+          "statement": "MOVE SQLERRMC TO WS-SQL-MSG.",
+          "type": "MOVE",
+          "dotnet_hint": "Property assignment or mapping"
+        }
+      ],
+      "conditional_logic": [
+        {
+          "condition": "DB-CONNECTED",
+          "line": 263,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 343,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CONTINUE-CHOICE NOT = \"N\" AND WS-OPERATION-CHOICE NOT = 9",
+          "line": 409,
+          "complexity": "medium"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 487,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 547,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 100",
+          "line": 571,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 637,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 697,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 100",
+          "line": 721,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 833,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 911,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-EMP-DEPT = SPACES",
+          "line": 953,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-EMP-POSITION = SPACES",
+          "line": 965,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-EMP-SALARY = ZEROES",
+          "line": 977,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 1013,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 100",
+          "line": 1041,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 1099,
+          "complexity": "low"
+        },
+        {
+          "condition": "WS-CONTINUE-CHOICE = \"Y\" OR WS-CONTINUE-CHOICE = \"Y\"",
+          "line": 1115,
+          "complexity": "medium"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 1131,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 100",
+          "line": 1165,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE < 0",
+          "line": 1193,
+          "complexity": "low"
+        },
+        {
+          "condition": "DB-CONNECTED",
+          "line": 1219,
+          "complexity": "low"
+        },
+        {
+          "condition": "SQLCODE = 0",
+          "line": 1233,
+          "complexity": "low"
+        }
+      ],
+      "state_mechanisms": {
+        "TSQ_queues": [],
+        "TDQ_queues": [],
+        "COMMAREAs": [],
+        "CHANNELS": [],
+        "CONTAINERS": [],
+        "MAPSETS": [],
+        "TRANSIDS": []
+      },
+      "performance_indicators": {
+        "file_operations": 0,
+        "database_operations": 23,
+        "network_operations": 0,
+        "loops": 26,
+        "conditions": 23
+      },
+      "error_handling": [
+        {
+          "line": 123,
+          "type": "error_handling",
+          "statement": "01 WS-ERROR-HANDLING."
+        },
+        {
+          "line": 129,
+          "type": "error_handling",
+          "statement": "05 WS-ERROR-MSG             PIC X(100)."
+        },
+        {
+          "line": 293,
+          "type": "error_handling",
+          "statement": "WS-ERROR-HANDLING."
+        },
+        {
+          "line": 353,
+          "type": "error_handling",
+          "statement": "DISPLAY \"SQL Error Code: \" SQLCODE"
+        },
+        {
+          "line": 355,
+          "type": "error_handling",
+          "statement": "DISPLAY \"SQL Error Message: \" SQLERRMC"
+        },
+        {
+          "line": 1195,
+          "type": "error_handling",
+          "statement": "STRING \"SQL ERROR: \" DELIMITED BY SIZE"
+        },
+        {
+          "line": 1203,
+          "type": "error_handling",
+          "statement": "INTO WS-ERROR-MSG"
+        },
+        {
+          "line": 1205,
+          "type": "error_handling",
+          "statement": "DISPLAY WS-ERROR-MSG"
+        },
+        {
+          "line": 1239,
+          "type": "error_handling",
+          "statement": "DISPLAY \"Error during database disconnect.\""
+        }
+      ],
+      "security_aspects": [],
+      "metadata": {
+        "total_lines": 0,
+        "cics_commands_count": 0,
+        "sql_blocks_count": 23,
+        "business_logic_statements": 0,
+        "procedures_count": 26,
+        "complexity_score": 46,
+        "modernization_score": 1
+      },
+      "dotnet_suggestions": {
+        "service_name": "DbconnectService",
+        "controller_name": "DbconnectController",
+        "required_services": [],
+        "suggested_patterns": [
+          "Strategy or Template Method"
+        ],
+        "performance_considerations": [
+          "Batch operations instead of loops",
+          "Use EF Change Tracking wisely"
+        ],
+        "security_recommendations": [
+          "Use HTTPS for all endpoints",
+          "Implement authentication & authorization",
+          "Log sensitive operations"
+        ]
+      }
     }
   },
   "copybooks": {
@@ -945,15 +1729,15 @@
   },
   "bms_maps": {},
   "summary": {
-    "total_programs": 1,
+    "total_programs": 2,
     "total_copybooks": 1,
     "total_control_includes": 0,
     "total_jcl_files": 1,
     "total_bms_maps": 0
   },
   "project_metadata": {
-    "analysis_timestamp": "2025-07-08T15:09:00.868017",
-    "total_files": 3,
+    "analysis_timestamp": "2025-07-09T11:26:18.805063",
+    "total_files": 4,
     "business_domain": "BANKING",
     "cics_transaction_flow": [],
     "data_flow_analysis": {},
@@ -966,7 +1750,8 @@
         "ERROR-CODES.cpy",
         "SECURITY-CONTROL.cpy",
         "TRANSACTION-TYPES.cpy"
-      ]
+      ],
+      "cobol_code.cbl": []
     },
     "program_to_program": {},
     "data_dependencies": []
@@ -978,39 +1763,47 @@
       "cics_operations": 16,
       "data_operations": 2,
       "complexity": 20
+    },
+    {
+      "program": "cobol_code.cbl",
+      "entry_point": "DBCONNECT",
+      "cics_operations": 0,
+      "data_operations": 23,
+      "complexity": 46
     }
   ],
   "ai_insights": {
     "business_domain": "BANKING",
     "integration_patterns": [
-      "Synchronous request-response",
-      "Asynchronous messaging"
+      "Synchronous request-reply",
+      "Asynchronous messaging",
+      "Service-oriented architecture"
     ],
     "data_flows": [
       {
         "source": "CICS application",
-        "destination": "DB2 database",
+        "destination": "Database",
         "type": "SQL operations",
-        "count": 2
+        "count": 25
       },
       {
-        "source": "External systems",
+        "source": "User interface",
         "destination": "CICS application",
         "type": "CICS commands",
         "count": 16
       }
     ],
     "modernization_recommendations": [
-      "Implement API gateways to expose CICS transactions as RESTful services",
-      "Migrate SQL operations to a microservices architecture for better scalability",
-      "Adopt containerization for CICS applications to improve deployment flexibility"
+      "Refactor COBOL programs to leverage modern languages like Java or .NET",
+      "Implement API gateways for better integration with external systems",
+      "Adopt microservices architecture for improved scalability and maintainability"
     ],
     "risk_assessment": {
-      "legacy_dependency": "High",
-      "data_integrity": "Medium",
-      "system_availability": "High",
-      "security": "Medium"
+      "legacy_code_dependency": "High",
+      "integration_complexity": "Medium",
+      "data_security": "High",
+      "modernization_impact": "Medium"
     }
   },
-  "enhancement_timestamp": "2025-07-08T15:09:43.701582"
+  "enhancement_timestamp": "2025-07-09T11:27:03.480429"
 }

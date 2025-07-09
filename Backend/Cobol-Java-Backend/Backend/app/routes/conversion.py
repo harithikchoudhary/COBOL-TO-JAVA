@@ -230,7 +230,9 @@ CRITICAL: Use these detailed analysis artifacts to:
                     f"The code should be compatible with .NET 8, and all necessary dependencies should be included in the .csproj file. "
                     f"Use the provided comprehensive analysis context to create more accurate entity relationships and service boundaries. "
                     f"Implement the recommended microservices patterns and technology stack from the analysis. "
+                    f"IMPORTANT: When generating code in the JSON fields, always escape line breaks as \n so each line appears properly in the frontend. "
                     f"Follow the architectural recommendations to ensure scalable, maintainable code. "
+                    f""
                     f"Return your response in JSON format always with the following structure:\n"
                     "{\n"
                     '  "convertedCode": {\n'
@@ -260,6 +262,7 @@ CRITICAL: Use these detailed analysis artifacts to:
                     "Implement proper dependency injection, async/await patterns, and error handling. Ensure everything is compatible with .NET 8. "
                     "Leverage the provided comprehensive analysis context to create more accurate business domain models and relationships. "
                     "Implement the recommended microservices patterns, caching strategies, and security measures from the analysis."
+                    "IMPORTANT: When generating code in the JSON fields, always escape line breaks as \n so each line appears properly in the frontend. "
                 )
             },
             {"role": "user", "content": prompt + analysis_instructions}

@@ -217,9 +217,7 @@ export default function Cobol({ children }) {
         const techReqs = data.technicalRequirements.technicalRequirements;
         if (Array.isArray(techReqs)) {
           techReqs.forEach((req, index) => {
-            const complexity = req.complexity ? ` (${req.complexity})` : '';
-            const category = req.category ? ` [${req.category}]` : '';
-            formattedTechReqs += `${index + 1}. ${req.description}${complexity}${category}\n`;
+            formattedTechReqs += `${index + 1}. ${req.description}`;
           });
         }
         

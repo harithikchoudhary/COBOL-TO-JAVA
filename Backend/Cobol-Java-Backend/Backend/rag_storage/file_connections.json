@@ -1,39 +1,19 @@
 {
   "project_summary": {
-    "total_files": 3,
-    "total_connections": 1,
-    "business_entities": 14,
-    "conversion_patterns": 58
+    "total_files": 1,
+    "total_connections": 0,
+    "business_entities": 19,
+    "conversion_patterns": 71
   },
   "file_connections": {
-    "BANKING.CBL": {
-      "depends_on": [
-        "ACCOUNT-VALIDATION.CPY"
-      ],
-      "used_by": [],
-      "connection_type": [
-        "ACCOUNT-VALIDATION.CPY:COPY"
-      ]
-    },
-    "ACCOUNT-VALIDATION.CPY": {
-      "depends_on": [],
-      "used_by": [
-        "BANKING.CBL"
-      ],
-      "connection_type": []
-    },
-    "BANKING.JCL": {
+    "cobol_code.cbl": {
       "depends_on": [],
       "used_by": [],
       "connection_type": []
     }
   },
   "dependency_matrix": {
-    "BANKING.CBL": [
-      "ACCOUNT-VALIDATION.CPY"
-    ],
-    "ACCOUNT-VALIDATION.CPY": [],
-    "BANKING.JCL": []
+    "cobol_code.cbl": []
   },
   "rag_summary": {
     "standards_rag_available": false,
