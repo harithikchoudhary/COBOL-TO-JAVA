@@ -182,8 +182,10 @@ ENHANCED CONTEXT FROM COMPREHENSIVE ANALYSIS:
 Use this analysis context to provide more accurate and specific requirements.
 """
 
-        bus_prompt = create_business_requirements_prompt(src, cobol_list) + analysis_context
-        tech_prompt = create_technical_requirements_prompt(src, tgt, cobol_list) + analysis_context
+        # Ensure cobol_list is a string for prompt functions
+        cobol_code_str = cobol_list if isinstance(cobol_list, str) else "\n".join(cobol_list)
+        bus_prompt = create_business_requirements_prompt(src, cobol_code_str) + analysis_context
+        tech_prompt = create_technical_requirements_prompt(src, tgt, cobol_code_str) + analysis_context
 
         # Business Requirements Analysis
         business_msgs = [

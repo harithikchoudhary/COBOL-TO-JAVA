@@ -62,7 +62,7 @@
           "dotnet_service": "IMediator",
           "dotnet_method": "SendAsync",
           "conversion_hint": "MediatR command/query pattern",
-          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"AUTHCHK\";\n        byte[] commArea = Encoding.ASCII.GetBytes(\"LK-USER-ID\".PadRight(8));\n        \n        // Assuming a method LinkProgram exists to handle the LINK operation\n        LinkProgram(programName, commArea);\n    }\n\n    private void LinkProgram(string programName, byte[] commArea)\n    {\n        // Implementation for linking to the program\n        // This is a placeholder for the actual logic to call the external program\n        Console.WriteLine($\"Linking to program: {programName} with commarea: {BitConverter.ToString(commArea)}\");\n    }\n}",
+          "ai_conversion": "using System;\nusing System.Runtime.InteropServices;\n\npublic class CicsLinkExample\n{\n    [DllImport(\"cicsapi.dll\", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]\n    private static extern int CicsLink(string programName, byte[] commArea, int length);\n\n    public void ExecuteLink()\n    {\n        string programName = \"AUTHCHK\";\n        byte[] commArea = new byte[8];\n        // Assuming LK-USER-ID is a string or byte array, populate commArea accordingly\n        // Example: Encoding.ASCII.GetBytes(\"LK-USER-ID\").CopyTo(commArea, 0);\n\n        int length = 8;\n        int result = CicsLink(programName, commArea, length);\n\n        if (result != 0)\n        {\n            // Handle error\n            Console.WriteLine(\"Error executing CICS LINK\");\n        }\n    }\n}",
           "complexity_score": 3,
           "performance_impact": "high",
           "security_considerations": [
@@ -87,7 +87,7 @@
           "dotnet_service": "IMediator",
           "dotnet_method": "SendAsync",
           "conversion_hint": "MediatR command/query pattern",
-          "ai_conversion": "using System;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"SESSVAL\";\n        string channelName = \"WS-CHANNEL-NAME\";\n        string containerName = \"WS-CONTAINER-NAME\";\n        string fileName = \"ACCOUNTS\";\n        string accountRecord = string.Empty;\n        string accKey = \"ACC-KEY\";\n        int cicsResponse = 0;\n\n        // Simulate CICS LINK command\n        LinkToProgram(programName, channelName, containerName);\n\n        // Simulate account inquiry\n        string accNumber = \"LK-FROM-ACCOUNT\";\n        accKey = accNumber;\n\n        // Simulate CICS READ command\n        ReadAccountInformation(fileName, ref accountRecord, accKey, ref cicsResponse);\n    }\n\n    private void LinkToProgram(string program, string channel, string container)\n    {\n        // Logic to link to the program\n        Console.WriteLine($\"Linking to program: {program}, Channel: {channel}, Container: {container}\");\n    }\n\n    private void ReadAccountInformation(string file, ref string accountRecord, string ridFld, ref int resp)\n    {\n        // Logic to read account information\n        Console.WriteLine($\"Reading from file: {file}, RIDFLD: {ridFld}\");\n        accountRecord = \"Sample Account Record\"; // Simulated data\n        resp = 0; // Simulated response code\n    }\n}",
+          "ai_conversion": "using System;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        string programName = \"SESSVAL\";\n        string channelName = \"WS-CHANNEL-NAME\";\n        string containerName = \"WS-CONTAINER-NAME\";\n        string fileName = \"ACCOUNTS\";\n        string accountRecord = string.Empty;\n        string accKey = \"ACC-KEY\";\n        int cicsResponse = 0;\n\n        // Simulate CICS LINK command\n        LinkToProgram(programName, channelName, containerName);\n\n        // Simulate account inquiry\n        string accNumber = \"LK-FROM-ACCOUNT\";\n        accountRecord = ReadAccountInformation(fileName, accKey, ref cicsResponse);\n    }\n\n    private void LinkToProgram(string program, string channel, string container)\n    {\n        // Logic to link to a CICS program\n        Console.WriteLine($\"Linking to program: {program}, Channel: {channel}, Container: {container}\");\n    }\n\n    private string ReadAccountInformation(string file, string ridfld, ref int resp)\n    {\n        // Logic to read account information\n        Console.WriteLine($\"Reading from file: {file}, RIDFLD: {ridfld}\");\n        resp = 0; // Simulate a successful response\n        return \"ACCOUNT-RECORD\"; // Simulate account record data\n    }\n}",
           "complexity_score": 8,
           "performance_impact": "high",
           "security_considerations": [
@@ -106,7 +106,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "try\n{\n    // Perform debit from account\n    DebitFromAccount();\n    \n    if (WsCicsResp == Dfhresp.Normal)\n    {\n        // Perform credit to account\n        CreditToAccount();\n        \n        if (WsCicsResp == Dfhresp.Normal)\n        {\n            // Perform log transaction\n            LogTransaction();\n            \n            // Commit the transaction\n            CommitTransaction();\n        }\n    }\n}\ncatch (Exception ex)\n{\n    // Rollback the transaction in case of an error\n    RollbackTransaction();\n    throw;\n}",
+          "ai_conversion": "try\n{\n    // Perform rollback\n    PerformDebitFromAccount();\n\n    if (WsCicsResp == Dfhresp.Normal)\n    {\n        PerformCreditToAccount();\n\n        if (WsCicsResp == Dfhresp.Normal)\n        {\n            PerformLogTransaction();\n        }\n    }\n\n    // Commit transaction\n}\ncatch (Exception ex)\n{\n    // Handle exception\n}",
           "complexity_score": 2,
           "performance_impact": "low",
           "security_considerations": []
@@ -120,7 +120,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "try\n{\n    // Commit the transaction\n    CommitTransaction();\n\n    // Perform the equivalent of NOTIFY-TRANSFER-COMPLETE\n    NotifyTransferComplete();\n}\ncatch (Exception)\n{\n    // Rollback the transaction in case of an error\n    RollbackTransaction();\n}\n\nvoid CommitTransaction()\n{\n    // Implementation for committing the transaction\n}\n\nvoid NotifyTransferComplete()\n{\n    // Implementation for notifying transfer completion\n}\n\nvoid RollbackTransaction()\n{\n    // Implementation for rolling back the transaction\n}",
+          "ai_conversion": "try\n{\n    // Commit the transaction\n    CommitTransaction();\n\n    // Perform the action after successful commit\n    NotifyTransferComplete();\n}\ncatch (Exception)\n{\n    // Rollback the transaction in case of an error\n    RollbackTransaction();\n}\n\nvoid CommitTransaction()\n{\n    // Logic to commit the transaction\n}\n\nvoid NotifyTransferComplete()\n{\n    // Logic to notify that the transfer is complete\n}\n\nvoid RollbackTransaction()\n{\n    // Logic to rollback the transaction\n}",
           "complexity_score": 0,
           "performance_impact": "low",
           "security_considerations": []
@@ -134,7 +134,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "try\n{\n    // Perform syncpoint rollback logic here\n}\ncatch (Exception)\n{\n    // Handle credit error\n}",
+          "ai_conversion": "try\n{\n    // Perform operations that require a syncpoint\n\n    // If an error occurs, rollback\n    throw new Exception(\"Simulated error for rollback\");\n}\ncatch (Exception)\n{\n    // Handle rollback\n    HandleCreditError();\n}\n\nvoid HandleCreditError()\n{\n    // Logic to handle credit error\n}",
           "complexity_score": 0,
           "performance_impact": "low",
           "security_considerations": []
@@ -153,7 +153,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "ReadAsync",
           "conversion_hint": "Entity Framework repository pattern",
-          "ai_conversion": "try\n{\n    // Begin transaction\n    using (var transaction = new TransactionScope())\n    {\n        // Read the account record\n        var accountRecord = ReadAccountRecord(\"ACCOUNTS\", accKey, out var response);\n\n        if (response == CicsResponse.Success)\n        {\n            // Perform debit from account\n            DebitFromAccount(accountRecord);\n\n            // Commit the transaction\n            transaction.Complete();\n        }\n        else\n        {\n            // Handle error\n            HandleDebitError();\n        }\n    }\n}\ncatch (Exception ex)\n{\n    // Handle exception\n    HandleDebitError();\n}\n\nAccountRecord ReadAccountRecord(string fileName, string recordId, out CicsResponse response)\n{\n    // Simulate reading from a file\n    response = CicsResponse.Success;\n    return new AccountRecord();\n}\n\nvoid DebitFromAccount(AccountRecord accountRecord)\n{\n    // Simulate debiting from account\n}\n\nvoid HandleDebitError()\n{\n    // Simulate error handling\n}\n\nenum CicsResponse\n{\n    Success,\n    Error\n}\n\nclass AccountRecord\n{\n    // Simulate account record structure\n}",
+          "ai_conversion": "try\n{\n    // Begin transaction\n    using (var transaction = new TransactionScope())\n    {\n        // Read the account record\n        var accountRecord = ReadAccountRecord(\"ACCOUNTS\", accKey);\n\n        // Perform debit operation\n        DebitFromAccount(accountRecord);\n\n        // Complete the transaction\n        transaction.Complete();\n    }\n}\ncatch (Exception ex)\n{\n    // Handle error\n    HandleDebitError(ex);\n}\n\nprivate AccountRecord ReadAccountRecord(string fileName, string recordId)\n{\n    // Logic to read the account record from the database\n    // This is a placeholder for the actual implementation\n    return new AccountRecord();\n}\n\nprivate void DebitFromAccount(AccountRecord accountRecord)\n{\n    // Logic to debit from the account\n    // This is a placeholder for the actual implementation\n}\n\nprivate void HandleDebitError(Exception ex)\n{\n    // Logic to handle errors during the debit operation\n    // This is a placeholder for the actual implementation\n}",
           "complexity_score": 5,
           "performance_impact": "medium",
           "security_considerations": []
@@ -171,7 +171,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "CreateAsync",
           "conversion_hint": "Entity Framework Add operation",
-          "ai_conversion": "try\n{\n    // Assuming ACCOUNT_RECORD is a byte array or similar structure\n    var accountRecord = GetAccountRecord(); // Method to retrieve the account record data\n    var fileName = \"ACCOUNTS\";\n\n    // Open the file for writing\n    using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Write))\n    {\n        // Write the account record to the file\n        fileStream.Write(accountRecord, 0, accountRecord.Length);\n    }\n\n    // Set response code to indicate success\n    var wsCicsResp = 0; // Assuming 0 indicates success\n}\ncatch (Exception ex)\n{\n    // Handle exceptions and set response code to indicate failure\n    var wsCicsResp = -1; // Assuming -1 indicates failure\n    // Log or handle the exception as needed\n}",
+          "ai_conversion": "try\n{\n    // Assuming ACCOUNT_RECORD is a byte array or similar structure\n    // and fileOperations is an instance of a class handling file operations\n    fileOperations.Rewrite(\"ACCOUNTS\", ACCOUNT_RECORD);\n}\ncatch (Exception ex)\n{\n    // WS_CICS_RESP is assumed to be a variable to store response codes or messages\n    WS_CICS_RESP = ex.Message;\n}",
           "complexity_score": 3,
           "performance_impact": "medium",
           "security_considerations": []
@@ -190,7 +190,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "ReadAsync",
           "conversion_hint": "Entity Framework repository pattern",
-          "ai_conversion": "try\n{\n    // Assuming a method GetAccountRecord that reads from a data source\n    var accountRecord = GetAccountRecord(\"ACCOUNTS\", ACC_KEY);\n\n    if (accountRecord != null)\n    {\n        ACCOUNT_RECORD = accountRecord;\n        WS_CICS_RESP = 0; // Success response code\n    }\n    else\n    {\n        WS_CICS_RESP = 1; // Not found response code\n    }\n}\ncatch (Exception ex)\n{\n    WS_CICS_RESP = 2; // Error response code\n    // Log exception or handle error\n}",
+          "ai_conversion": "try\n{\n    // Assuming a method GetAccountRecord that reads from the \"ACCOUNTS\" file\n    ACCOUNT_RECORD accountRecord = GetAccountRecord(ACC_KEY);\n\n    // Process the accountRecord as needed\n}\ncatch (Exception ex)\n{\n    int WS_CICS_RESP = ex.HResult; // Assign the response code from the exception\n    // Handle the exception or log the error\n}",
           "complexity_score": 4,
           "performance_impact": "medium",
           "security_considerations": []
@@ -208,7 +208,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "CreateAsync",
           "conversion_hint": "Entity Framework Add operation",
-          "ai_conversion": "try\n{\n    // Assuming ACCOUNT-RECORD is a byte array or similar data structure\n    byte[] accountRecord = GetAccountRecord(); // Method to get the account record data\n\n    // Assuming a method to rewrite the record in the file\n    RewriteRecordInFile(\"ACCOUNTS\", accountRecord);\n}\ncatch (Exception ex)\n{\n    int wsCicsResp = GetCicsResponseCode(ex); // Method to map exception to a CICS response code\n    // Handle the response code as needed\n}",
+          "ai_conversion": "try\n{\n    // Assuming ACCOUNT-RECORD is a byte array or similar data structure\n    byte[] accountRecord = GetAccountRecord(); // Method to retrieve the account record data\n\n    // Assuming a method to rewrite the record in the file\n    RewriteRecordInFile(\"ACCOUNTS\", accountRecord);\n}\ncatch (Exception ex)\n{\n    int wsCicsResp = GetCicsResponseCode(ex); // Method to map exception to CICS response code\n    // Handle the response code as needed\n}",
           "complexity_score": 3,
           "performance_impact": "medium",
           "security_considerations": []
@@ -229,7 +229,7 @@
           "dotnet_service": "IRepositoryService",
           "dotnet_method": "CreateAsync",
           "conversion_hint": "Entity Framework Add operation",
-          "ai_conversion": "using System;\n\npublic class TransactionProcessor\n{\n    private DateTime transDate;\n    private int wsRecordCount;\n    private string transKey;\n    private string transFromAcc;\n    private string transToAcc;\n    private decimal transAmount;\n    private string transType;\n    private string transStatus;\n    private string transUserId;\n    private string transTerminal;\n    private int wsCicsResp;\n\n    public void ProcessTransaction()\n    {\n        // Get current date and time\n        transDate = DateTime.Now;\n\n        // Increment record count\n        wsRecordCount++;\n\n        // Set transaction details\n        transKey = wsRecordCount.ToString();\n        transFromAcc = \"LK-FROM-ACCOUNT\";\n        transToAcc = \"LK-TO-ACCOUNT\";\n        transAmount = 100.00m; // Example amount\n        transType = \"TRF\";\n        transStatus = \"C\";\n        transUserId = \"WS-USER-ID\";\n        transTerminal = \"WS-TERMINAL-ID\";\n\n        // Write transaction record\n        WriteTransactionRecord();\n    }\n\n    private void WriteTransactionRecord()\n    {\n        // Simulate writing to a file or database\n        // This is where you would implement the actual write logic\n        Console.WriteLine(\"Transaction written:\");\n        Console.WriteLine($\"Date: {transDate}\");\n        Console.WriteLine($\"From Account: {transFromAcc}\");\n        Console.WriteLine($\"To Account: {transToAcc}\");\n        Console.WriteLine($\"Amount: {transAmount}\");\n        Console.WriteLine($\"Type: {transType}\");\n        Console.WriteLine($\"Status: {transStatus}\");\n        Console.WriteLine($\"User ID: {transUserId}\");\n        Console.WriteLine($\"Terminal: {transTerminal}\");\n        Console.WriteLine($\"Response: {wsCicsResp}\");\n    }\n}",
+          "ai_conversion": "using System;\n\npublic class TransactionProcessor\n{\n    private DateTime transDate;\n    private string transTime;\n    private int wsRecordCount;\n    private string transSeq;\n    private string transFromAcc;\n    private string transToAcc;\n    private decimal transAmount;\n    private string transType;\n    private string transStatus;\n    private string transUserId;\n    private string transTerminal;\n    private string transKey;\n    private string wsCicsResp;\n\n    public void ProcessTransaction()\n    {\n        // Get current date and time\n        transDate = DateTime.Now;\n        transTime = transDate.ToString(\"HHmmss\");\n\n        // Increment record count\n        wsRecordCount++;\n        transSeq = wsRecordCount.ToString();\n\n        // Set transaction details\n        transFromAcc = \"LK-FROM-ACCOUNT\"; // Replace with actual value\n        transToAcc = \"LK-TO-ACCOUNT\"; // Replace with actual value\n        transAmount = 0; // Replace with actual value\n        transType = \"TRF\";\n        transStatus = \"C\";\n        transUserId = \"WS-USER-ID\"; // Replace with actual value\n        transTerminal = \"WS-TERMINAL-ID\"; // Replace with actual value\n\n        // Write transaction record\n        WriteTransactionRecord();\n    }\n\n    private void WriteTransactionRecord()\n    {\n        // Simulate writing to a file or database\n        // Replace with actual file/database write logic\n        Console.WriteLine(\"Writing transaction record...\");\n        Console.WriteLine($\"Date: {transDate.ToString(\"yyyyMMdd\")}\");\n        Console.WriteLine($\"Time: {transTime}\");\n        Console.WriteLine($\"From Account: {transFromAcc}\");\n        Console.WriteLine($\"To Account: {transToAcc}\");\n        Console.WriteLine($\"Amount: {transAmount}\");\n        Console.WriteLine($\"Type: {transType}\");\n        Console.WriteLine($\"Status: {transStatus}\");\n        Console.WriteLine($\"User ID: {transUserId}\");\n        Console.WriteLine($\"Terminal: {transTerminal}\");\n        Console.WriteLine($\"Response: {wsCicsResp}\");\n    }\n}",
           "complexity_score": 8,
           "performance_impact": "medium",
           "security_considerations": []
@@ -247,7 +247,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "using System;\n\npublic class CicsTransaction\n{\n    public void StartBrowse()\n    {\n        try\n        {\n            // Assuming a method to start browsing the file\n            StartBrowseFile(\"TRANSACTIONS\", LK_FROM_ACCOUNT);\n        }\n        catch (Exception ex)\n        {\n            WS_CICS_RESP = ex.Message;\n        }\n    }\n\n    private void StartBrowseFile(string fileName, string ridField)\n    {\n        // Implementation for starting the browse on the file\n        // This is a placeholder for the actual logic\n    }\n\n    private string LK_FROM_ACCOUNT; // This should be initialized with the appropriate value\n    private string WS_CICS_RESP;\n}",
+          "ai_conversion": "using System;\n\npublic class CicsTransaction\n{\n    public void StartBrowse()\n    {\n        string fileName = \"TRANSACTIONS\";\n        string ridField = LK_FROM_ACCOUNT;\n        int responseCode;\n\n        try\n        {\n            // Simulate the STARTBR operation\n            responseCode = StartBrowseOperation(fileName, ridField);\n        }\n        catch (Exception ex)\n        {\n            responseCode = -1; // Indicate an error\n            Console.WriteLine($\"Error: {ex.Message}\");\n        }\n\n        WS_CICS_RESP = responseCode;\n    }\n\n    private int StartBrowseOperation(string fileName, string ridField)\n    {\n        // Implement the logic to start browsing the file\n        // This is a placeholder for the actual CICS STARTBR operation\n        // Return a response code indicating success or failure\n        return 0; // Assume success for this example\n    }\n\n    private string LK_FROM_ACCOUNT = \"SomeAccountIdentifier\";\n    private int WS_CICS_RESP;\n}",
           "complexity_score": 3,
           "performance_impact": "low",
           "security_considerations": []
@@ -266,7 +266,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "bool wsEofFlag = false;\nint wsTsqItem = 1;\nTransactionRecord transactionRecord = new TransactionRecord();\nstring transKey = string.Empty;\nint wsCicsResp = 0;\n\n// End browse logic\nEndBrowse(\"TRANSACTIONS\");\n\n// Read transaction history logic\nReadTransactionHistory();\n\nwhile (!wsEofFlag)\n{\n    wsEofFlag = ReadNextTransaction(\"TRANSACTIONS\", ref transactionRecord, ref transKey, ref wsCicsResp);\n    wsTsqItem++;\n}\n\n// Method to end browse\nvoid EndBrowse(string fileName)\n{\n    // Logic to end browse on the file\n}\n\n// Method to read transaction history\nvoid ReadTransactionHistory()\n{\n    // Logic to read transaction history\n}\n\n// Method to read next transaction\nbool ReadNextTransaction(string fileName, ref TransactionRecord record, ref string key, ref int response)\n{\n    // Logic to read next transaction\n    // Return true if end of file, otherwise false\n    return false;\n}\n\n// TransactionRecord class definition\nclass TransactionRecord\n{\n    // Define properties for transaction record\n}",
+          "ai_conversion": "bool wsEofFlag = false;\nint wsTsqItem = 1;\nTransactionRecord transactionRecord = new TransactionRecord();\nstring transKey = string.Empty;\nint wsCicsResp = 0;\n\n// End browse logic\nEndBrowse(\"TRANSACTIONS\");\n\n// Read transaction history logic\nReadTransactionHistory();\n\nwhile (!wsEofFlag)\n{\n    wsEofFlag = ReadNextTransaction(\"TRANSACTIONS\", ref transactionRecord, ref transKey, ref wsCicsResp);\n    wsTsqItem++;\n}\n\n// Method to end browse\nvoid EndBrowse(string fileName)\n{\n    // Logic to end browse on the specified file\n}\n\n// Method to read transaction history\nvoid ReadTransactionHistory()\n{\n    // Logic to read transaction history\n}\n\n// Method to read next transaction\nbool ReadNextTransaction(string fileName, ref TransactionRecord record, ref string key, ref int response)\n{\n    // Logic to read the next transaction\n    // Return true if end of file is reached, otherwise false\n    return false;\n}",
           "complexity_score": 5,
           "performance_impact": "low",
           "security_considerations": []
@@ -285,7 +285,7 @@
           "dotnet_service": "",
           "dotnet_method": "",
           "conversion_hint": "",
-          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CicsContainerHandler\n{\n    public byte[] GetContainerData(string containerName, string channelName, out int containerLength)\n    {\n        // Simulate fetching data from a CICS container\n        byte[] containerData = FetchDataFromContainer(containerName, channelName);\n        containerLength = containerData.Length;\n        return containerData;\n    }\n\n    private byte[] FetchDataFromContainer(string containerName, string channelName)\n    {\n        // Placeholder for actual CICS interaction logic\n        // For demonstration, returning a sample byte array\n        return Encoding.UTF8.GetBytes(\"Sample container data\");\n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        var handler = new CicsContainerHandler();\n        int containerLength;\n        byte[] containerData = handler.GetContainerData(\"WS-CONTAINER-NAME\", \"WS-CHANNEL-NAME\", out containerLength);\n\n        // Assuming WS-CONTAINER-DATA is a byte array\n        byte[] WS_CONTAINER_DATA = containerData;\n        int WS_CONTAINER_LENGTH = containerLength;\n\n        // Output the results\n        Console.WriteLine(\"Container Data: \" + Encoding.UTF8.GetString(WS_CONTAINER_DATA));\n        Console.WriteLine(\"Container Length: \" + WS_CONTAINER_LENGTH);\n    }\n}",
+          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CICSContainerHandler\n{\n    public byte[] GetContainerData(string containerName, string channelName, out int containerLength)\n    {\n        // Simulate fetching container data from a CICS-like environment\n        byte[] containerData = FetchContainerData(containerName, channelName);\n        containerLength = containerData.Length;\n        return containerData;\n    }\n\n    private byte[] FetchContainerData(string containerName, string channelName)\n    {\n        // Placeholder for actual logic to fetch container data\n        // For demonstration, returning a dummy byte array\n        return Encoding.UTF8.GetBytes(\"Sample container data\");\n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        string containerName = \"WS-CONTAINER-NAME\";\n        string channelName = \"WS-CHANNEL-NAME\";\n        int containerLength;\n\n        CICSContainerHandler handler = new CICSContainerHandler();\n        byte[] containerData = handler.GetContainerData(containerName, channelName, out containerLength);\n\n        // Assuming WS-CONTAINER-DATA is a string for demonstration purposes\n        string containerDataString = Encoding.UTF8.GetString(containerData);\n        Console.WriteLine($\"Container Data: {containerDataString}\");\n        Console.WriteLine($\"Container Length: {containerLength}\");\n    }\n}",
           "complexity_score": 4,
           "performance_impact": "low",
           "security_considerations": [
@@ -304,7 +304,7 @@
           "dotnet_service": "IMediator",
           "dotnet_method": "SendAsync",
           "conversion_hint": "MediatR command/query pattern",
-          "ai_conversion": "using System;\nusing System.Data.SqlClient;\n\npublic class CicsLinkExample\n{\n    public void ExecuteLink()\n    {\n        // Simulate the LINK command to call the program BATCHPRC\n        CallBatchProcess();\n\n        // SQL Operations for reporting\n        GenerateAccountReport();\n    }\n\n    private void CallBatchProcess()\n    {\n        // Logic to call the external program BATCHPRC\n        Console.WriteLine(\"Calling external program BATCHPRC with channel WS-CHANNEL-NAME\");\n        // Implement the actual call logic here\n    }\n\n    private void GenerateAccountReport()\n    {\n        string connectionString = \"your_connection_string_here\";\n        string query = @\"\n            SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE\n            FROM ACCOUNTS\n            WHERE ACC_STATUS = 'A'\n            ORDER BY ACC_BALANCE DESC\";\n\n        using (SqlConnection connection = new SqlConnection(connectionString))\n        {\n            SqlCommand command = new SqlCommand(query, connection);\n            connection.Open();\n\n            using (SqlDataReader reader = command.ExecuteReader())\n            {\n                while (reader.Read())\n                {\n                    Console.WriteLine($\"Account Number: {reader[\"ACC_NUMBER\"]}, \" +\n                                      $\"Holder Name: {reader[\"ACC_HOLDER_NAME\"]}, \" +\n                                      $\"Balance: {reader[\"ACC_BALANCE\"]}, \" +\n                                      $\"Type: {reader[\"ACC_TYPE\"]}\");\n                }\n            }\n        }\n    }\n}",
+          "ai_conversion": "using System;\nusing System.Data.SqlClient;\n\npublic class CICSLinkExample\n{\n    public void ExecuteLink()\n    {\n        // Simulate the CICS LINK to program 'BATCHPRC' with channel 'WS-CHANNEL-NAME'\n        CallBatchProcess(\"BATCHPRC\", \"WS-CHANNEL-NAME\");\n\n        // SQL Operations for reporting\n        GenerateAccountReport();\n    }\n\n    private void CallBatchProcess(string program, string channel)\n    {\n        // Placeholder for the logic to call the batch process\n        Console.WriteLine($\"Calling program {program} with channel {channel}\");\n    }\n\n    private void GenerateAccountReport()\n    {\n        string connectionString = \"your_connection_string_here\";\n        string query = @\"\n            SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE\n            FROM ACCOUNTS\n            WHERE ACC_STATUS = 'A'\n            ORDER BY ACC_BALANCE DESC\";\n\n        using (SqlConnection connection = new SqlConnection(connectionString))\n        {\n            SqlCommand command = new SqlCommand(query, connection);\n            connection.Open();\n            SqlDataReader reader = command.ExecuteReader();\n\n            while (reader.Read())\n            {\n                Console.WriteLine($\"Account Number: {reader[\"ACC_NUMBER\"]}, \" +\n                                  $\"Holder Name: {reader[\"ACC_HOLDER_NAME\"]}, \" +\n                                  $\"Balance: {reader[\"ACC_BALANCE\"]}, \" +\n                                  $\"Type: {reader[\"ACC_TYPE\"]}\");\n            }\n        }\n    }\n}",
           "complexity_score": 3,
           "performance_impact": "high",
           "security_considerations": [
@@ -330,7 +330,7 @@
           "dotnet_service": "ICacheService",
           "dotnet_method": "WriteToTempStorageAsync",
           "conversion_hint": "Redis/MemoryCache implementation",
-          "ai_conversion": "using System;\nusing System.Collections.Generic;\n\npublic class CicsTransaction\n{\n    private string WS_TSQ_NAME = \"WS-TSQ-NAME\";\n    private string WS_MQ_QUEUE = \"WS-MQ-QUEUE\";\n    private string WS_MAPSET = \"WS-MAPSET\";\n    private string WS_MAP_NAME = \"WS-MAP-NAME\";\n    private int WS_CURSOR_POS = 0;\n    private int WS_TSQ_ITEM = 0;\n    private int WS_TSQ_LENGTH = 0;\n    private int WS_MQ_LENGTH = 100;\n    private int WS_ERROR_COUNT = 0;\n    private string WS_ERROR_CODE = string.Empty;\n    private string WS_CICS_RESP = string.Empty;\n    private string ACCOUNT_RECORD = \"ACCOUNT-RECORD\";\n    private string WS_MQ_MESSAGE = \"TRANSFER-COMPLETE\";\n\n    public void ExecuteTransaction()\n    {\n        WriteQueueTS(WS_TSQ_NAME, \"SESSION-START\", 13, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        StoreAccountInTSQ();\n        WS_TSQ_ITEM++;\n        WS_TSQ_LENGTH = ACCOUNT_RECORD.Length;\n        WriteQueueTS(WS_TSQ_NAME, ACCOUNT_RECORD, WS_TSQ_LENGTH, WS_TSQ_ITEM, ref WS_CICS_RESP);\n        SendMQNotification();\n        WriteQueueTD(WS_MQ_QUEUE, WS_MQ_MESSAGE, WS_MQ_LENGTH);\n        SendAccountMap();\n        HandleFileError();\n        StartAuditLog();\n        FinalizeTransaction();\n    }\n\n    private void WriteQueueTS(string queue, string from, int length, int item, ref string resp)\n    {\n        // Simulate CICS WRITEQ TS operation\n        Console.WriteLine($\"WRITEQ TS: Queue={queue}, From={from}, Length={length}, Item={item}\");\n    }\n\n    private void StoreAccountInTSQ()\n    {\n        // Simulate storing account in TSQ\n        Console.WriteLine(\"Store account in TSQ.\");\n    }\n\n    private void SendMQNotification()\n    {\n        // Simulate sending MQ notification\n        Console.WriteLine(\"Send MQ notification.\");\n    }\n\n    private void WriteQueueTD(string queue, string from, int length)\n    {\n        // Simulate CICS WRITEQ TD operation\n        Console.WriteLine($\"WRITEQ TD: Queue={queue}, From={from}, Length={length}\");\n    }\n\n    private void SendAccountMap()\n    {\n        // Sim",
+          "ai_conversion": "using System;\nusing System.Text;\n\npublic class CICSOperations\n{\n    private int wsTsqItem = 0;\n    private int wsTsqLength = 0;\n    private int wsErrorCount = 0;\n    private string wsCicsResp;\n    private string wsMqMessage;\n    private int wsMqLength;\n    private string wsErrorCode;\n    private string wsTsqName = \"WS-TSQ-NAME\";\n    private string wsMqQueue = \"WS-MQ-QUEUE\";\n    private string wsMapset = \"WS-MAPSET\";\n    private string wsMapName = \"WS-MAP-NAME\";\n    private int wsCursorPos;\n    private string accountRecord = \"ACCOUNT-RECORD\";\n\n    public void Execute()\n    {\n        StoreAccountInTsq();\n        SendMqNotification();\n        SendAccountMap();\n        HandleFileError();\n        StartAuditLog();\n        FinalizeTransaction();\n    }\n\n    private void StoreAccountInTsq()\n    {\n        WriteQueueTs(wsTsqName, \"SESSION-START\", 13, wsTsqItem, ref wsCicsResp);\n        wsTsqItem++;\n        wsTsqLength = accountRecord.Length;\n        WriteQueueTs(wsTsqName, accountRecord, wsTsqLength, wsTsqItem, ref wsCicsResp);\n    }\n\n    private void SendMqNotification()\n    {\n        wsMqMessage = \"TRANSFER-COMPLETE\";\n        wsMqLength = 100;\n        WriteQueueTd(wsMqQueue, wsMqMessage, wsMqLength);\n    }\n\n    private void SendAccountMap()\n    {\n        SendMap(wsMapset, wsMapName, accountRecord, wsCursorPos);\n    }\n\n    private void HandleFileError()\n    {\n        wsErrorCount++;\n        wsErrorCode = \"FILE-ERROR\";\n        LogError();\n    }\n\n    private void StartAuditLog()\n    {\n        WriteQueueTd(\"AUDIT\", \"TRANSACTION-START\", 17);\n    }\n\n    private void FinalizeTransaction()\n    {\n        DeleteQueueTs(wsTsqName);\n    }\n\n    private void WriteQueueTs(string queue, string from, int length, int item, ref string resp)\n    {\n        // Simulate WRITEQ TS operation\n        Console.WriteLine($\"WRITEQ TS: Queue={queue}, From={from}, Length={length}, Item={item}\");\n        resp = \"OK\";\n    }",
           "complexity_score": 12,
           "performance_impact": "medium",
           "security_considerations": []
@@ -952,7 +952,7 @@
     "total_bms_maps": 0
   },
   "project_metadata": {
-    "analysis_timestamp": "2025-07-08T15:09:00.868017",
+    "analysis_timestamp": "2025-07-10T12:54:13.127406",
     "total_files": 3,
     "business_domain": "BANKING",
     "cics_transaction_flow": [],
@@ -983,34 +983,34 @@
   "ai_insights": {
     "business_domain": "BANKING",
     "integration_patterns": [
-      "Synchronous request-response",
+      "Synchronous request-reply",
       "Asynchronous messaging"
     ],
     "data_flows": [
       {
         "source": "CICS application",
         "destination": "DB2 database",
-        "type": "SQL operations",
+        "type": "SQL operation",
         "count": 2
       },
       {
-        "source": "External systems",
-        "destination": "CICS application",
-        "type": "CICS commands",
+        "source": "CICS application",
+        "destination": "External systems",
+        "type": "CICS command",
         "count": 16
       }
     ],
     "modernization_recommendations": [
-      "Implement API gateways to expose CICS transactions as RESTful services",
-      "Migrate SQL operations to a microservices architecture for better scalability",
-      "Adopt containerization for CICS applications to improve deployment flexibility"
+      "Consider migrating CICS applications to microservices architecture for better scalability and maintainability.",
+      "Implement API gateways to expose CICS transactions as RESTful services for easier integration with modern applications.",
+      "Evaluate the use of cloud-based solutions for hosting and scaling CICS workloads."
     ],
     "risk_assessment": {
       "legacy_dependency": "High",
-      "data_integrity": "Medium",
-      "system_availability": "High",
-      "security": "Medium"
+      "integration_complexity": "Medium",
+      "data_security": "High",
+      "modernization_cost": "Medium"
     }
   },
-  "enhancement_timestamp": "2025-07-08T15:09:43.701582"
+  "enhancement_timestamp": "2025-07-10T12:54:59.776021"
 }

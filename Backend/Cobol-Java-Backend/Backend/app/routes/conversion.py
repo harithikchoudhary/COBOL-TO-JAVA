@@ -73,6 +73,47 @@ def get_enhanced_context_from_analysis():
     
     return enhanced_context
 
+def build_analysis_instructions(enhanced_context):
+    """Build comprehensive analysis instructions"""
+    analysis_instructions = ""
+    
+    if enhanced_context:
+        analysis_instructions += f"\n\nENHANCED CONTEXT:\n{enhanced_context}\n"
+    
+    try:
+        from ..routes.analysis import analysis_manager
+        if analysis_manager and hasattr(analysis_manager, 'analysis_results'):
+            full = analysis_manager.analysis_results
+            full_json = json.dumps(full, indent=2)[:2000]  # Truncate to prevent token overflow
+            
+            # Get RAG contexts
+            standards_ctx = getattr(analysis_manager, 'get_standards_context', lambda x, k: "")(enhanced_context[:200], k=3)
+            project_ctx = getattr(analysis_manager, 'get_project_context', lambda x, k: "")(enhanced_context[:200], k=5)
+
+            analysis_instructions += f"""
+COMPREHENSIVE ANALYSIS RESULTS:
+{full_json}
+
+STANDARDS CONTEXT:
+{standards_ctx}
+
+PROJECT CONTEXT:
+{project_ctx}
+
+CRITICAL INSTRUCTIONS:
+1. Honor ALL architecture recommendations from the analysis
+2. Map COBOL structures to .NET entities as specified
+3. Implement all identified business rules and CICS patterns
+4. Follow the derived namespace and project conventions
+5. Use the recommended technology stack and patterns
+"""
+    except Exception as e:
+        logger.warning(f"⚠️ Could not build full analysis instructions: {e}")
+        # Fallback to just enhanced context if available
+        if not enhanced_context:
+            analysis_instructions = "\n\nNo comprehensive analysis context available.\n"
+    
+    return analysis_instructions
 
 @bp.route("/convert", methods=["POST"])
 def convert_code():
@@ -128,14 +169,14 @@ def convert_code():
                 "databaseUsed": False
             }), 400
 
-        # NEW: Get comprehensive enhanced context from analysis results.
+        # Get comprehensive enhanced context from analysis results
         log_processing_step("Retrieving comprehensive analysis context", {
             "has_analysis_manager": True
         }, 2)
         
         enhanced_context = get_enhanced_context_from_analysis()
 
-        # Analyze the code to detect if it contains database operations.
+        # Analyze the code to detect if it contains database operations
         log_processing_step("Analyzing source code for database operations", {
             "source_language": source_language,
             "code_preview": source_code[:200] + "..." if len(source_code) > 200 else source_code,
@@ -149,7 +190,7 @@ def convert_code():
             "will_include_db_template": has_database
         }, 4)
         
-        # Only get DB template if database operations are detected.
+        # Only get DB template if database operations are detected
         if has_database:
             logger.info(f"📊 Database operations detected in COBOL code. Including DB setup in conversion.")
             db_setup_template = get_db_template("C#")
@@ -164,7 +205,7 @@ def convert_code():
         # Create a code converter instance
         converter = create_code_converter(client, AZURE_OPENAI_DEPLOYMENT_NAME)
         
-        # Create a prompt for the Azure OpenAI model
+        # Create base prompt for code conversion
         log_processing_step("Creating enhanced code conversion prompt", {
             "including_db_template": bool(db_setup_template),
             "business_req_length": len(str(business_requirements)),
@@ -172,97 +213,73 @@ def convert_code():
             "enhanced_context_length": len(enhanced_context)
         }, 5)
         
-        prompt = create_code_conversion_prompt(
+        base_prompt = create_code_conversion_prompt(
             source_language, "C#", source_code,
             business_requirements, technical_requirements, db_setup_template
         )
 
-        # NEW: Embed full analysis.json plus live RAG contexts
-        analysis_instructions = ""
-        try:
-            from ..routes.analysis import analysis_manager
-            full = analysis_manager.analysis_results  # complete analysis dict
-            full_json = json.dumps(full, indent=2)[:2000]
-            standards_ctx = analysis_manager.get_standards_context(source_code[:200], k=3)
-            project_ctx   = analysis_manager.get_project_context(source_code[:200], k=5)
+        # Add database-specific instructions
+        database_instruction = (
+            "\n\nIMPORTANT: Only include database initialization code if the source COBOL code contains "
+            "database or SQL operations. If the code is a simple algorithm (like sorting, calculation, etc.) "
+            "without any database interaction, do NOT include any database setup code in the converted .NET 8 code."
+        )
 
-            analysis_instructions = f"""
+        # Build comprehensive analysis instructions
+        analysis_instructions = build_analysis_instructions(enhanced_context)
 
-FULL ANALYSIS JSON (truncated):
-{full_json}
+        # Combine all prompt parts
+        final_prompt = base_prompt + database_instruction + analysis_instructions
 
-STANDARDS RAG CONTEXT:
-{standards_ctx}
+        # Create system message for code conversion
+        system_message = (
+            "You are an expert COBOL to .NET 8 code converter with comprehensive analysis capabilities. "
+            "You have access to detailed business analysis, CICS patterns, RAG-enhanced context, and architectural recommendations. "
+            "You convert legacy COBOL code to modern, domain-aware .NET 8 applications while maintaining all business logic. "
+            "Only include database setup/initialization if the original COBOL code uses databases or SQL. "
+            "For simple algorithms or calculations without database operations, do NOT add any database code. "
+            "Generate a complete .NET 8 application structure following clean architecture, DDD principles, and best practices. "
+            "Include Entity Framework Core models, repositories, services, controllers, and configuration files as needed. "
+            "Please generate the database connection string for MySQL Server. Ensure the model definitions do not use precision attributes. "
+            "The code should be compatible with .NET 8, and all necessary dependencies should be included in the .csproj file. "
+            "Use the provided comprehensive analysis context to create more accurate entity relationships and service boundaries. "
+            "Implement the recommended microservices patterns and technology stack from the analysis. "
+            "Follow the architectural recommendations to ensure scalable, maintainable code. "
+            "Return your response in JSON format always with the following structure:\n"
+            "{\n"
+            '  "convertedCode": {\n'
+            '    "Entity": {"FileName": "","Path": "Models/", "content": ""},\n'
+            '    "Repository": {"FileName": "","Path": "Repositories/Interfaces/", "content": ""},\n'
+            '    "RepositoryImpl": {"FileName": "","Path": "Repositories/", "content": ""},\n'
+            '    "Service": {"FileName": "IUserService.cs","Path": "Services/Interfaces/", "content": ""},\n'
+            '    "ServiceImpl": {"FileName": "UserService.cs","Path": "Services/", "content": ""},\n'
+            '    "Controller": {"FileName": "UserController.cs","Path": "Controllers/", "content": ""},\n'
+            '    "DbContext": {"FileName": "ApplicationDbContext.cs","Path": "Data/", "content": ""},\n'
+            '    "Program": {"FileName": "Program.cs","Path": "./", "content": ""},\n'
+            '    "Startup": {"FileName": "Startup.cs","Path": "./", "content": ""},\n'
+            '    "AppSettings": {"FileName": "appsettings.json","Path": "./", "content": ""},\n'
+            '    "AppSettingsDev": {"FileName": "appsettings.Development.json","Path": "./", "content": ""},\n'
+            '    "ProjectFile": {"FileName": "Project.csproj","Path": "./", "content": ""},\n'
+            '    "Dependencies": {"content": "NuGet packages and .NET dependencies needed"}\n'
+            "  },\n"
+            '  "databaseUsed": true/false,\n'
+            '  "conversionNotes": "Detailed notes about the conversion process including comprehensive analysis insights",\n'
+            '  "potentialIssues": ["List of potential issues or considerations"],\n'
+            '  "analysisEnhanced": true/false,\n'
+            '  "architectureRecommendations": ["List of implemented architecture patterns"],\n'
+            '  "technologyStack": {"database": "", "caching": "", "messaging": ""}\n'
+            "}\n"
+            "IMPORTANT: Always return the response in this JSON format. Include proper .NET attributes ([ApiController], [Route], [HttpGet], etc.). "
+            "Use Entity Framework Core for database operations. Follow .NET best practices, SOLID principles, and naming conventions. "
+            "Implement proper dependency injection, async/await patterns, and error handling. Ensure everything is compatible with .NET 8. "
+            "Leverage the provided comprehensive analysis context to create more accurate business domain models and relationships. "
+            "Implement the recommended microservices patterns, caching strategies, and security measures from the analysis."
+        )
 
-PROJECT RAG CONTEXT:
-{project_ctx}
-
-CRITICAL: Use these detailed analysis artifacts to:
-1. Honor EVERY architecture recommendation.
-2. Map COBOL structures → .NET entities EXACTLY.
-3. Embed all business rules & CICS patterns.
-4. Follow the derived namespace & project conventions.
-"""
-        except Exception:
-            # fallback to just the short enhanced_context
-            if enhanced_context:
-                analysis_instructions = f"\n{enhanced_context}\n"
-        
-        conversion_messages = [ {"role": "user", "content": prompt + analysis_instructions}]
-
-
-        # Add enhanced instruction about database code
-        prompt += f"\n\nIMPORTANT: Only include database initialization code if the source COBOL code contains database or SQL operations. If the code is a simple algorithm (like sorting, calculation, etc.) without any database interaction, do NOT include any database setup code in the converted .NET 8 code."
-
-        # Enhanced conversion messages for COBOL to .NET 8 with comprehensive analysis
+        # Build final messages for code conversion
         conversion_messages = [
-            {
-                "role": "system",
-                "content": (
-                    f"You are an expert COBOL to .NET 8 code converter with comprehensive analysis capabilities. "
-                    f"You have access to detailed business analysis, CICS patterns, RAG-enhanced context, and architectural recommendations. "
-                    f"You convert legacy COBOL code to modern, domain-aware .NET 8 applications while maintaining all business logic. "
-                    f"Only include database setup/initialization if the original COBOL code uses databases or SQL. "
-                    f"For simple algorithms or calculations without database operations, do NOT add any database code. "
-                    f"Generate a complete .NET 8 application structure following clean architecture, DDD principles, and best practices. "
-                    f"Include Entity Framework Core models, repositories, services, controllers, and configuration files as needed. "
-                    f"Please generate the database connection string for MySQL Server. Ensure the model definitions do not use precision attributes. "
-                    f"The code should be compatible with .NET 8, and all necessary dependencies should be included in the .csproj file. "
-                    f"Use the provided comprehensive analysis context to create more accurate entity relationships and service boundaries. "
-                    f"Implement the recommended microservices patterns and technology stack from the analysis. "
-                    f"Follow the architectural recommendations to ensure scalable, maintainable code. "
-                    f"Return your response in JSON format always with the following structure:\n"
-                    "{\n"
-                    '  "convertedCode": {\n'
-                    '    "Entity": {"FileName": "User.cs","Path": "Models/", "content": ""},\n'
-                    '    "Repository": {"FileName": "IUserRepository.cs","Path": "Repositories/Interfaces/", "content": ""},\n'
-                    '    "RepositoryImpl": {"FileName": "UserRepository.cs","Path": "Repositories/", "content": ""},\n'
-                    '    "Service": {"FileName": "IUserService.cs","Path": "Services/Interfaces/", "content": ""},\n'
-                    '    "ServiceImpl": {"FileName": "UserService.cs","Path": "Services/", "content": ""},\n'
-                    '    "Controller": {"FileName": "UserController.cs","Path": "Controllers/", "content": ""},\n'
-                    '    "DbContext": {"FileName": "ApplicationDbContext.cs","Path": "Data/", "content": ""},\n'
-                    '    "Program": {"FileName": "Program.cs","Path": "./", "content": ""},\n'
-                    '    "Startup": {"FileName": "Startup.cs","Path": "./", "content": ""},\n'
-                    '    "AppSettings": {"FileName": "appsettings.json","Path": "./", "content": ""},\n'
-                    '    "AppSettingsDev": {"FileName": "appsettings.Development.json","Path": "./", "content": ""},\n'
-                    '    "ProjectFile": {"FileName": "Project.csproj","Path": "./", "content": ""},\n'
-                    '    "Dependencies": {"content": "NuGet packages and .NET dependencies needed"}\n'
-                    "  },\n"
-                    '  "databaseUsed": true/false,\n'
-                    '  "conversionNotes": "Detailed notes about the conversion process including comprehensive analysis insights",\n'
-                    '  "potentialIssues": ["List of potential issues or considerations"],\n'
-                    '  "analysisEnhanced": true/false,\n'
-                    '  "architectureRecommendations": ["List of implemented architecture patterns"],\n'
-                    '  "technologyStack": {"database": "", "caching": "", "messaging": ""}\n'
-                    "}\n"
-                    "IMPORTANT: Always return the response in this JSON format. Include proper .NET attributes ([ApiController], [Route], [HttpGet], etc.). "
-                    "Use Entity Framework Core for database operations. Follow .NET best practices, SOLID principles, and naming conventions. "
-                    "Implement proper dependency injection, async/await patterns, and error handling. Ensure everything is compatible with .NET 8. "
-                    "Leverage the provided comprehensive analysis context to create more accurate business domain models and relationships. "
-                    "Implement the recommended microservices patterns, caching strategies, and security measures from the analysis."
-                )
-            },
-            {"role": "user", "content": prompt + analysis_instructions}
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": final_prompt}
         ]
 
         # Call Azure OpenAI API for enhanced code conversion
@@ -270,7 +287,7 @@ CRITICAL: Use these detailed analysis artifacts to:
             "model": AZURE_OPENAI_DEPLOYMENT_NAME,
             "temperature": 0.1,
             "max_tokens": 4000,
-            "prompt_length": len(prompt + analysis_instructions),
+            "prompt_length": len(final_prompt),
             "target_language": "C#",
             "analysis_enhanced": bool(enhanced_context)
         }, 6)
@@ -310,6 +327,30 @@ CRITICAL: Use these detailed analysis artifacts to:
 
         # Save converted code to file (if original filename is provided)
         cobol_filename = data.get("cobolFilename") or data.get("sourceFilename") or ""
+
+        # Save full JSON and extract code sections to ConvertedCode folder
+        converted_code_dir = os.path.join(output_dir, "ConvertedCode")
+        os.makedirs(converted_code_dir, exist_ok=True)
+        
+        # Save the full JSON response
+        base_name = os.path.splitext(os.path.basename(cobol_filename))[0] if cobol_filename else f"converted_{int(time.time())}"
+        json_filename = f"{base_name}_llm_output.json"
+        json_path = os.path.join(converted_code_dir, json_filename)
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(conversion_json, f, indent=2, ensure_ascii=False)
+        
+        # Extract and save each code section
+        for section, info in converted_code.items():
+            if isinstance(info, dict):
+                file_name = info.get("FileName") or f"{section}.txt"
+                file_path = info.get("Path") or ""
+                content = info.get("content", "")
+                # Compose full path
+                section_dir = os.path.join(converted_code_dir, file_path)
+                os.makedirs(section_dir, exist_ok=True)
+                section_file_path = os.path.join(section_dir, file_name)
+                with open(section_file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
         
         log_processing_step("Enhanced code conversion completed", {
             "converted_code_length": len(str(converted_code)),
@@ -337,21 +378,23 @@ CRITICAL: Use these detailed analysis artifacts to:
         if enhanced_context:
             unit_test_prompt += f"\n\nAdditional Context from Analysis:\n{enhanced_context[:1000]}..."
         
+        # Unit test system message
+        unit_test_system = (
+            "You are an expert test engineer specializing in writing comprehensive unit tests for .NET 8 applications. "
+            "You create unit tests that verify all business logic, edge cases, and domain rules. "
+            "Use the provided analysis context to create more accurate and business-aware tests. "
+            "Return your response in JSON format with the following structure:\n"
+            "{\n"
+            '  "unitTestCode": "The complete unit test code here",\n'
+            '  "testDescription": "Description of the test strategy",\n'
+            '  "coverage": ["List of functionalities covered by the tests"],\n'
+            '  "businessRuleTests": ["List of business rules being tested"]\n'
+            "}"
+        )
+        
         # Prepare unit test messages
         unit_test_messages = [
-            {
-                "role": "system",
-                "content": f"You are an expert test engineer specializing in writing comprehensive unit tests for .NET 8 applications. "
-                          f"You create unit tests that verify all business logic, edge cases, and domain rules. "
-                          f"Use the provided analysis context to create more accurate and business-aware tests. "
-                          f"Return your response in JSON format with the following structure:\n"
-                          f"{{\n"
-                          f'  "unitTestCode": "The complete unit test code here",\n'
-                          f'  "testDescription": "Description of the test strategy",\n'
-                          f'  "coverage": ["List of functionalities covered by the tests"],\n'
-                          f'  "businessRuleTests": ["List of business rules being tested"]\n'
-                          f"}}"
-            },
+            {"role": "system", "content": unit_test_system},
             {"role": "user", "content": unit_test_prompt}
         ]
         
@@ -373,7 +416,7 @@ CRITICAL: Use these detailed analysis artifacts to:
         log_gpt_interaction("Enhanced Unit Test Generation", AZURE_OPENAI_DEPLOYMENT_NAME, 
                           unit_test_messages, unit_test_response, 9)
         
-        # Parse the JSON response
+        # Parse unit test response
         log_processing_step("Parsing enhanced unit test response", {
             "response_length": len(unit_test_response.choices[0].message.content)
         }, 10)
@@ -412,24 +455,26 @@ CRITICAL: Use these detailed analysis artifacts to:
         if enhanced_context:
             functional_test_prompt += f"\n\nBusiness Domain Context from Analysis:\n{enhanced_context[:1000]}..."
         
+        # Functional test system message
+        functional_test_system = (
+            "You are an expert QA engineer specializing in creating functional tests for .NET 8 applications. "
+            "You create comprehensive test scenarios that verify the application meets all business requirements. "
+            "Focus on user journey tests, acceptance criteria, and business domain validation. "
+            "Use the provided analysis context to create domain-aware functional tests. "
+            "Return your response in JSON format with the following structure:\n"
+            "{\n"
+            '  "functionalTests": [\n'
+            '    {"id": "FT1", "title": "Test scenario title", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"},\n'
+            '    {"id": "FT2", "title": "Another test scenario", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"}\n'
+            '  ],\n'
+            '  "testStrategy": "Description of the overall testing approach",\n'
+            '  "domainCoverage": ["List of business domain areas covered"]\n'
+            "}"
+        )
+        
         # Prepare functional test messages
         functional_test_messages = [
-            {
-                "role": "system",
-                "content": f"You are an expert QA engineer specializing in creating functional tests for .NET 8 applications. "
-                          f"You create comprehensive test scenarios that verify the application meets all business requirements. "
-                          f"Focus on user journey tests, acceptance criteria, and business domain validation. "
-                          f"Use the provided analysis context to create domain-aware functional tests. "
-                          f"Return your response in JSON format with the following structure:\n"
-                          f"{{\n"
-                          f'  "functionalTests": [\n'
-                          f'    {{"id": "FT1", "title": "Test scenario title", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"}},\n'
-                          f'    {{"id": "FT2", "title": "Another test scenario", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"}}\n'
-                          f'  ],\n'
-                          f'  "testStrategy": "Description of the overall testing approach",\n'
-                          f'  "domainCoverage": ["List of business domain areas covered"]\n'
-                          f"}}"
-            },
+            {"role": "system", "content": functional_test_system},
             {"role": "user", "content": functional_test_prompt}
         ]
         
@@ -451,7 +496,7 @@ CRITICAL: Use these detailed analysis artifacts to:
         log_gpt_interaction("Enhanced Functional Test Generation", AZURE_OPENAI_DEPLOYMENT_NAME, 
                           functional_test_messages, functional_test_response, 12)
         
-        # Parse the JSON response
+        # Parse functional test response
         log_processing_step("Parsing enhanced functional test response", {
             "response_length": len(functional_test_response.choices[0].message.content)
         }, 13)

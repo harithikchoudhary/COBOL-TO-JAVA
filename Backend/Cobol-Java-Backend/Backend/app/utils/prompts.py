@@ -2,6 +2,8 @@
 Module for generating prompts for code analysis and conversion.
 """
 
+from .cobol_business_logic import extract_business_logic_lines
+
 def create_business_requirements_prompt(source_language, source_code):
     """
     Creates a prompt for analyzing business requirements from source code.
@@ -13,10 +15,17 @@ def create_business_requirements_prompt(source_language, source_code):
     Returns:
         str: The prompt for business requirements analysis
     """
+    business_logic_lines = []
+    if source_language.strip().lower() == "cobol":
+        business_logic_lines = extract_business_logic_lines(source_code)
+    logic_summary = "\n".join(business_logic_lines) if business_logic_lines else "[WARNING: No business logic statements detected in COBOL code. Only CRUD/data access may be present.]"
     return f"""
             You are a business analyst responsible for analyzing and documenting the business requirements from the following {source_language} code. Your task is to interpret the code's intent and extract meaningful business logic suitable for non-technical stakeholders.
 
             The code may be written in a legacy language like COBOL, possibly lacking comments or modern structure. You must infer business rules by examining variable names, control flow, data manipulation, and any input/output operations. Focus only on **business intent**—do not describe technical implementation.
+
+            ### Extracted Business Logic (from COBOL):
+            {logic_summary}
 
             ### Output Format Instructions:
             - Use plain text headings and paragraphs with the following structure:
