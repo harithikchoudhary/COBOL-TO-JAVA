@@ -1,1 +1,0 @@
-NuGet packages and .NET dependencies needed

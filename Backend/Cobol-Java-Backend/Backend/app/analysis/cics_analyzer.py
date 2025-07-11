@@ -187,6 +187,47 @@ class CICSAnalyzer:
         
         return enhanced_analysis
 
+    def analyze_full_source(self) -> Dict[str, Any]:
+        """Analyze all source code files in uploads_dir and save a single comprehensive analysis.json in a new 'analysis' folder."""
+        logger.info("🔍 Starting full source code analysis for all files...")
+        
+        # Scan all files in uploads_dir (recursively)
+        all_files = []
+        for root, dirs, files in os.walk(self.uploads_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                all_files.append(file_path)
+
+        logger.info(f"📁 Found {len(all_files)} files for analysis.")
+        
+        # Load content of all files
+        files_content = {}
+        for file_path in all_files:
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    files_content[os.path.relpath(file_path, self.uploads_dir)] = f.read()
+            except Exception as e:
+                logger.warning(f"⚠️ Could not read {file_path}: {e}")
+
+        # Perform enhanced analysis on all files
+        analysis_result = self._perform_enhanced_analysis(files_content)
+        
+        # Optionally, enhance with AI
+        full_analysis = self._ai_enhance_analysis(analysis_result)
+
+        # Save to new 'analysis' folder
+        analysis_dir = os.path.join(self.output_dir, '..', 'analysis')
+        os.makedirs(analysis_dir, exist_ok=True)
+        analysis_path = os.path.join(analysis_dir, 'analysis.json')
+        try:
+            with open(analysis_path, 'w', encoding='utf-8') as f:
+                json.dump(full_analysis, f, indent=2, ensure_ascii=False)
+            logger.info(f"✅ Full source analysis saved to {analysis_path}")
+        except Exception as e:
+            logger.error(f"❌ Failed to save full source analysis: {e}")
+
+        return full_analysis
+
     def _load_project_files(self) -> Dict[str, Any]:
         """Load and categorize project files"""
         
@@ -303,7 +344,6 @@ class CICSAnalyzer:
                     "line_number": i,
                     "cobol_type": self._determine_cobol_type(pic),
                     "dotnet_property": self._generate_dotnet_property(name, pic),
-                    "java_property": self._generate_java_property(name, pic),
                     "validation_hints": self._generate_validation_hints(pic),
                     "is_key_field": self._is_key_field(name),
                     "is_required": self._is_required_field(name, pic)
@@ -876,19 +916,6 @@ class CICSAnalyzer:
             return "long"
         return "string"
 
-    def _pic_to_java_type(self, pic: str) -> str:
-        """Convert PIC clause to Java type"""
-        if not pic:
-            return "String"
-        pu = pic.upper()
-        if "X" in pu or "A" in pu:
-            return "String"
-        if "9" in pu:
-            if "V" in pu or "." in pu:
-                return "BigDecimal"
-            return "Integer" if pu.count("9") <= 9 else "Long"
-        return "String"
-
     def _to_pascal_case(self, text: str) -> str:
         """Convert to PascalCase"""
         parts = re.split(r"[\s_-]+", text)
@@ -904,15 +931,6 @@ class CICSAnalyzer:
         return {
             "name": self._to_pascal_case(name.replace("-", "_")),
             "type": self._pic_to_dotnet_type(pic),
-            "original_name": name,
-            "pic_clause": pic
-        }
-
-    def _generate_java_property(self, name: str, pic: str) -> Dict[str, str]:
-        """Generate Java property info"""
-        return {
-            "name": self._to_camel_case(name.replace("-", "_")),
-            "type": self._pic_to_java_type(pic),
             "original_name": name,
             "pic_clause": pic
         }

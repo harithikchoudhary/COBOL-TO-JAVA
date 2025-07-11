@@ -44,6 +44,7 @@ export default function App() {
         error,
         isBackendAvailable,
         setSourceCodeJson,
+        convertedFiles,
       }) => (
         <div className="min-vh-100" style={{ backgroundColor: "#f0fffa" }}>
           <Container className="px-4 py-5">
@@ -160,6 +161,7 @@ export default function App() {
                   setActiveTab={setActiveTab}
                   handleReset={handleReset}
                   targetLanguage={targetLanguage}
+                  convertedFiles={convertedFiles}
                 />
               )}
             </div>

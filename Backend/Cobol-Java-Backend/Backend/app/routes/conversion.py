@@ -14,6 +14,7 @@ import json
 import re
 import time
 import traceback
+import uuid
 
 bp = Blueprint('conversion', __name__, url_prefix='/cobo')
 
@@ -25,10 +26,13 @@ client = AzureOpenAI(
 )
 
 def save_json_response(cobol_filename, json_obj):
-    """Save the full JSON response to the output directory, using the COBOL filename as base."""
+    """Save the full JSON response to the json_output directory, using the COBOL filename as base."""
+    base_dir = os.path.dirname(output_dir)
+    json_output_dir = os.path.join(base_dir, "json_output")
+    os.makedirs(json_output_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(cobol_filename))[0] if cobol_filename else f"converted_{int(time.time())}"
     output_filename = f"{base_name}_output.json"
-    output_path = os.path.join(output_dir, output_filename)
+    output_path = os.path.join(json_output_dir, output_filename)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(json_obj, f, indent=2, ensure_ascii=False)
     return output_path
@@ -115,6 +119,117 @@ CRITICAL INSTRUCTIONS:
     
     return analysis_instructions
 
+def extract_project_name(converted_code):
+    # Prefer namespace from Program.cs or any .cs file
+    for key, info in converted_code.items():
+        if isinstance(info, dict):
+            file_name = info.get("FileName", "")
+            if file_name.endswith(".cs"):
+                content = info.get("content", "")
+                match = re.search(r'namespace ([^\s{]+)', content)
+                if match:
+                    return match.group(1)
+    # Fallback: Try Project.csproj
+    proj = converted_code.get("ProjectFile") or converted_code.get("Project")
+    if proj and isinstance(proj, dict):
+        content = proj.get("content", "")
+        match = re.search(r'<RootNamespace>(.*?)</RootNamespace>', content)
+        if match:
+            return match.group(1)
+        # Fallback: use file name without extension
+        file_name = proj.get("FileName")
+        if file_name and file_name.endswith(".csproj"):
+            return file_name[:-7]
+    return "Project"
+
+def flatten_converted_code(converted_code, unit_test_code=None):
+    files = {}
+    top_level_files = [
+        "Program.cs",
+        "Startup.cs",
+        "appsettings.json",
+        "appsettings.Development.json"
+    ]
+    project_name = extract_project_name(converted_code)
+    # Find the relevant service or controller filename for the test file
+    test_file_name = "UnitTests.cs"
+    test_folder = "Services"
+    if "ServiceImpl" in converted_code and isinstance(converted_code["ServiceImpl"], dict):
+        service_file = converted_code["ServiceImpl"].get("FileName")
+        if service_file and service_file.endswith(".cs"):
+            test_file_name = service_file.replace(".cs", "Tests.cs")
+            test_folder = "Services"
+    elif "Controller" in converted_code and isinstance(converted_code["Controller"], dict):
+        controller_file = converted_code["Controller"].get("FileName")
+        if controller_file and controller_file.endswith(".cs"):
+            test_file_name = controller_file.replace(".cs", "Tests.cs")
+            test_folder = "Controllers"
+    for section, info in converted_code.items():
+        if isinstance(info, dict):
+            file_name = info.get("FileName") or f"{section}.txt"
+            if file_name == "Dependencies.txt":
+                continue  # Skip Dependencies.txt
+            file_path = info.get("Path") or ""
+            # Place any .csproj file in the project_name/ directory, like Program.cs
+            if file_name.lower().endswith(".csproj"):
+                rel_path = f"{project_name}/{file_name}"
+            elif file_name in top_level_files:
+                rel_path = f"{project_name}/{file_name}"
+            else:
+                rel_path = os.path.join(project_name, file_path, file_name).replace("\\", "/")
+            content = info.get("content", "")
+            files[rel_path] = content
+    # Add unit test code and test .csproj with the correct name and folder
+    test_project_folder = f"{project_name}.Tests"
+    test_csproj_name = f"{project_name}.Tests.csproj"
+    test_csproj_content = f'''<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+    <PackageReference Include="Moq" Version="4.20.70" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../{project_name}/{project_name}.csproj" />
+  </ItemGroup>
+</Project>'''
+    if unit_test_code and unit_test_code.strip():
+        files[f"{test_project_folder}/{test_folder}/{test_file_name}"] = unit_test_code
+        files[f"{test_project_folder}/{test_csproj_name}"] = test_csproj_content
+        # Add a minimal .sln file at the root referencing both projects
+        sln_content = f"""
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "{project_name}", "{project_name}/{project_name}.csproj", "{{11111111-1111-1111-1111-111111111111}}"
+EndProject
+Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "{project_name}.Tests", "{project_name}.Tests/{project_name}.Tests.csproj", "{{22222222-2222-2222-2222-222222222222}}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{{11111111-1111-1111-1111-111111111111}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{{11111111-1111-1111-1111-111111111111}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{{11111111-1111-1111-1111-111111111111}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{{11111111-1111-1111-1111-111111111111}}.Release|Any CPU.Build.0 = Release|Any CPU
+		{{22222222-2222-2222-2222-222222222222}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{{22222222-2222-2222-2222-222222222222}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{{22222222-2222-2222-2222-222222222222}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{{22222222-2222-2222-2222-222222222222}}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
+"""
+        files[f"{project_name}.sln"] = sln_content.strip()
+    return files
+
 @bp.route("/convert", methods=["POST"])
 def convert_code():
     """Enhanced endpoint to convert COBOL code to .NET 8 using comprehensive analysis results"""
@@ -124,6 +239,7 @@ def convert_code():
     logger.info("Starting code conversion process")
 
     try:
+        conversion_id = str(uuid.uuid4())
         data = request.json
         log_request_details("ENHANCED CODE CONVERSION", data)
         
@@ -251,15 +367,15 @@ def convert_code():
             '    "Entity": {"FileName": "","Path": "Models/", "content": ""},\n'
             '    "Repository": {"FileName": "","Path": "Repositories/Interfaces/", "content": ""},\n'
             '    "RepositoryImpl": {"FileName": "","Path": "Repositories/", "content": ""},\n'
-            '    "Service": {"FileName": "IUserService.cs","Path": "Services/Interfaces/", "content": ""},\n'
-            '    "ServiceImpl": {"FileName": "UserService.cs","Path": "Services/", "content": ""},\n'
-            '    "Controller": {"FileName": "UserController.cs","Path": "Controllers/", "content": ""},\n'
-            '    "DbContext": {"FileName": "ApplicationDbContext.cs","Path": "Data/", "content": ""},\n'
-            '    "Program": {"FileName": "Program.cs","Path": "./", "content": ""},\n'
-            '    "Startup": {"FileName": "Startup.cs","Path": "./", "content": ""},\n'
-            '    "AppSettings": {"FileName": "appsettings.json","Path": "./", "content": ""},\n'
-            '    "AppSettingsDev": {"FileName": "appsettings.Development.json","Path": "./", "content": ""},\n'
-            '    "ProjectFile": {"FileName": "Project.csproj","Path": "./", "content": ""},\n'
+            '    "Service": {"FileName": "","Path": "Services/Interfaces/", "content": ""},\n'
+            '    "ServiceImpl": {"FileName": "","Path": "Services/", "content": ""},\n'
+            '    "Controller": {"FileName": "","Path": "Controllers/", "content": ""},\n'
+            '    "DbContext": {"FileName": "","Path": "Data/", "content": ""},\n'
+            '    "Program": {"FileName": "","Path": "./", "content": ""},\n'
+            '    "Startup": {"FileName": "","Path": "./", "content": ""},\n'
+            '    "AppSettings": {"FileName": "","Path": "./", "content": ""},\n'
+            '    "AppSettingsDev": {"FileName": "","Path": "./", "content": ""},\n'
+            '    "ProjectFile": {"FileName": "","Path": "./", "content": ""},\n'
             '    "Dependencies": {"content": "NuGet packages and .NET dependencies needed"}\n'
             "  },\n"
             '  "databaseUsed": true/false,\n'
@@ -326,18 +442,18 @@ def convert_code():
         technology_stack = conversion_json.get("technologyStack", {})
 
         # Save converted code to file (if original filename is provided)
-        cobol_filename = data.get("cobolFilename") or data.get("sourceFilename") or ""
-
-        # Save full JSON and extract code sections to ConvertedCode folder
-        converted_code_dir = os.path.join(output_dir, "ConvertedCode")
+        cobol_filename = data.get("cobolFilename") or data.get("sourceFilename")
+        base_name = os.path.splitext(os.path.basename(cobol_filename))[0] if cobol_filename else "ConvertedCode"
+        # Use uuid for output folder
+        converted_code_dir = os.path.join(output_dir, conversion_id)
         os.makedirs(converted_code_dir, exist_ok=True)
         
         # Save the full JSON response
         base_name = os.path.splitext(os.path.basename(cobol_filename))[0] if cobol_filename else f"converted_{int(time.time())}"
         json_filename = f"{base_name}_llm_output.json"
         json_path = os.path.join(converted_code_dir, json_filename)
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(conversion_json, f, indent=2, ensure_ascii=False)
+        # with open(json_path, 'w', encoding='utf-8') as f:
+        #     json.dump(conversion_json, f, indent=2, ensure_ascii=False)
         
         # Extract and save each code section
         for section, info in converted_code.items():
@@ -547,9 +663,10 @@ def convert_code():
                 "context_length": len(enhanced_context),
                 "analysis_available": True,
                 "comprehensive_analysis": True
-            }
+            },
+            "technicalRequirements": technical_requirements
         }
-        
+        result["files"] = flatten_converted_code(converted_code, unit_test_code)
         # Save the full JSON response to output directory
         try:
             json_output_path = save_json_response(cobol_filename, result)
@@ -599,3 +716,31 @@ def convert_code():
             "databaseUsed": False,
             "analysisEnhanced": False
         }), 500
+
+@bp.route("/converted-files/<base_name>", methods=["GET"])
+def get_converted_files(base_name):
+    """Return the file tree and contents for a given conversion (by base_name) from ConvertedCode."""
+    import os
+    from flask import jsonify
+    
+    converted_code_dir = os.path.join(output_dir, "ConvertedCode")
+    base_dir = os.path.join(converted_code_dir, base_name)
+    if not os.path.exists(base_dir):
+        # Fallback: try to find files with base_name as prefix (for flat structure)
+        files = [f for f in os.listdir(converted_code_dir) if f.startswith(base_name)]
+        file_tree = {"files": {}}
+        for file in files:
+            file_path = os.path.join(converted_code_dir, file)
+            if os.path.isfile(file_path):
+                with open(file_path, "r", encoding="utf-8") as f:
+                    file_tree["files"][file] = f.read()
+        return jsonify(file_tree)
+    # Recursively walk the directory
+    file_tree = {"files": {}}
+    for root, dirs, files in os.walk(base_dir):
+        for file in files:
+            file_path = os.path.join(root, file)
+            rel_path = os.path.relpath(file_path, base_dir)
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_tree["files"][rel_path] = f.read()
+    return jsonify(file_tree)

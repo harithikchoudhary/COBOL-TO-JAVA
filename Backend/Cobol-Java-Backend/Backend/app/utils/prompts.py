@@ -260,6 +260,7 @@ def create_code_conversion_prompt(
     - Ensure consistent data handling, formatting, and computations
     - DO NOT include markdown code blocks (like ```csharp or ```) in your response, just provide the raw code
     - Do not return any unwanted code in {target_language} or functions which are not in {source_language}.
+    - **NEVER use placeholder comments or stub implementations (such as 'return await Task.FromResult(new Account());' or '// Placeholder for actual implementation'). You MUST fully implement all business logic and method bodies based on the COBOL source and requirements.**
 
     Database-Specific Instructions:
     - If the {source_language} code includes any database-related operations, automatically generate the necessary setup code using Entity Framework Core

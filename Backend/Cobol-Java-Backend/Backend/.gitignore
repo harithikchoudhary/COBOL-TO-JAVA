@@ -77,3 +77,12 @@ Thumbs.db
 # Environment variables
 .env 
 /venv/
+
+# Project output and generated folders
+json_output/
+output/
+uploads/
+documents/
+rag_storage/
+cics_analysis/
+logs/

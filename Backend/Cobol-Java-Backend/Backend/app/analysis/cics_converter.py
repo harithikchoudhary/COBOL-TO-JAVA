@@ -42,7 +42,6 @@ class CICSConverter:
             "Application": self._generate_application_layer(analysis),
             "Infrastructure": self._generate_infrastructure_layer(analysis),
             "WebAPI": self._generate_webapi_layer(analysis),
-            "Tests": self._generate_test_layer(analysis),
             "Configuration": self._generate_solution_files(analysis)
         }
         
@@ -153,14 +152,6 @@ class CICSConverter:
         webapi_layer["Middleware"]["LoggingMiddleware"] = self._generate_logging_middleware()
         
         return webapi_layer
-
-    def _generate_test_layer(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate test projects"""
-        
-        return {
-            "UnitTests": {"placeholder": {"filename": "UnitTests.cs", "content": "// Unit tests placeholder"}},
-            "IntegrationTests": {"placeholder": {"filename": "IntegrationTests.cs", "content": "// Integration tests placeholder"}}
-        }
 
     def _generate_solution_files(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Generate solution and project files"""
