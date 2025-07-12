@@ -2,6 +2,8 @@
 Module for generating prompts for code analysis and conversion.
 """
 
+
+
 def create_business_requirements_prompt(source_language, source_code):
     """
     Creates a prompt for analyzing business requirements from source code.
@@ -210,38 +212,54 @@ def create_code_conversion_prompt(
 
     {language_specific_prompt}
 
-    Required Output Structure:
+    ENHANCED OUTPUT STRUCTURE REQUIREMENTS:
     
-    Give output in below structure mentioned clearly. Each section must be properly formatted with clear section markers.
+    Analyze the COBOL code complexity and generate the appropriate number of components:
     
-    Your response must be organized in the following sections, each clearly marked with a section header:
-
-    ##Entity
-    FileName: [filename]
-    // Entity code here
-
-    ##Repository
-    FileName: [filename]
-    // Repository code here
-
-    ##Service
-    FileName: [filename]
-    // Service code here
-
-    ##Controller
-    FileName: [filename]
-    // Controller code here
-
-    ##appsettings.json
-    // Configuration here
-
-    ##Dependencies
-    // Dependencies configuration here
-
-    Each section must be clearly separated using the above headers. Include only relevant code for each layer.
-    Ensure proper dependency injection and relationships between layers are maintained.
-    Each code block must be properly formatted with the correct language identifier (e.g., csharp for code, json for configuration).
-    File names must be clearly specified for each section.
+    1. **Multiple Controllers**: Create separate controllers for different business domains or major functions
+    2. **Multiple Services**: Implement service layer with separate services for different business logic areas
+    3. **Multiple Models**: Create entity models for each major data structure found in the COBOL code
+    4. **Multiple Repositories**: Implement repository pattern with separate repositories for different data access needs
+    5. **DTOs**: Create data transfer objects for complex data structures when needed
+    
+    COMPONENT GENERATION GUIDELINES:
+    
+    - **Controllers**: Create one controller per major business function or COBOL program
+      - Use descriptive names like "CustomerController", "OrderController", "ReportController"
+      - Each controller should handle related business operations
+      - Implement proper HTTP methods (GET, POST, PUT, DELETE)
+    
+    - **Services**: Create services for business logic separation
+      - Use descriptive names like "CustomerService", "OrderService", "ValidationService"
+      - Each service should handle specific business domain logic
+      - Implement interfaces for dependency injection
+    
+    - **Models**: Create entity models for data structures
+      - Use descriptive names like "Customer", "Order", "Product"
+      - Include proper validation attributes
+      - Follow Entity Framework Core conventions
+    
+    - **Repositories**: Create repositories for data access
+      - Use descriptive names like "CustomerRepository", "OrderRepository"
+      - Implement repository pattern with interfaces
+      - Handle different data sources (database, files, etc.)
+    
+    - **DTOs**: Create data transfer objects when needed
+      - Use for complex data structures or API responses
+      - Separate internal models from external contracts
+    
+    NAMING CONVENTIONS:
+    - Use PascalCase for all public members and class names
+    - Use descriptive, business-focused names
+    - Follow .NET naming conventions
+    - Include proper namespaces (Company.Project.*)
+    
+    ARCHITECTURE PATTERNS:
+    - Implement Clean Architecture principles
+    - Use Dependency Injection throughout
+    - Follow SOLID principles
+    - Implement proper separation of concerns
+    - Use async/await patterns for all I/O operations
 
     Requirements:
     - The output should be a complete, executable implementation in .NET 8
@@ -251,6 +269,18 @@ def create_code_conversion_prompt(
     - Ensure consistent data handling, formatting, and computations
     - DO NOT include markdown code blocks (like ```csharp or ```) in your response, just provide the raw code
     - Do not return any unwanted code in {target_language} or functions which are not in {source_language}.
+    - **NEVER use placeholder comments or stub implementations (such as 'return await Task.FromResult(new Account());' or '// Placeholder for actual implementation'). You MUST fully implement all business logic and method bodies based on the COBOL source and requirements.**
+    
+    MULTIPLE COMPONENT GENERATION REQUIREMENTS:
+    - **Analyze the COBOL code structure** to identify distinct business domains and functions
+    - **Create separate controllers** for each major business function (e.g., CustomerController, OrderController, ReportController)
+    - **Implement multiple services** for different business logic areas (e.g., CustomerService, OrderService, ValidationService)
+    - **Generate multiple models** for different data structures found in the COBOL code
+    - **Create multiple repositories** for different data access patterns (e.g., CustomerRepository, OrderRepository, FileRepository)
+    - **Use descriptive, business-focused names** for all components
+    - **Ensure proper relationships** between controllers, services, and repositories
+    - **Implement dependency injection** for all service and repository dependencies
+    - **Follow single responsibility principle** - each component should have one clear purpose
 
     Database-Specific Instructions:
     - If the {source_language} code includes any database-related operations, automatically generate the necessary setup code using Entity Framework Core

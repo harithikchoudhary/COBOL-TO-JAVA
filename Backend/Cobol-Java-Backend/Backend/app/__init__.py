@@ -17,10 +17,7 @@ def create_app():
     # Ensure all required directories exist
     directories = [
         output_dir,
-        "uploads",
-        "cics_analysis",
-        "documents",
-        "rag_storage"
+        "uploads"
     ]
     for directory in directories:
         os.makedirs(directory, exist_ok=True)

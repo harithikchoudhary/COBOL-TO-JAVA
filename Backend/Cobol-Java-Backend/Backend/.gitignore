@@ -78,10 +78,15 @@ Thumbs.db
 .env 
 /venv/
 
+# Ignore Python bytecode
+*.pyc
+__pycache__/
 
-Backend/Cobol-Java-Backend/Backend/output/
+# Project output and generated folders
+json_output/
 output/
 uploads/
-cic_analysis/
-rag_storage/
 documents/
+rag_storage/
+cics_analysis/
+logs/
