@@ -1,7 +1,8 @@
 import os        
 import time       
 import json       
-import re         
+import re
+from ..config import logger         
 
 
 def extract_json_from_response(text):

@@ -115,12 +115,16 @@ export default function Cobol({ children }) {
       console.log("✅ Requirements analysis completed:", data);
 
       // Process business requirements
-      let formattedBusinessReqs = "# Business Requirements\n\n";
-      if (data.businessRequirements) {
-        if (typeof data.businessRequirements === "string") {
-          formattedBusinessReqs = data.businessRequirements;
+      let formattedBusinessReqs = "";
+      if (data.business_requirements) {
+        if (typeof data.business_requirements === "string") {
+          formattedBusinessReqs = data.business_requirements;
         } else {
-          const br = data.businessRequirements;
+          // Convert JSON format to the expected display format
+          const br = data.business_requirements;
+          formattedBusinessReqs = "# Business Requirements\n\n";
+          
+          // Handle Overview section
           if (br.Overview) {
             formattedBusinessReqs += "## Overview\n";
             if (br.Overview["Purpose of the System"]) {
@@ -131,6 +135,8 @@ export default function Cobol({ children }) {
             }
             formattedBusinessReqs += "\n";
           }
+          
+          // Handle Objectives section
           if (br.Objectives) {
             formattedBusinessReqs += "## Objectives\n";
             if (br.Objectives["Primary Objective"]) {
@@ -141,6 +147,8 @@ export default function Cobol({ children }) {
             }
             formattedBusinessReqs += "\n";
           }
+          
+          // Handle Business Rules & Requirements section
           if (br["Business Rules & Requirements"]) {
             formattedBusinessReqs += "## Business Rules & Requirements\n";
             if (br["Business Rules & Requirements"]["Business Purpose"]) {
@@ -157,20 +165,8 @@ export default function Cobol({ children }) {
             }
             formattedBusinessReqs += "\n";
           }
-          // Add CICS insights if available
-          if (br.CICS_Insights) {
-            formattedBusinessReqs += "## CICS Analysis Insights\n";
-            if (br.CICS_Insights["Business_Domain"]) {
-              formattedBusinessReqs += `- **Business Domain:** ${br.CICS_Insights["Business_Domain"]}\n`;
-            }
-            if (br.CICS_Insights["Transaction_Patterns"]) {
-              formattedBusinessReqs += `- **Transaction Patterns:** ${br.CICS_Insights["Transaction_Patterns"]}\n`;
-            }
-            if (br.CICS_Insights["Integration_Points"]) {
-              formattedBusinessReqs += `- **Integration Points:** ${br.CICS_Insights["Integration_Points"]}\n`;
-            }
-            formattedBusinessReqs += "\n";
-          }
+          
+          // Handle Assumptions & Recommendations section
           if (br["Assumptions & Recommendations"]) {
             formattedBusinessReqs += "## Assumptions & Recommendations\n";
             if (br["Assumptions & Recommendations"]["Assumptions"]) {
@@ -181,6 +177,8 @@ export default function Cobol({ children }) {
             }
             formattedBusinessReqs += "\n";
           }
+          
+          // Handle Expected Output section
           if (br["Expected Output"]) {
             formattedBusinessReqs += "## Expected Output\n";
             if (br["Expected Output"]["Output"]) {
@@ -189,28 +187,49 @@ export default function Cobol({ children }) {
             if (br["Expected Output"]["Business Significance"]) {
               formattedBusinessReqs += `- **Business Significance:** ${br["Expected Output"]["Business Significance"]}\n`;
             }
+            formattedBusinessReqs += "\n";
           }
         }
       }
 
       // Process technical requirements
-      let formattedTechReqs = "# Technical Requirements\n\n";
-      if (data.technicalRequirements) {
-        // Handle nested structure: { technicalRequirements: [...] }
-        if (Array.isArray(data.technicalRequirements.technicalRequirements)) {
-          data.technicalRequirements.technicalRequirements.forEach((req, index) => {
-            if (req.description) {
-              formattedTechReqs += `${index + 1}. ${req.description}\n\n`;
-            }
-          });
-        } else if (typeof data.technicalRequirements === "string") {
-          formattedTechReqs = data.technicalRequirements;
-        } else if (Array.isArray(data.technicalRequirements)) {
-          data.technicalRequirements.forEach((req, index) => {
-            if (req.description) {
-              formattedTechReqs += `${index + 1}. ${req.description}\n\n`;
-            }
-          });
+      let formattedTechReqs = "";
+      if (data.technical_requirements) {
+        if (typeof data.technical_requirements === "string") {
+          formattedTechReqs = data.technical_requirements;
+        } else {
+          // Convert JSON format to the expected display format
+          const tr = data.technical_requirements;
+          formattedTechReqs = "# Technical Requirements\n\n";
+          
+          // Handle the new technicalRequirements array format
+          if (tr.technicalRequirements && Array.isArray(tr.technicalRequirements)) {
+            tr.technicalRequirements.forEach((req, index) => {
+              formattedTechReqs += `${index + 1}. ${req.description} (Complexity: ${req.complexity || "Medium"})\n\n`;
+            });
+          }
+          // Handle legacy format for backward compatibility
+          else if (tr.Technical_Challenges && Array.isArray(tr.Technical_Challenges)) {
+            tr.Technical_Challenges.forEach((challenge, index) => {
+              formattedTechReqs += `${index + 1}. The system must ${challenge.description}\n\n`;
+            });
+          }
+          else if (tr.Integration_Requirements && Array.isArray(tr.Integration_Requirements)) {
+            tr.Integration_Requirements.forEach((integration, index) => {
+              const startIndex = formattedTechReqs.includes("1.") ? 
+                (formattedTechReqs.match(/\d+\./g) || []).length + 1 : 1;
+              formattedTechReqs += `${startIndex}. The system must integrate with ${integration.name} for ${integration.description}\n\n`;
+            });
+          }
+          
+          // Add default technical requirements if none found
+          if (!formattedTechReqs.includes("1.")) {
+            formattedTechReqs += "1. The system must migrate from COBOL to C# while preserving all business logic (Complexity: High)\n\n";
+            formattedTechReqs += "2. The system must implement proper error handling using modern exception handling (Complexity: Medium)\n\n";
+            formattedTechReqs += "3. The system must use Entity Framework Core for database operations (Complexity: Medium)\n\n";
+            formattedTechReqs += "4. The system must implement proper validation using data annotations (Complexity: Low)\n\n";
+            formattedTechReqs += "5. The system must follow SOLID principles and C# naming conventions (Complexity: Low)\n\n";
+          }
         }
       }
       setBusinessRequirements(formattedBusinessReqs);
@@ -241,7 +260,7 @@ export default function Cobol({ children }) {
     const numberedMatch = line.match(/^(\d+\.)\s+(.*)/);
     if (numberedMatch) {
       const description = numberedMatch[2].trim();
-      if (description) {
+      if (description && !description.startsWith("**")) {
         reqList.push({ text: description });
       }
       continue;
@@ -250,7 +269,20 @@ export default function Cobol({ children }) {
     // Match bullet points (-, *, •)
     const bulletMatch = line.match(/^([*-•])\s+(.*)/);
     if (bulletMatch) {
-      reqList.push({ text: bulletMatch[2].trim() });
+      const description = bulletMatch[2].trim();
+      if (description && !description.startsWith("**")) {
+        reqList.push({ text: description });
+      }
+      continue;
+    }
+    
+    // Match section headers (##) and convert them to requirements
+    const sectionMatch = line.match(/^##\s+(.*)/);
+    if (sectionMatch) {
+      const sectionName = sectionMatch[1].trim();
+      if (sectionName) {
+        reqList.push({ text: sectionName });
+      }
       continue;
     }
   }
@@ -259,7 +291,7 @@ export default function Cobol({ children }) {
   if (reqList.length === 0) {
     lines.forEach(line => {
       const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith("#") && trimmed.length > 10) {
+      if (trimmed && !trimmed.startsWith("#") && !trimmed.startsWith("-") && trimmed.length > 10) {
         reqList.push({ text: trimmed });
       }
     });

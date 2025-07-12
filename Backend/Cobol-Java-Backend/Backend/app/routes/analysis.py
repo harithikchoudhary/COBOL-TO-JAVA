@@ -24,12 +24,6 @@ client = AzureOpenAI(
     azure_endpoint=AZURE_OPENAI_ENDPOINT,
 )
 
-# Use the real AnalysisManager
-from ..analysis.analysis_manager import AnalysisManager
-
-# Single global instance
-analysis_manager = AnalysisManager()
-
 def enhanced_classify_files(file_data: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
     """Enhanced file classification using existing classifier"""
     logger.info("=== ENHANCED FILE CLASSIFICATION STARTED ===")
@@ -85,14 +79,12 @@ def get_cobol_files_for_analysis(classified_files: Dict[str, List[Dict[str, Any]
     
     return analysis_files
 
-
 @bp.route("/analyze-requirements", methods=["POST"])
 def analyze_requirements():
     """
-    Enhanced flow: 
+    Simplified flow: 
     1) Classify uploaded files
-    2) Run comprehensive analysis (CICS + Dual RAG)
-    3) Run GPT for business & technical requirements
+    2) Run GPT for business & technical requirements
     """
     try:
         data = request.json
@@ -119,40 +111,7 @@ def analyze_requirements():
             "copybooks": len(classified.get("Copybooks", []))
         }, 2)
 
-        # 2) COMPREHENSIVE ANALYSIS (CICS + Dual RAG)
-        cobol_files = get_cobol_files_for_analysis(classified)
-        
-        comprehensive_analysis = {"status": "skipped", "reason": "No files to analyze"}
-        if cobol_files:
-            try:
-                logger.info("Starting comprehensive analysis")
-                logger.info(f"Analysis completed with status: {comprehensive_analysis.get('status', 'unknown')}")
-                
-                # Process files through the comprehensive analysis manager
-                comprehensive_analysis = analysis_manager.process_uploaded_files(cobol_files)
-                
-                logger.info(f"✅ Comprehensive analysis completed: {comprehensive_analysis.get('status', 'unknown')}")
-                
-                # Store analysis data for conversion use
-                current_app.comprehensive_analysis_data = {
-                    "cobol_files": cobol_files,
-                    "classified_files": classified,
-                    "analysis_results": comprehensive_analysis,
-                    "analysis_manager": analysis_manager
-                }
-                
-            except Exception as e:
-                logger.error(f"❌ Comprehensive analysis failed: {e}")
-                comprehensive_analysis = {"status": "failed", "error": str(e)}
-
-        log_processing_step("Comprehensive analysis completed", {
-            "status": comprehensive_analysis.get("status", "unknown"),
-            "files_processed": len(cobol_files),
-            "rag_analysis": comprehensive_analysis.get("rag_analysis", {}),
-            "cics_analysis": comprehensive_analysis.get("cics_analysis", {})
-        }, 3)
-
-        # 3) GPT REQUIREMENTS ANALYSIS
+        # 2) GPT REQUIREMENTS ANALYSIS
         src = data.get("sourceLanguage")
         tgt = data.get("targetLanguage")
         cobol_list = [f["content"] for f in classified.get("COBOL Code", [])]
@@ -160,32 +119,23 @@ def analyze_requirements():
         if not src or not cobol_list:
             return jsonify({"error": "Missing sourceLanguage or no COBOL code"}), 400
 
-        log_processing_step("Creating business and technical prompts with analysis context", {
+        log_processing_step("Creating business and technical prompts", {
             "source_language": src,
             "target_language": tgt,
-            "cobol_files_count": len(cobol_list),
-            "analysis_enhanced": comprehensive_analysis.get("status") == "success"
-        }, 4)
-
-        # Enhanced prompts with analysis context
-        analysis_context = ""
-        if comprehensive_analysis.get("status") == "success":
-            analysis_context = f"""
-            
-ENHANCED CONTEXT FROM COMPREHENSIVE ANALYSIS:
-- CICS Analysis: {comprehensive_analysis.get('cics_analysis', {}).get('total_programs', 0)} programs analyzed
-- Business Domain: {comprehensive_analysis.get('cics_analysis', {}).get('business_domain', 'Unknown')}
-- RAG Analysis: {comprehensive_analysis.get('rag_analysis', {}).get('total_files', 0)} files processed
-- File Connections: {comprehensive_analysis.get('rag_analysis', {}).get('file_connections', 0)} dependencies found
-- Conversion Patterns: {comprehensive_analysis.get('rag_analysis', {}).get('conversion_patterns', 0)} patterns identified
-
-Use this analysis context to provide more accurate and specific requirements.
-"""
+            "cobol_files_count": len(cobol_list)
+        }, 3)
 
         # Ensure cobol_list is a string for prompt functions
         cobol_code_str = cobol_list if isinstance(cobol_list, str) else "\n".join(cobol_list)
-        bus_prompt = create_business_requirements_prompt(src, cobol_code_str) + analysis_context
-        tech_prompt = create_technical_requirements_prompt(src, tgt, cobol_code_str) + analysis_context
+        
+        # Add standards context if available
+        standards_context = ""
+        if hasattr(current_app, 'standards_documents') and current_app.standards_documents:
+            standards_context = f"\n\nSTANDARDS DOCUMENTS CONTEXT:\n{chr(10).join(current_app.standards_documents)}\n"
+            logger.info(f"Adding standards context with {len(current_app.standards_documents)} documents")
+        
+        bus_prompt = create_business_requirements_prompt(src, cobol_code_str) + standards_context
+        tech_prompt = create_technical_requirements_prompt(src, tgt, cobol_code_str) + standards_context
 
         # Business Requirements Analysis
         business_msgs = [
@@ -211,11 +161,6 @@ Use this analysis context to provide more accurate and specific requirements.
                     f'    "Impact on System": "Describe how this part affects the system\'s overall operation.",\n'
                     f'    "Constraints": "Note any business limitations or operational restrictions."\n'
                     f'  }},\n'
-                    f'  "CICS_Insights": {{\n'
-                    f'    "Transaction_Patterns": "Describe CICS transaction patterns identified.",\n'
-                    f'    "Business_Domain": "Business domain classification from analysis.",\n'
-                    f'    "Integration_Points": "Key integration and data flow points."\n'
-                    f'  }},\n'
                     f'  "Assumptions & Recommendations": {{\n'
                     f'    "Assumptions": "Describe what is presumed about data, processes, or environment.",\n'
                     f'    "Recommendations": "Suggest enhancements or modernization directions."\n'
@@ -227,294 +172,146 @@ Use this analysis context to provide more accurate and specific requirements.
                     f"}}"
                 )
             },
-            {"role": "user", "content": bus_prompt}
+            {
+                "role": "user",
+                "content": bus_prompt
+            }
         ]
-        
-        log_processing_step("Calling GPT for enhanced business requirements", {
-            "model": AZURE_OPENAI_DEPLOYMENT_NAME,
-            "temperature": 0.1,
-            "analysis_context_included": bool(analysis_context)
-        }, 5)
-        
-        business_resp = client.chat.completions.create(
+
+        log_processing_step("Running business requirements analysis", {
+            "prompt_length": len(bus_prompt)
+        }, 4)
+
+        business_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
             messages=business_msgs,
-            temperature=0.1,
-            max_tokens=2500,
-            response_format={"type": "json_object"}
+            temperature=0.3,
+            max_tokens=4000
         )
-        
-        try:
-            business_json = json.loads(business_resp.choices[0].message.content)
-        except json.JSONDecodeError:
-            business_json = extract_json_from_response(business_resp.choices[0].message.content)
 
-        # Enhanced Technical Requirements Analysis
+        log_gpt_interaction("BUSINESS_REQUIREMENTS", AZURE_OPENAI_DEPLOYMENT_NAME, business_msgs, business_response)
+
+        business_json = extract_json_from_response(business_response.choices[0].message.content)
+
+        # Technical Requirements Analysis
         technical_msgs = [
-            {
-                "role": "system",
-                "content": f"You are an expert in COBOL/CICS to .NET 8 migration with deep knowledge of mainframe modernization. "
-                          f"You understand CICS commands, VSAM files, JCL, and modern .NET architecture patterns. "
-                          f"You have access to comprehensive analysis including CICS patterns and architectural recommendations. "
+             {
+                "role": "system", 
+                "content": f"You are an expert in COBOL to .NET 8 migration. "
+                          f"You deeply understand both COBOL and .NET 8 and can identify technical challenges and requirements for migration. "
                           f"Output your analysis in JSON format with the following structure:\n"
                           f"{{\n"
                           f'  "technicalRequirements": [\n'
-                          f'    {{"id": "TR1", "description": "Technical requirement description", "complexity": "High/Medium/Low", "category": "CICS/Database/Architecture/etc"}},\n'
-                          f'    {{"id": "TR2", "description": "Another technical requirement", "complexity": "High/Medium/Low", "category": "category"}}\n'
+                          f'    {{"id": "TR1", "description": "First technical requirement", "complexity": "High/Medium/Low"}},\n'
+                          f'    {{"id": "TR2", "description": "Second technical requirement", "complexity": "High/Medium/Low"}}\n'
                           f'  ],\n'
                           f"}}"
             },
-            {"role": "user", "content": tech_prompt}
+            {
+                "role": "user",
+                "content": tech_prompt
+            }
         ]
-        
-        log_processing_step("Calling GPT for enhanced technical requirements", {
-            "model": AZURE_OPENAI_DEPLOYMENT_NAME,
-            "temperature": 0.1,
-            "analysis_context_included": bool(analysis_context)
-        }, 6)
-        
-        technical_resp = client.chat.completions.create(
+
+        log_processing_step("Running technical requirements analysis", {
+            "prompt_length": len(tech_prompt)
+        }, 5)
+
+        technical_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
             messages=technical_msgs,
-            temperature=0.1,
-            max_tokens=2500,
-            response_format={"type": "json_object"}
+            temperature=0.3,
+            max_tokens=4000
         )
-        
-        try:
-            technical_json = json.loads(technical_resp.choices[0].message.content)
-        except json.JSONDecodeError:
-            technical_json = extract_json_from_response(technical_resp.choices[0].message.content)
 
-        # 4) BUILD ENHANCED RESPONSE
-        result = {
-            "businessRequirements": business_json,
-            "technicalRequirements": technical_json,
-            "sourceLanguage": src,
-            "targetLanguage": tgt,
-            "fileClassification": classified,
-            "comprehensiveAnalysis": comprehensive_analysis,
-            "analysisEnhanced": comprehensive_analysis.get("status") == "success",
-            "conversionContextReady": hasattr(analysis_manager, 'conversion_context') and analysis_manager.conversion_context is not None
+        log_gpt_interaction("TECHNICAL_REQUIREMENTS", AZURE_OPENAI_DEPLOYMENT_NAME, technical_msgs, technical_response)
+
+        technical_json = extract_json_from_response(technical_response.choices[0].message.content)
+
+        # Store analysis data for conversion use
+        current_app.comprehensive_analysis_data = {
+            "cobol_files": get_cobol_files_for_analysis(classified),
+            "classified_files": classified,
+            "analysis_results": {
+                "business_requirements": business_json,
+                "technical_requirements": technical_json,
+                "status": "success"
+            }
         }
-        
-        log_processing_step("Enhanced analysis completed successfully", {
-            "business_requirements_available": bool(business_json),
-            "technical_requirements_available": bool(technical_json),
-            "comprehensive_analysis_status": comprehensive_analysis.get("status", "unknown"),
-            "conversion_context_ready": result["conversionContextReady"]
-        }, 7)
-        
-        logger.info("=== ENHANCED ANALYZE REQUIREMENTS REQUEST COMPLETED SUCCESSFULLY ===")
-        return jsonify(result)
+
+        log_processing_step("Analysis completed successfully", {
+            "business_rules_count": len(business_json.get("Business_Rules", [])),
+            "technical_challenges_count": len(technical_json.get("Technical_Challenges", [])),
+            "conversionContextReady": True
+        }, 6)
+
+        return jsonify({
+            "status": "success",
+            "business_requirements": business_json,
+            "technical_requirements": technical_json,
+            "file_classification": classified,
+            "conversionContextReady": True
+        })
 
     except Exception as e:
-        logger.error(f"Error in /analyze-requirements: {e}")
-        logger.error(traceback.format_exc())
+        logger.error(f"❌ Analysis failed: {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
 
 @bp.route("/upload-standards", methods=["POST"])
 def upload_standards():
-    """Upload standards documents and build Standards RAG"""
+    """Upload standards documents for requirements analysis context"""
     try:
-        logger.info("📄 Standards documents upload initiated")
-        
-        files = request.files.getlist("files")
-        if not files:
+        if 'files' not in request.files:
             return jsonify({"error": "No files provided"}), 400
-            
-        # Create standards file map
-        standards_map = {}
+        
+        files = request.files.getlist('files')
+        if not files:
+            return jsonify({"error": "No files selected"}), 400
+
+        processed_files = []
+        standards_content = []
+        
         for file in files:
             if file.filename:
                 try:
+                    # Read file content
                     content = file.read()
-                    standards_map[file.filename] = content
-                    logger.info(f"📄 Read file: {file.filename} ({len(content)} bytes)")
+                    if hasattr(content, 'decode'):
+                        content = content.decode('utf-8', errors='ignore')
+                    
+                    # Store file info and content
+                    processed_files.append({
+                        "filename": file.filename,
+                        "size": len(content),
+                        "status": "processed"
+                    })
+                    
+                    # Extract text content for analysis context
+                    standards_content.append(f"Document: {file.filename}\n{content[:2000]}...")
+                    
                 except Exception as e:
-                    logger.error(f"❌ Error reading file {file.filename}: {e}")
-                    continue
-        
-        if not standards_map:
-            return jsonify({"error": "No valid files to process"}), 400
+                    logger.error(f"Error processing file {file.filename}: {e}")
+                    processed_files.append({
+                        "filename": file.filename,
+                        "size": 0,
+                        "status": "error",
+                        "error": str(e)
+                    })
 
-        # Save to documents directory and process
-        os.makedirs("documents", exist_ok=True)
-        for filename, content in standards_map.items():
-            try:
-                file_path = os.path.join("documents", filename)
-                with open(file_path, 'wb') as f:
-                    f.write(content)
-                logger.info(f"💾 Saved {filename} to documents directory")
-            except Exception as e:
-                logger.error(f"❌ Error saving {filename}: {e}")
-        
-        # Process through analysis manager
-        if not analysis_manager:
-            return jsonify({"error": "Analysis Manager unavailable"}), 503
-            
-        result = analysis_manager.process_standards_documents(standards_map)
-        
-        logger.info(f"✅ Standards processing completed: {result}")
-        return jsonify(result)
-        
-    except Exception as e:
-        logger.error(f"❌ Error in /upload-standards: {e}")
-        logger.error(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        # Store standards content in current_app for use in requirements analysis
+        if standards_content:
+            current_app.standards_documents = standards_content
+            logger.info(f"Stored {len(standards_content)} standards documents for analysis context")
 
-
-@bp.route("/query-rag", methods=["POST"])
-def query_rag():
-    """Query RAG systems: standards/project/both"""
-    try:
-        params = request.json or {}
-        query = params.get("query", "")
-        rag_type = params.get("type", "both")
-        k = params.get("k", 5)
-        
-        if not query:
-            return jsonify({"error": "Query parameter required"}), 400
-        
-        if not analysis_manager:
-            return jsonify({"error": "Analysis Manager unavailable"}), 503
-            
-        result = analysis_manager.query_rag_system(query, rag_type, k)
-        return jsonify(result)
-        
-    except Exception as e:
-        logger.error(f"❌ Error in /query-rag: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@bp.route("/analysis-status", methods=["GET"])
-def analysis_status():
-    """Return comprehensive analysis status"""
-    try:
-        if not analysis_manager:
-            return jsonify({
-                "status": "unavailable",
-                "message": "Analysis Manager not available",
-                "enhanced_features": False
-            })
-            
-        status = analysis_manager.get_analysis_summary()
-        status["enhanced_features"] = True
-        status["comprehensive_analysis_available"] = True
-        
-        return jsonify(status)
-        
-    except Exception as e:
-        logger.error(f"❌ Error in /analysis-status: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@bp.route("/upload-project-files", methods=["POST"])
-def upload_project_files():
-    """Accept project files and trigger indexing"""
-    try:
-        data = request.json or {}
-        files_map = data.get("file_data", {})
-        
-        if not isinstance(files_map, dict):
-            return jsonify({"error": "file_data must be dict"}), 400
-
-        if not files_map:
-            return jsonify({"error": "No files provided"}), 400
-
-        # Write each file to uploads directory
-        os.makedirs("uploads", exist_ok=True)
-        for filename, content in files_map.items():
-            try:
-                file_path = os.path.join("uploads", filename)
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(content)
-                logger.info(f"💾 Saved {filename} to uploads directory")
-            except Exception as e:
-                logger.error(f"❌ Error saving {filename}: {e}")
-
-        logger.info(f"✅ Uploaded {len(files_map)} project files")
-        
         return jsonify({
             "status": "success",
-            "message": f"Uploaded {len(files_map)} files to uploads directory",
-            "files_count": len(files_map)
+            "files_processed": len(processed_files),
+            "standards_rag_active": len(standards_content) > 0,
+            "message": f"Successfully processed {len(processed_files)} standards documents"
         })
 
     except Exception as e:
-        logger.error(f"❌ Error in /upload-project-files: {e}")
+        logger.error(f"❌ Standards upload failed: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-@bp.route("/analyze-project", methods=["POST"])
-def analyze_project():
-    """Run comprehensive Dual RAG + CICS analysis"""
-    try:
-        logger.info("🚀 Starting comprehensive project analysis")
-        
-        if not analysis_manager:
-            return jsonify({"error": "Analysis Manager unavailable"}), 503
-        
-        # Check if files exist in uploads directory
-        if not os.path.exists("uploads"):
-            return jsonify({"error": "No uploads directory found"}), 400
-            
-        files = os.listdir("uploads")
-        if not files:
-            return jsonify({"error": "No files found in uploads directory"}), 400
-        
-        # Load files from uploads directory
-        project_files = {}
-        for filename in files:
-            try:
-                file_path = os.path.join("uploads", filename)
-                with open(file_path, "r", encoding="utf-8") as f:
-                    project_files[filename] = f.read()
-            except Exception as e:
-                logger.error(f"❌ Error reading {filename}: {e}")
-                continue
-        
-        if not project_files:
-            return jsonify({"error": "No valid project files to analyze"}), 400
-        
-        # Run comprehensive analysis
-        result = analysis_manager.process_uploaded_files(project_files)
-        
-        logger.info(f"✅ Comprehensive analysis completed: {result.get('status', 'unknown')}")
-        return jsonify(result)
-        
-    except Exception as e:
-        logger.error(f"❌ analyze-project failed: {e}", exc_info=True)
-        return jsonify({"status": "error", "error": str(e)}), 500
-
-
-@bp.route("/clear-analysis", methods=["DELETE"])
-def clear_analysis():
-    """Clear all analysis data and reinitialize"""
-    import shutil
-    try:
-        directories_to_clear = ["uploads", "cics_analysis", "rag_storage", "documents"]
-        cleared_dirs = []
-        
-        for directory in directories_to_clear:
-            if os.path.exists(directory):
-                shutil.rmtree(directory)
-                cleared_dirs.append(directory)
-            os.makedirs(directory, exist_ok=True)
-        
-        # Reset analysis manager
-        global analysis_manager
-        analysis_manager = AnalysisManager()
-        
-        logger.info(f"🧹 Cleared analysis data: {cleared_dirs}")
-        
-        return jsonify({
-            "status": "cleared",
-            "cleared_directories": cleared_dirs,
-            "message": "Analysis data cleared and reinitialized successfully"
-        })
-        
-    except Exception as e:
-        logger.error(f"❌ Error in /clear-analysis: {e}")
-        return jsonify({"error": str(e)}), 500

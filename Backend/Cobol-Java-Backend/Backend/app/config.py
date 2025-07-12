@@ -26,9 +26,6 @@ AZURE_CONFIG = {
 
 # Directory configurations
 UPLOAD_DIR = "uploads"
-OUTPUT_DIR = "cics_analysis"
-DOCUMENTS_DIR = "documents"
-API_OUTPUT_DIR = "rag_storage"
 
 # Output directory
 output_dir = 'output'
