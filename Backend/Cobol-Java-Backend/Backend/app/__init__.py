@@ -1,35 +1,36 @@
-from flask import Flask
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from .config import AZURE_OPENAI_DEPLOYMENT_NAME, AZURE_OPENAI_ENDPOINT, setup_logging, logger, output_dir
+from .config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_NAME, setup_logging, logger, output_dir
 import os
-from flask import request
 import traceback
-from flask import jsonify
 
 def create_app():
     app = Flask(__name__)
     CORS(app)
 
-    # --- Inject Azure config into Flask app.config ---
     app.config["AZURE_OPENAI_ENDPOINT"] = AZURE_OPENAI_ENDPOINT
     app.config["AZURE_OPENAI_DEPLOYMENT_NAME"] = AZURE_OPENAI_DEPLOYMENT_NAME
+    app.config["UPLOAD_DIR"] = "uploads"
+    app.config["output_dir"] = output_dir
 
-    # Ensure all required directories exist
-    directories = [
-        output_dir,
-        "uploads"
-    ]
+    # Initialize comprehensive analysis data
+    app.comprehensive_analysis_data = {
+        "business_requirements": "",
+        "technical_requirements": "",
+        "cobol_analysis": {}  # Added for COBOL analysis
+    }
+
+    directories = [output_dir, "uploads", os.path.join(output_dir, "analysis"), os.path.join(output_dir, "rag"), os.path.join(output_dir, "standards-rag")]
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
         logger.info(f"Ensured directory exists: {directory}")
 
     # Register blueprints
-    from .routes import analysis, conversion, misc
+    from .routes import analysis, conversion, cobol_analyzer
     app.register_blueprint(analysis.bp)
     app.register_blueprint(conversion.bp)
-    app.register_blueprint(misc.bp)
+    app.register_blueprint(cobol_analyzer)  # Fixed: removed .bp since cobol_analyzer is already the blueprint
 
-    # Initialize analysis components inside app context
     with app.app_context():
         try:
             logger.info("Basic analysis components ready")
