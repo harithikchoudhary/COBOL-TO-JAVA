@@ -75,69 +75,71 @@ export default function Input({
     console.log("Updated fileStats:", fileStats);
   }, [uploadedFiles]);
 
-  const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) {
-      setMessage("No files selected");
-      setTimeout(() => setMessage(""), 2000);
-      return;
+ // Update the enhancedProps handling in Input.js around line 45:
+
+const handleFileUpload = async (e) => {
+  const files = Array.from(e.target.files);
+  if (!files.length) {
+    setMessage("No files selected");
+    setTimeout(() => setMessage(""), 2000);
+    return;
+  }
+  setMessage(`Uploading ${files.length} project files…`);
+
+  const fd = new FormData();
+  files.forEach((f) => fd.append("files", f));
+
+  try {
+    const res = await fetch("http://localhost:8010/cobo/upload-cobol-files", {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) throw new Error(`Upload failed with status: ${res.status}`);
+    const data = await res.json();
+    if (!data.project_id) throw new Error("No project ID returned from server");
+
+    setProjectId(data.project_id);
+    
+    // Pass project ID to parent component
+    if (enhancedProps?.setProjectId) {
+      enhancedProps.setProjectId(data.project_id);
     }
-    setMessage(`Uploading ${files.length} project files…`);
 
-    const fd = new FormData();
-    files.forEach((f) => fd.append("files", f));
+    const read = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = (ev) =>
+              res({
+                fileName: file.name,
+                content: ev.target.result,
+                type: getType(file.name),
+              });
+            r.onerror = () => rej(new Error(`Failed to read file: ${file.name}`));
+            r.readAsText(file);
+          })
+      )
+    );
 
-    try {
-      const res = await fetch("http://localhost:8010/cobo/upload-cobol-files", {
-        method: "POST",
-        body: fd,
-      });
-      if (!res.ok) throw new Error(`Upload failed with status: ${res.status}`);
-      const data = await res.json();
-      if (!data.project_id) throw new Error("No project ID returned from server");
+    setUploadedFiles(() => {
+      const nxt = {};
+      read.forEach((f) => (nxt[f.fileName] = f));
+      return nxt;
+    });
 
-      setProjectId(data.project_id); // Set projectId in Input
-      if (enhancedProps && typeof enhancedProps.setProjectId === 'function') {
-        enhancedProps.setProjectId(data.project_id); // Pass to parent Cobol component
-      } else {
-        console.warn("enhancedProps.setProjectId is not a function or undefined");
-      }
-
-      const read = await Promise.all(
-        files.map(
-          (file) =>
-            new Promise((res, rej) => {
-              const r = new FileReader();
-              r.onload = (ev) =>
-                res({
-                  fileName: file.name,
-                  content: ev.target.result,
-                  type: getType(file.name),
-                });
-              r.onerror = () => rej(new Error(`Failed to read file: ${file.name}`));
-              r.readAsText(file);
-            })
-        )
-      );
-
-      setUploadedFiles(() => {
-        const nxt = {};
-        read.forEach((f) => (nxt[f.fileName] = f));
-        return nxt;
-      });
-
-      setActiveFileTab(read[0]?.fileName || null); // Always set to first file
-      console.log("Uploaded files:", read, "Active file tab:", read[0]?.fileName);
-      setMessage(`Uploaded and processed ${read.length} project files`);
-      setTimeout(() => setMessage(""), 2000);
-    } catch (error) {
-      console.error("File upload error:", error);
-      setMessage(`Project files upload failed: ${error.message}`);
-      setTimeout(() => setMessage(""), 2000);
-    } finally {
-      e.target.value = "";
-    }
-  };
+    setActiveFileTab(read[0]?.fileName || null);
+    console.log("Uploaded files:", read, "Active file tab:", read[0]?.fileName);
+    setMessage(`Uploaded and processed ${read.length} project files`);
+    setTimeout(() => setMessage(""), 2000);
+  } catch (error) {
+    console.error("File upload error:", error);
+    setMessage(`Project files upload failed: ${error.message}`);
+    setTimeout(() => setMessage(""), 2000);
+  } finally {
+    e.target.value = "";
+  }
+};
 
   const handleStandardsUpload = async (e) => {
     const files = Array.from(e.target.files);

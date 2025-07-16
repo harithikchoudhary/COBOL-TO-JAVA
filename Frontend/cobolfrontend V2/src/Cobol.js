@@ -300,95 +300,105 @@ export default function Cobol({ children }) {
     return files;
   };
 
-  const handleConvert = async (setActiveTab) => {
-    setError("");
-    if (!sourceCodeJson) {
-      setError("Please upload COBOL files to convert");
-      return;
-    }
-    if (!projectId) {
-      setError("Project ID is missing. Please upload files first.");
-      return;
-    }
-  
-    setIsLoading(true);
-    console.log("🚀 Starting code conversion");
-  
-    try {
-      // Ensure sourceCodeJson is an object
-      let sourceCode = sourceCodeJson;
-      if (typeof sourceCodeJson === 'string') {
-        try {
-          sourceCode = JSON.parse(sourceCodeJson);
-        } catch (e) {
-          console.error("Failed to parse sourceCodeJson:", e);
-          setError("Invalid sourceCode format. Expected a JSON object.");
-          setIsLoading(false);
-          return;
-        }
-      }
-  
-      if (!Object.keys(sourceCode).length) {
-        setError("sourceCode is empty. Please upload valid COBOL files.");
+
+const handleConvert = async (setActiveTab) => {
+  setError("");
+  if (!sourceCodeJson) {
+    setError("Please upload COBOL files to convert");
+    return;
+  }
+  if (!projectId) {
+    setError("Project ID is missing. Please upload files first.");
+    return;
+  }
+
+  setIsLoading(true);
+  console.log("🚀 Starting code conversion");
+
+  try {
+    // Ensure sourceCodeJson is properly formatted
+    let sourceCode = sourceCodeJson;
+    if (typeof sourceCodeJson === 'string') {
+      try {
+        sourceCode = JSON.parse(sourceCodeJson);
+      } catch (e) {
+        console.error("Failed to parse sourceCodeJson:", e);
+        setError("Invalid sourceCode format. Expected a JSON object.");
         setIsLoading(false);
         return;
       }
-  
-      const response = await fetch(`${API_BASE_URL}/convert`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sourceLanguage: "COBOL",
-          targetLanguage: "C#",
-          sourceCode, // Use the parsed object
-          businessRequirements,
-          technicalRequirements,
-          projectId,
-          cobolFilename: Object.keys(uploadedFiles)[0] || "BANKING.CBL"
-        }),
-      });
-  
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Conversion failed:", errorText);
-        let errorMessage = `Conversion failed: ${response.status}`;
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorText || errorMessage;
-        } catch (e) {
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
-  
-      const data = await response.json();
-      console.log("✅ Conversion completed:", data);
-  
-      setConversionResponse(data);
-  
-      const files = data.files || {};
-      setConvertedFiles(files);
-      setConvertedCode(data.converted_code?.[0]?.content || "");
-      setUnitTests(data.unit_tests || "");
-      setFunctionalTests(data.functional_tests || "");
-      setActiveTab("output");
-  
-      if (Object.keys(files).length === 0) {
-        console.warn("No converted files received in response");
-        setError("Conversion completed, but no files were generated. Please check the backend logs.");
-      }
-  
-      console.log("✅ All conversion data processed successfully");
-  
-    } catch (error) {
-      console.error("Error during conversion:", error);
-      setError(error.message || "Failed to convert code. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    // Validate that we have content
+    if (!sourceCode || Object.keys(sourceCode).length === 0) {
+      setError("No COBOL files found. Please upload files first.");
+      setIsLoading(false);
+      return;
+    }
+
+    // Log the data being sent for debugging
+    console.log("Sending conversion request with:", {
+      projectId,
+      sourceCodeKeys: Object.keys(sourceCode),
+      businessRequirements: businessRequirements ? "present" : "missing",
+      technicalRequirements: technicalRequirements ? "present" : "missing"
+    });
+
+    const response = await fetch(`${API_BASE_URL}/convert`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sourceLanguage: "COBOL",
+        targetLanguage: "C#",
+        sourceCode: sourceCode, // Pass the parsed object
+        businessRequirements,
+        technicalRequirements,
+        projectId,
+        cobolFilename: Object.keys(uploadedFiles)[0] || "BANKING.CBL"
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Conversion failed:", errorText);
+      let errorMessage = `Conversion failed: ${response.status}`;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error || errorText || errorMessage;
+      } catch (e) {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    console.log("✅ Conversion completed:", data);
+
+    setConversionResponse(data);
+
+    const files = data.files || {};
+    setConvertedFiles(files);
+    setConvertedCode(data.converted_code?.[0]?.content || "");
+    setUnitTests(data.unit_tests || "");
+    setFunctionalTests(data.functional_tests || "");
+    setActiveTab("output");
+
+    if (Object.keys(files).length === 0) {
+      console.warn("No converted files received in response");
+      setError("Conversion completed, but no files were generated. Please check the backend logs.");
+    }
+
+    console.log("✅ All conversion data processed successfully");
+
+  } catch (error) {
+    console.error("Error during conversion:", error);
+    setError(error.message || "Failed to convert code. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 
   const handleReset = () => {

@@ -1,0 +1,381 @@
+-07-16 13:12:19,323 - INFO - Ensured directory exists: output
+2025-07-16 13:12:19,323 - INFO - Ensured directory exists: uploads
+2025-07-16 13:12:19,325 - INFO - Ensured directory exists: output\analysis
+2025-07-16 13:12:19,325 - INFO - Ensured directory exists: output\rag
+2025-07-16 13:12:19,326 - INFO - Ensured directory exists: output\standards-rag
+2025-07-16 13:12:26,621 - INFO - Azure OpenAI embedding client initialized successfully
+2025-07-16 13:12:27,588 - INFO - Basic analysis components ready
+2025-07-16 13:12:27,588 - INFO - Enhanced features will be available through route handlers
+2025-07-16 13:12:27,595 - INFO - Starting COBOL Converter Application
+2025-07-16 13:12:27,595 - INFO - Server: 0.0.0.0:8010 | Debug: False
+2025-07-16 13:12:27,595 - INFO - Azure OpenAI: gpt-4o
+ * Serving Flask app 'app'
+ * Debug mode: off
+2025-07-16 13:12:43,160 - INFO - Uploaded COBOL file: ACCOUNT-VALIDATION.CPY
+2025-07-16 13:12:43,166 - INFO - Uploaded COBOL file: BANKING.JCL
+2025-07-16 13:12:43,171 - INFO - Uploaded COBOL file: BANKING.CBL
+2025-07-16 13:13:10,140 - INFO - Uploaded standards document: Sight 2.0 Rules.pdf
+2025-07-16 13:13:10,147 - INFO - Indexing standards document for project: b84e623b-a29a-432d-a776-7e5313aef24f, file: output\standards-rag\b84e623b-a29a-432d-a776-7e5313aef24f\Sight 2.0 Rules.pdf
+2025-07-16 13:13:13,800 - INFO - Embedding test successful. Dimension: 3072
+2025-07-16 13:13:13,808 - INFO - Extracting text from file: output\standards-rag\b84e623b-a29a-432d-a776-7e5313aef24f\Sight 2.0 Rules.pdf
+2025-07-16 13:13:14,055 - INFO - Split standards document into 4 chunks
+2025-07-16 13:13:15,725 - WARNING - `embedding_function` is expected to be an Embeddings object, support for passing in a function will soon be removed.
+2025-07-16 13:13:15,725 - INFO - Created new standards vector store for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:15,740 - INFO - Saved standards vector store to output\standards-rag\b84e623b-a29a-432d-a776-7e5313aef24f\faiss_index
+2025-07-16 13:13:15,758 - INFO - Standards document indexing completed for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:15,758 - INFO - Indexed standards document: Sight 2.0 Rules.pdf
+2025-07-16 13:13:22,637 - INFO - === ANALYZE REQUIREMENTS REQUEST STARTED ===
+2025-07-16 13:13:22,639 - INFO - Timestamp: 2025-07-16T13:13:22.639801
+2025-07-16 13:13:22,639 - INFO - Request Method: POST
+2025-07-16 13:13:22,639 - INFO - Request Headers: {'Host': 'localhost:8010', 'Connection': 'keep-alive', 'Content-Length': '17940', 'Sec-Ch-Ua-Platform': '"Windows"', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36', 'Sec-Ch-Ua': '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"', 'Content-Type': 'application/json', 'Sec-Ch-Ua-Mobile': '?0', 'Accept': '*/*', 'Origin': 'http://localhost:3000', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Referer': 'http://localhost:3000/', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-US,en;q=0.9'}
+2025-07-16 13:13:22,647 - INFO - Request Data Keys: ['sourceLanguage', 'targetLanguage', 'file_data', 'projectId']
+2025-07-16 13:13:22,651 - INFO - Full Request Data: {
+  "sourceLanguage": "COBOL",
+  "targetLanguage": "C#",
+  "file_data": {
+    "ACCOUNT-VALIDATION.CPY": {
+      "fileName": "ACCOUNT-VALIDATION.CPY",
+      "content": "*> Account Validation Copybook\r\n01  ACCOUNT-VALIDATION-RECORD.\r\n    05  VALID-ACC-NUMBER     PIC 9(14).\r\n    05  VALID-ACC-TYPE       PIC X(2).\r\n    05  VALID-STATUS         PIC X.\r\n    05  VALID-DAILY-LIMIT    PIC S9(11)V99 COMP-3.\r\n    05  VALID-MIN-BALANCE    PIC S9(11)V99 COMP-3.\r\n    05  VALID-OVERDRAFT      PIC S9(11)V99 COMP-3.",
+      "type": "Copybook"
+    },
+    "BANKING.JCL": {
+      "fileName": "BANKING.JCL",
+      "content": "//BANKJOB  JOB (ACCT),'BANKING SYSTEM',CLASS=A,MSGCLASS=X,\r\n//         MSGLEVEL=(1,1),NOTIFY=&SYSUID\r\n//*\r\n//********************************************************\r\n//* BANKING SYSTEM - COMPREHENSIVE JCL                   *\r\n//* Compiles and links CICS programs                     *\r\n//********************************************************\r\n//*\r\n//PROCLIB  DD DSN=SYS1.PROCLIB,DISP=SHR\r\n//COMPILE  EXEC PROC=CICSCBL,\r\n//         PARM.COB='APOST,LIB,OBJECT,MAP'\r\n//COB.SYSLIB DD DSN=BANK.COPYBOOK.LIBRARY,DISP=SHR\r\n//           DD DSN=CICS.COPYBOOK.LIBRARY,DISP=SHR\r\n//           DD DSN=DB2.COPYBOOK.LIBRARY,DISP=SHR\r\n//COB.SYSIN  DD DSN=BANK.SOURCE.LIBRARY(BANKING),DISP=SHR\r\n//COB.SYSPRINT DD SYSOUT=*\r\n//COB.SYSLIN DD DSN=&&LOADSET,DISP=(MOD,PASS),\r\n//           UNIT=SYSDA,SPACE=(80,(250,100))\r\n//*\r\n//LINK     EXEC PGM=IEWL,PARM='MAP,LET,LIST,NCAL'\r\n//SYSLIB   DD DSN=CICS.SDFHLOAD,DISP=SHR\r\n//         DD DSN=DB2.SDSNLOAD,DISP=SHR\r\n//         DD DSN=BANK.LOAD.LIBRARY,DISP=SHR\r\n//SYSLMOD  DD DSN=BANK.LOAD.LIBRARY(BANKING),DISP=SHR\r\n//SYSLIN   DD DSN=&&LOADSET,DISP=(OLD,DELETE)\r\n//         DD DDNAME=SYSIN\r\n//SYSIN    DD *\r\n  INCLUDE SDFHLOAD(DFHECI)\r\n  INCLUDE SDFHLOAD(DFHEAI)\r\n  ENTRY BANKING\r\n  NAME BANKING(R)\r\n/*\r\n//SYSPRINT DD SYSOUT=*\r\n//*\r\n//********************************************************\r\n//* DEFINE CICS RESOURCES               
+                 *\r\n//********************************************************\r\n//*\r\n//CICSDEF  EXEC PGM=DFHCSDUP,REGION=2048K\r\n//STEPLIB  DD DSN=CICS.SDFHLOAD,DISP=SHR\r\n//DFHCSD   DD DSN=CICS.DFHCSD,DISP=SHR\r\n//SYSPRINT DD SYSOUT=*\r\n//SYSIN    DD *\r\n  DEFINE PROGRAM(BANKING) GROUP(BANKGRP)\r\n    LANGUAGE(COBOL)\r\n    RELOAD(NO)\r\n    RESIDENT(NO)\r\n    USAGE(NORMAL)\r\n    USELPACOPY(NO)\r\n    STATUS(ENABLED)\r\n    \r\n  DEFINE TRANSACTION(BANK) GROUP(BANKGRP)\r\n    PROGRAM(BANKING)\r\n    TWASIZE(0)\r\n    PROFILE(DFHCICST)\r\n    STATUS(ENABLED)\r\n    PRIORITY(1)\r\n    \r\n  DEFINE FILE(ACCOUNTS) GROUP(BANKGRP)\r\n    DSNAME(BANK.ACCOUNTS.VSAM)\r\n    STATUS(ENABLED)\r\n    OPENTIME(FIRSTREF)\r\n    DISPOSITION(SHR)\r\n    RECORDSIZE(200)\r\n    KEYLENGTH(14)\r\n    \r\n  DEFINE FILE(TRANSACTIONS) GROUP(BANKGRP)\r\n    DSNAME(BANK.TRANSACTIONS.VSAM)\r\n    STATUS(ENABLED)\r\n    OPENTIME(FIRSTREF)\r\n    DISPOSITION(SHR)\r\n    RECORDSIZE(150)\r\n    KEYLENGTH(20)\r\n    \r\n  DEFINE MAPSET(BANKMAP) GROUP(BANKGRP)\r\n    TYPE(INPUT)\r\n    STATUS(ENABLED)\r\n    \r\n  INSTALL GROUP(BANKGRP)\r\n/*\r\n//*\r\n//********************************************************\r\n//* ALLOCATE VSAM FILES                                  *\r\n//********************************************************\r\n//*\r\n//VSAM     EXEC PGM=IDCAMS\r\n//SYSPRINT DD SYSOUT=*\r\n//SYSIN    DD *\r\n  DELETE BANK.ACCOUNTS.VSAM CLUSTER PURGE\r\n  SET MAXCC = 0\r\n  \r\n  DEFINE CLUSTER (NAME(BANK.ACCOUNTS.VSAM) -\r\n    INDEXED -\r\n    KEYS(14 0) -\r\n    RECORDSIZE(200 200) -\r\n    TRACKS(100 50) -\r\n    CISZ(4096) -\r\n    FREESPACE(20 10) -\r\n    SHR(2 3)) -\r\n  DATA (NAME(BANK.ACCOUNTS.DATA)) -\r\n  INDEX (NAME(BANK.ACCOUNTS.INDEX))\r\n  \r\n  DELETE BANK.TRANSACTIONS.VSAM CLUSTER PURGE\r\n  SET MAXCC = 0\r\n  \r\n  DEFINE CLUSTER (NAME(BANK.TRANSACTIONS.VSAM) -\r\n    INDEXED -\r\n    KEYS(20 0) -\r\n    RECORDSIZE(150 150) -\r\n    TRACKS(500 250) -\r\n    CISZ(4096) -\r\n    FREESPACE(10 5) -\r\n    SHR(2 3)) -\r\n  DATA (NAME(BANK.TRANSACTIONS.DATA)) -\r\n  INDEX (NAME(BANK.TRANSACTIONS.INDEX))\r\n/*",
+      "type": "JCL"
+    },
+    "BANKING.CBL": {
+      "fileName": "BANKING.CBL",
+      "content": "*>================================================================*\r\n*> COMPREHENSIVE BANKING SYSTEM - CICS TRANSACTION PROGRAM        *\r\n*> Handles Account Management, Transfers, and Transaction History *\r\n*>================================================================*\r\nIDENTIFICATION DIVISION.\r\nPROGRAM-ID. BANKING.\r\nAUTHOR.     SYSTEM-ARCHITECT.\r\nINSTALLATION. GLOBAL-BANK.\r\nDATE-WRITTEN. 2025-06-27.\r\nREMARKS.    Enterprise CICS application with complex business logic.\r\n\r\nENVIRONMENT DIVISION.\r\nCONFIGURATION SECTION.\r\nSOURCE-COMPUTER. IBM-Z15.\r\nOBJECT-COMPUTER. CICS-TS-V5R6.\r\nSPECIAL-NAMES.\r\n    DECIMAL-POINT IS COMMA.\r\n\r\nFILE-CONTROL.\r\n    SELECT ACCOUNT-FILE ASSIGN TO VSAM-ACCOUNTS\r\n           ORGANIZATION IS INDEXED\r\n          
+ ACCESS IS DYNAMIC\r\n           RECORD KEY IS ACC-KEY.\r\n    \r\n    SELECT TRANS-FILE ASSIGN TO VSAM-TRANSACTIONS\r\n           ORGANIZATION IS INDEXED\r\n           ACCESS IS DYNAMIC\r\n           RECORD KEY IS TRANS-KEY.\r\n    \r\n    SELECT AUDIT-FILE ASSIGN TO AUDIT-LOG\r\n           ORGANIZATION IS SEQUENTIAL.\r\n\r\nDATA DIVISION.\r\nFILE SECTION.\r\nFD  ACCOUNT-FILE.\r\n01  ACCOUNT-RECORD.\r\n    05  ACC-KEY.\r\n        10  ACC-BANK-CODE    PIC X(4).\r\n        10  ACC-NUMBER       PIC 9(10).\r\n    05  ACC-HOLDER-NAME      PIC X(50).\r\n    05  ACC-TYPE             PIC X(2).\r\n    05  ACC-BALANCE          PIC S9(13)V99 COMP-3.\r\n    05  ACC-STATUS           PIC X.\r\n    05  ACC-OPEN-DATE        PIC 9(8).\r\n    05  ACC-LAST-ACTIVITY    PIC 9(8).\r\n\r\nFD  TRANS-FILE.\r\n01  TRANSACTION-RECORD.\r\n    05  TRANS-KEY.\r\n        10  TRANS-DATE       PIC 9(8).\r\n        10  TRANS-TIME       PIC 9(6).\r\n        10  TRANS-SEQ        PIC 9(6).\r\n    05  TRANS-FROM-ACC       PIC 9(14).\r\n    05  TRANS-TO-ACC         PIC 9(14).\r\n    05  TRANS-AMOUNT         PIC S9(13)V99 COMP-3.\r\n    05  TRANS-TYPE           PIC X(3).\r\n    05  TRANS-STATUS         PIC X.\r\n    05  TRANS-USER-ID        PIC X(8).\r\n    05  TRANS-TERMINAL       PIC X(4).\r\n\r\nFD  AUDIT-FILE.\r\n01  AUDIT-RECORD            PIC X(200).\r\n\r\nWORKING-STORAGE SECTION.\r\n*> Transaction Control\r\n01  WS-TRANSACTION-DATA.\r\n    05  WS-TRANS-ID          PIC X(4) VALUE 'BANK'.\r\n    05  WS-USER-ID           PIC X(8).\r\n    05  WS-TERMINAL-ID       PIC X(4).\r\n    05  WS-SESSION-TOKEN     PIC X(32).\r\n\r\n*> Account Processing\r\n01  WS-ACCOUNT-WORK.\r\n    05  WS-FROM-ACCOUNT      PIC 9(14).\r\n    05  WS-TO-ACCOUNT        PIC 9(14).\r\n    05  WS-TRANSFER-AMOUNT   PIC S9(13)V99 COMP-3.\r\n    05  WS-OLD-BALANCE       PIC S9(13)V99 COMP-3.\r\n    05  WS-NEW-BALANCE       PIC S9(13)V99 COMP-3.\r\n\r\n*> Error Handling\r\n01  WS-ERROR-AREA.\r\n    05  WS-ERROR-CODE        PIC X(8).\r\n    05  WS-ERROR-MESSAGE     PIC X(80).\r\n    05  WS-CICS-RESP         PIC S9(8) COMP.\r\n    05  WS-CICS-RESP2        PIC S9(8) COMP.\r\n\r\n*> Temporary Storage Queues\r\n01  WS-TSQ-DATA.\r\n    05  WS-TSQ-NAME          PIC X(8) VALUE 'BANKTSQ'.\r\n    05  WS-TSQ-ITEM          PIC S9(4) COMP VALUE 1.\r\n    05  WS-TSQ-LENGTH        PIC S9(4) COMP.\r\n\r\n*> Message Queue Data\r\n01  WS-MQ-DATA.\r\n    05  WS-MQ-QUEUE          PIC X(8) VALUE 'BANKMQ'.\r\n    05  WS-MQ-MESSAGE        PIC X(500).\r\n    05  WS-MQ-LENGTH         PIC S9(4) COMP.\r\n\r\n*> Channel/Container Data\r\n01  WS-CHANNEL-DATA.\r\n    05  WS-CHANNEL-NAME      PIC X(16) VALUE 'BANK-CHANNEL'.\r\n    05  WS-CONTAINER-NAME    PIC X(16) VALUE 'ACCOUNT-DATA'.\r\n    05  WS-CONTAINER-DATA    PIC X(1000).\r\n    05  WS-CONTAINER-LENGTH  PIC S9(8) COMP.\r\n\r\n*> BMS Map Control\r\n01  WS-MAP-CONTROL.\r\n    05  WS-MAPSET            PIC X(8) VALUE 'BANKMAP'.\r\n    05  WS-MAP-NAME          PIC X(8) VALUE 'ACCFORM'.\r\n    05  WS-CURSOR-POS        PIC S9(4) COMP.\r\n\r\n*> Counters and Flags\r\n01  WS-COUNTERS.\r\n    05  WS-RECORD-COUNT      PIC S9(8) COMP VALUE ZERO.\r\n    05  WS-ERROR-COUNT       PIC S9(4) COMP VALUE ZERO.\r\n    05  WS-RETRY-COUNT       PIC S9(2) COMP VALUE ZERO.\r\n\r\n01  WS-FLAGS.\r\n    05  WS-EOF-FLAG          PIC X VALUE 'N'.\r\n    05  WS-VALID-TRANS-FLAG  PIC X VALUE 'Y'.\r\n    05  WS-AUDIT-FLAG        PIC X VALUE 'Y'.\r\n    05  WS-DEBUG-FLAG        PIC X VALUE 'N'.\r\n\r\nLINKAGE SECTION.\r\n01  DFHCOMMAREA.\r\n    05  LK-FUNCTION-CODE     PIC X(2).\r\n    05  LK-FROM-ACCOUNT      PIC 9(14).\r\n    05  LK-TO-ACCOUNT        PIC 9(14).\r\n    05  LK-AMOUNT            PIC S9(13)V99 COMP-3.\r\n    05  LK-USER-ID           PIC X(8).\r\n    05  LK-RETURN-CODE       PIC X(2).\r\n    05  LK-ERROR-MESSAGE     PIC X(80).\r\n\r\n*> Include copybooks\r\nCOPY ACCOUNT-VALIDATION.\r\nCOPY TRANSACTION-TYPES.\r\nCOPY ERROR-CODES.\r\nCOPY SECURITY-CONTROL.\r\n\r\nPROCEDURE DIVISION.\r\nMAIN-PROCESSING.\r\n    *> Initialize transaction environment\r\n    PERFORM INITIALIZE-TRANSACTION\r\n    \r\n    *> Validate user session\r\n    PERFORM VALIDATE-USER-SESSION\r\n    \r\n    *> Process based on function code\r\n    EVALUATE LK-FUNCTION-CODE\r\n        WHEN '01' PERFORM ACCOUNT-INQUIRY\r\n        WHEN '02' PERFORM ACCOUNT-TRANSFER\r\n        WHEN '03' PERFORM TRANSACTION-HISTORY\r\n        WHEN '04' PERFORM ACCOUNT-BALANCE-UPDATE\r\n        WHEN '05' PERFORM BATCH-PROCESSING\r\n        WHEN OTHER PERFORM INVALID-FUNCTION\r\n    END-EVALUATE\r\n    \r\n    *> Finalize transaction\r\n    PERFORM FINALIZE-TRANSACTION\r\n    \r\n    *> Return to CICS\r\n    EXEC CICS RETURN\r\n        TRANSID('BANK')\r\n        COMMAREA(DFHCOMMAREA)\r\n    END-EXEC.\r\n\r\nINITIALIZE-TRANSACTION.\r\n    *> Get terminal and user information\r\n    EXEC CICS ASSIGN\r\n        USERID(WS-USER-ID)\r\n        TERMID(WS-TERMINAL-ID)\r\n    END-EXEC\r\n    \r\n    *> Start audit logging\r\n    IF WS-AUDIT-FLAG = 'Y'\r\n        PERFORM START-AUDIT-LOG\r\n    END-IF\r\n    \r\n    *> Initialize temporary storage\r\n    PERFORM INITIALIZE-TEMP-STORAGE\r\n    \r\n    *> Set up error handling\r\n    MOVE ZERO TO WS-ERROR-COUNT.\r\n\r\nVALIDATE-USER-SESSION.\r\n    *> Check user authorization\r\n    EXEC CICS LINK\r\n        PROGRAM('AUTHCHK')\r\n        COMMAREA(LK-USER-ID)\r\n        LENGTH(8)\r\n    END-EXEC\r\n    \r\n    *> Validate session token through external service\r\n    EXEC CICS LINK\r\n        PROGRAM('SESSVAL')\r\n        CHANNEL(WS-CHANNEL-NAME)\r\n        CONTAINER(WS-CONTAINER-NAME)\r\n    END-EXEC.\r\n\r\nACCOUNT-INQUIRY.\r\n    *> Read account information\r\n    MOVE LK-FROM-ACCOUNT TO ACC-NUMBER\r\n    \r\n    EXEC CICS READ\r\n        FILE('ACCOUNTS')\r\n        INTO(ACCOUNT-RECORD)\r\n        RIDFLD(ACC-KEY)\r\n        RESP(WS-CICS-RESP)\r\n    END-EXEC\r\n    \r\n    IF WS-CICS-RESP = DFHRESP(NORMAL)\r\n        *> Store in temporary storage for session\r\n        PERFORM STORE-ACCOUNT-IN-TSQ\r\n        *> Send account data to terminal\r\n        PERFORM SEND-ACCOUNT-MAP\r\n    ELSE\r\n        PERFORM HANDLE-FILE-ERROR\r\n    END-IF.\r\n\r\nACCOUNT-TRANSFER.\r\n    *> Complex transfer logic with rollback capability\r\n    PERFORM VALIDATE-TRANSFER-REQUEST\r\n    \r\n    IF WS-VALID-TRANS-FLAG = 'Y'\r\n        *> Start transaction unit of work\r\n        EXEC CICS SYNCPOINT ROLLBACK END-EXEC\r\n        \r\n        PERFORM DEBIT-FROM-ACCOUNT\r\n        IF WS-CICS-RESP = DFHRESP(NORMAL)\r\n            PERFORM CREDIT-TO-ACCOUNT\r\n            IF WS-CICS-RESP = DFHRESP(NORMAL)\r\n                PERFORM LOG-TRANSACTION\r\n                EXEC CICS SYNCPOINT END-EXEC\r\n                PERFORM NOTIFY-TRANSFER-COMPLETE\r\n            ELSE\r\n                EXEC CICS SYNCPOINT ROLLBACK END-EXEC\r\n                PERFORM HANDLE-CREDIT-ERROR\r\n            END-IF\r\n        ELSE\r\n            EXEC CICS SYNCPOINT ROLLBACK END-EXEC\r\n            PERFORM HANDLE-DEBIT-ERROR\r\n        END-IF\r\n    END-IF.\r\n\r\nDEBIT-FROM-ACCOUNT.\r\n    MOVE LK-FROM-ACCOUNT TO ACC-NUMBER\r\n    \r\n    EXEC CICS READ UPDATE\r\n        FILE('ACCOUNTS')\r\n        INTO(ACCOUNT-RECORD)\r\n        RIDFLD(ACC-KEY)\r\n        RESP(WS-CICS-RESP)\r\n    END-EXEC\r\n    \r\n    IF WS-CICS-RESP = DFHRESP(NORMAL)\r\n        MOVE ACC-BALANCE TO WS-OLD-BALANCE\r\n        SUBTRACT LK-AMOUNT FROM ACC-BALANCE\r\n        \r\n        IF ACC-BALANCE >= ZERO\r\n            EXEC CICS REWRITE\r\n                FILE('ACCOUNTS')\r\n            
+    FROM(ACCOUNT-RECORD)\r\n                RESP(WS-CICS-RESP)\r\n            END-EXEC\r\n        ELSE\r\n            MOVE 'INSUFFICIENT_FUNDS' TO WS-ERROR-CODE\r\n            MOVE DFHRESP(ERROR) TO WS-CICS-RESP\r\n        END-IF\r\n    END-IF.\r\n\r\nCREDIT-TO-ACCOUNT.\r\n    MOVE LK-TO-ACCOUNT TO ACC-NUMBER\r\n    \r\n    EXEC CICS READ UPDATE\r\n        FILE('ACCOUNTS')\r\n        INTO(ACCOUNT-RECORD)\r\n        RIDFLD(ACC-KEY)\r\n        RESP(WS-CICS-RESP)\r\n    END-EXEC\r\n    \r\n    IF WS-CICS-RESP = DFHRESP(NORMAL)\r\n        ADD LK-AMOUNT TO ACC-BALANCE\r\n        \r\n        EXEC CICS REWRITE\r\n            FILE('ACCOUNTS')\r\n            FROM(ACCOUNT-RECORD)\r\n            RESP(WS-CICS-RESP)\r\n        END-EXEC\r\n    END-IF.\r\n\r\nLOG-TRANSACTION.\r\n    *> Create transaction record\r\n    EXEC CICS ASKTIME ABSTIME(TRANS-DATE) END-EXEC\r\n    MOVE FUNCTION CURRENT-DATE(1:8) TO TRANS-DATE\r\n    MOVE FUNCTION CURRENT-DATE(9:6) TO TRANS-TIME\r\n    ADD 1 TO WS-RECORD-COUNT\r\n    MOVE WS-RECORD-COUNT TO TRANS-SEQ\r\n    MOVE LK-FROM-ACCOUNT TO TRANS-FROM-ACC\r\n    MOVE LK-TO-ACCOUNT TO TRANS-TO-ACC\r\n    MOVE LK-AMOUNT TO TRANS-AMOUNT\r\n    MOVE 'TRF' TO TRANS-TYPE\r\n    MOVE 'C' TO TRANS-STATUS\r\n    MOVE WS-USER-ID TO TRANS-USER-ID\r\n    MOVE WS-TERMINAL-ID TO TRANS-TERMINAL\r\n    \r\n    EXEC CICS WRITE\r\n        FILE('TRANSACTIONS')\r\n        FROM(TRANSACTION-RECORD)\r\n        RIDFLD(TRANS-KEY)\r\n        RESP(WS-CICS-RESP)\r\n    END-EXEC\r\n    \r\n    *> Send notification via message queue\r\n    PERFORM SEND-MQ-NOTIFICATION.\r\n\r\nTRANSACTION-HISTORY.\r\n    *> Browse transaction history for account\r\n    EXEC CICS STARTBR\r\n        FILE('TRANSACTIONS')\r\n        RIDFLD(LK-FROM-ACCOUNT)\r\n        RESP(WS-CICS-RESP)\r\n    END-EXEC\r\n    \r\n    IF WS-CICS-RESP = DFHRESP(NORMAL)\r\n        PERFORM READ-TRANSACTION-HISTORY\r\n        EXEC CICS ENDBR FILE('TRANSACTIONS') END-EXEC\r\n    END-IF.\r\n\r\nREAD-TRANSACTION-HISTORY.\r\n    MOVE 'N' TO WS-EOF-FLAG\r\n    MOVE 1 TO WS-TSQ-ITEM\r\n    \r\n    PERFORM UNTIL WS-EOF-FLAG = 'Y'\r\n        EXEC CICS READNEXT\r\n            FILE('TRANSACTIONS')\r\n            INTO(TRANSACTION-RECORD)\r\n            RIDFLD(TRANS-KEY)\r\n           
+ RESP(WS-CICS-RESP)\r\n        END-EXEC\r\n        \r\n        IF WS-CICS-RESP = DFHRESP(NORMAL)\r\n            PERFORM STORE-TRANSACTION-IN-TSQ\r\n            ADD 1 TO WS-TSQ-ITEM\r\n        ELSE\r\n            MOVE 'Y' TO WS-EOF-FLAG\r\n        END-IF\r\n    END-PERFORM\r\n    \r\n    *> Send history data to terminal\r\n    PERFORM SEND-HISTORY-MAP.\r\n\r\nBATCH-PROCESSING.\r\n    *> Process multiple transactions via container\r\n    EXEC CICS GET CONTAINER(WS-CONTAINER-NAME)\r\n        CHANNEL(WS-CHANNEL-NAME)\r\n        INTO(WS-CONTAINER-DATA)\r\n        FLENGTH(WS-CONTAINER-LENGTH)\r\n    END-EXEC\r\n    \r\n    *> Link to batch processor\r\n    EXEC CICS LINK\r\n        PROGRAM('BATCHPRC')\r\n        CHANNEL(WS-CHANNEL-NAME)\r\n    END-EXEC.\r\n\r\n*> SQL Operations for reporting\r\nGENERATE-ACCOUNT-REPORT.\r\n    EXEC SQL\r\n        DECLARE ACCOUNT-CURSOR CURSOR FOR\r\n        SELECT ACC_NUMBER, ACC_HOLDER_NAME, ACC_BALANCE, ACC_TYPE\r\n        FROM ACCOUNTS\r\n        WHERE ACC_STATUS = 'A'\r\n        ORDER BY ACC_BALANCE DESC\r\n    END-EXEC\r\n    \r\n    EXEC SQL OPEN ACCOUNT-CURSOR END-EXEC\r\n    \r\n    PERFORM PROCESS-REPORT-RECORDS UNTIL WS-EOF-FLAG = 'Y'\r\n    \r\n    EXEC SQL CLOSE ACCOUNT-CURSOR END-EXEC.\r\n\r\nPROCESS-REPORT-RECORDS.\r\n    EXEC SQL\r\n        FETCH ACCOUNT-CURSOR\r\n        INTO :ACC-NUMBER, :ACC-HOLDER-NAME, :ACC-BALANCE, :ACC-TYPE\r\n    END-EXEC\r\n    \r\n    IF SQLCODE = 0\r\n        PERFORM FORMAT-REPORT-LINE\r\n        PERFORM WRITE-REPORT-LINE\r\n    ELSE\r\n        MOVE 'Y' TO WS-EOF-FLAG\r\n    END-IF.\r\n\r\n*> Utility procedures\r\nINITIALIZE-TEMP-STORAGE.\r\n    EXEC CICS WRITEQ TS\r\n        QUEUE(WS-TSQ-NAME)\r\n        FROM('SESSION-START')\r\n        LENGTH(13)\r\n        ITEM(WS-TSQ-ITEM)\r\n        RESP(WS-CICS-RESP)\r\n    END-EXEC.\r\n\r\nSTORE-ACCOUNT-IN-TSQ.\r\n    ADD 1 TO WS-TSQ-ITEM\r\n    MOVE LENGTH OF ACCOUNT-RECORD TO WS-TSQ-LENGTH\r\n    \r\n    EXEC CICS WRITEQ TS\r\n        QUEUE(WS-TSQ-NAME)\r\n        FROM(ACCOUNT-RECORD)\r\n        LENGTH(WS-TSQ-LENGTH)\r\n        ITEM(WS-TSQ-ITEM)\r\n    END-EXEC.\r\n\r\nSEND-MQ-NOTIFICATION.\r\n    MOVE 'TRANSFER-COMPLETE' TO WS-MQ-MESSAGE\r\n    MOVE 100 TO WS-MQ-LENGTH\r\n    \r\n    EXEC CICS WRITEQ TD\r\n        QUEUE(WS-MQ-QUEUE)\r\n        FROM(WS-MQ-MESSAGE)\r\n        LENGTH(WS-MQ-LENGTH)\r\n    END-EXEC.\r\n\r\nSEND-ACCOUNT-MAP.\r\n    EXEC CICS SEND\r\n        MAPSET(WS-MAPSET)\r\n        MAP(WS-MAP-NAME)\r\n        FROM(ACCOUNT-RECORD)\r\n        ERASE\r\n        CURSOR(WS-CURSOR-POS)\r\n    END-EXEC.\r\n\r\nHANDLE-FILE-ERROR.\r\n    ADD 1 TO WS-ERROR-COUNT\r\n    MOVE 'FILE-ERROR' TO WS-ERROR-CODE\r\n    PERFORM LOG-ERROR.\r\n\r\nSTART-AUDIT-LOG.\r\n    EXEC CICS WRITEQ TD\r\n        QUEUE('AUDIT')\r\n        FROM('TRANSACTION-START')\r\n        LENGTH(17)\r\n    END-EXEC.\r\n\r\nFINALIZE-TRANSACTION.\r\n    EXEC CICS DELETEQ TS\r\n        QUEUE(WS-TSQ-NAME)\r\n    END-EXEC\r\n    \r\n    IF WS-AUDIT-FLAG = 'Y'\r\n        PERFORM END-AUDIT-LOG\r\n    END-IF.\r\n\r\nEND PROGRAM BANKING.",
+      "type": "COBOL"
+    }
+  },
+  "projectId": "b84e623b-a29a-432d-a776-7e5313aef24f"
+}
+2025-07-16 13:13:22,697 - INFO - STEP 1: Parsing request data
+2025-07-16 13:13:22,697 - INFO -   has_file_data: True
+2025-07-16 13:13:22,701 - INFO -   source_language: COBOL
+2025-07-16 13:13:22,703 - INFO -   target_language: C#
+2025-07-16 13:13:22,705 - INFO -   project_id: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:22,705 - INFO - === ENHANCED FILE CLASSIFICATION STARTED ===
+2025-07-16 13:13:22,705 - INFO - === FILE CLASSIFICATION STARTED ===
+2025-07-16 13:13:22,705 - INFO - Number of files to classify: 3
+2025-07-16 13:13:22,705 - INFO - Classified 'ACCOUNT-VALIDATION.CPY' as 'Copybooks'
+2025-07-16 13:13:22,713 - INFO - Classified 'BANKING.JCL' as 'JCL'
+2025-07-16 13:13:22,713 - INFO - Classified 'BANKING.CBL' as 'COBOL Code'
+2025-07-16 13:13:22,713 - INFO - COBOL Code: 1 files
+2025-07-16 13:13:22,713 - INFO - JCL: 1 files
+2025-07-16 13:13:22,718 - INFO - Copybooks: 1 files
+2025-07-16 13:13:22,720 - INFO - === FILE CLASSIFICATION COMPLETED ===
+2025-07-16 13:13:22,721 - INFO - === ENHANCED FILE CLASSIFICATION COMPLETED ===
+2025-07-16 13:13:22,721 - INFO - STEP 2: File classification completed
+2025-07-16 13:13:22,721 - INFO -   total_files: 3
+2025-07-16 13:13:22,721 - INFO -   cobol_files: 1
+2025-07-16 13:13:22,721 - INFO -   copybooks: 1
+2025-07-16 13:13:22,730 - INFO -   jcl_files: 1
+2025-07-16 13:13:22,730 - INFO - STEP 3: Generating COBOL analysis JSON
+2025-07-16 13:13:22,730 - INFO -   project_id: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:22,735 - INFO - Creating COBOL JSON for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:22,737 - INFO - Analyzing file: uploads\b84e623b-a29a-432d-a776-7e5313aef24f\ACCOUNT-VALIDATION.CPY
+2025-07-16 13:13:22,740 - WARNING - No variables found in copybook ACCOUNT-VALIDATION.CPY. Content may be empty or malformed.
+2025-07-16 13:13:22,740 - INFO - File ACCOUNT-VALIDATION.CPY analyzed: 0 variables, 0 CICS commands, 0 paragraphs
+2025-07-16 13:13:22,745 - INFO - Analyzing file: uploads\b84e623b-a29a-432d-a776-7e5313aef24f\BANKING.CBL
+2025-07-16 13:13:22,745 - INFO - File BANKING.CBL analyzed: 50 variables, 26 CICS commands, 19 paragraphs
+2025-07-16 13:13:22,752 - INFO - Extracted dependencies from BANKING.CBL: ['ACCOUNT-VALIDATION', 'TRANSACTION-TYPES', 'ERROR-CODES', 'SECURITY-CONTROL']
+2025-07-16 13:13:22,754 - INFO - Analyzing file: uploads\b84e623b-a29a-432d-a776-7e5313aef24f\BANKING.JCL
+2025-07-16 13:13:22,756 - INFO - File BANKING.JCL analyzed: 0 variables, 0 CICS commands, 0 paragraphs
+2025-07-16 13:13:22,778 - INFO - COBOL JSON created at: output\analysis\b84e623b-a29a-432d-a776-7e5313aef24f\cobol_analysis.json
+2025-07-16 13:13:22,803 - INFO - COBOL JSON created at: output\analysis\b84e623b-a29a-432d-a776-7e5313aef24f\cobol_analysis.json
+2025-07-16 13:13:22,803 - INFO - STEP 4: Indexing files for RAG
+2025-07-16 13:13:22,803 - INFO -   project_id: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:22,803 - INFO - Indexing files for RAG: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:24,872 - INFO - Embedding test successful. Dimension: 3072
+2025-07-16 13:13:24,872 - INFO - Found 3 files in file_data to process
+2025-07-16 13:13:24,872 - INFO - Added document for file: ACCOUNT-VALIDATION.CPY
+2025-07-16 13:13:24,872 - INFO - Added document for file: BANKING.JCL
+2025-07-16 13:13:24,880 - INFO - Added document for file: BANKING.CBL
+2025-07-16 13:13:24,880 - INFO - Prepared 3 documents for indexing
+2025-07-16 13:13:24,886 - INFO - Split into 22 chunks
+2025-07-16 13:13:31,659 - WARNING - `embedding_function` is expected to be an Embeddings object, support for passing in a function will soon be removed.
+2025-07-16 13:13:31,674 - INFO - Created new vector store for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:31,691 - INFO - Saved vector store to output\rag\b84e623b-a29a-432d-a776-7e5313aef24f\faiss_index
+2025-07-16 13:13:31,702 - INFO - RAG indexing completed successfully for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:31,702 - INFO - STEP 5: Creating business and technical prompts
+2025-07-16 13:13:31,702 - INFO -   source_language: COBOL
+2025-07-16 13:13:31,707 - INFO -   target_language: C#
+2025-07-16 13:13:31,707 - INFO -   cobol_files_count: 1
+2025-07-16 13:13:31,717 - WARNING - `embedding_function` is expected to be an Embeddings object, support for passing in a function will soon be removed.
+2025-07-16 13:13:31,717 - INFO - COBOL vector store loaded successfully for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:31,723 - WARNING - `embedding_function` is expected to be an Embeddings object, support for passing in a function will soon be removed.
+2025-07-16 13:13:31,723 - INFO - Standards vector store loaded successfully for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:31,723 - INFO - Combined 2 vector stores for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:13:31,723 - INFO - Performing similarity search with query: 'Relevant COBOL program and standards information' and k=5
+2025-07-16 13:13:31,723 - ERROR - Error querying vector store: 'AzureOpenAIEmbeddingWrapper' object is not callable
+2025-07-16 13:13:31,723 - INFO - Added RAG context with 0 results
+2025-07-16 13:13:31,732 - INFO - STEP 6: Running business requirements analysis
+2025-07-16 13:13:31,733 - INFO -   prompt_length: 39975
+2025-07-16 13:13:48,410 - INFO - === BUSINESS_REQUIREMENTS - GPT INTERACTION ===
+2025-07-16 13:13:48,410 - INFO - Model: gpt-4o
+2025-07-16 13:13:48,418 - INFO - Timestamp: 2025-07-16T13:13:48.418937
+2025-07-16 13:13:48,418 - INFO - INPUT TO GPT:
+2025-07-16 13:13:48,418 - INFO -   Message 1 (system):
+2025-07-16 13:13:48,418 - INFO -     Content Preview (first 500 chars): You are an expert in analyzing COBOL/CICS code to extract business requirements. You understand COBOL, CICS commands, and mainframe business processes deeply. You have access to comprehensive analysis results including CICS patterns, RAG context, and standards documents. Use the provided COBOL analysis JSON to understand program structure, variables, and dependencies. Output your analysis in JSON format with the following structure:
+
+{
+  "Overview": {
+    "Purpose of the System": "Describe the s...
+2025-07-16 13:13:48,426 - INFO -     Content Preview (last 500 chars): ...verall operation.",
+    "Constraints": "Note any business limitations or operational restrictions."
+  },
+  "Assumptions & Recommendations": {
+    "Assumptions": "Describe what is presumed about data, processes, or environment.",
+    "Recommendations": "Suggest enhancements or modernization directions."
+  },
+  "Expected Output": {
+    "Output": "Describe the main outputs (e.g., reports, logs, updates).",
+    "Business Significance": "Explain why these outputs matter for business processes."
+  }
+}
+2025-07-16 13:13:48,428 - INFO -     Total Content Length: 1645 characters
+2025-07-16 13:13:48,428 - INFO -   Message 2 (user):
+2025-07-16 13:13:48,428 - INFO -     Content Preview (first 500 chars):
+            You are a business analyst responsible for analyzing and documenting the business requirements from the following COBOL code. Your task is to interpret the code's intent and extract meaningful business logic suitable for non-technical stakeholders.
+
+            The code may be written in a legacy language like COBOL, possibly lacking comments or modern structure. You must infer business rules by examining variable names, control flow, data manipulation, and any input/output operatio...
+2025-07-16 13:13:48,434 - INFO -     Content Preview (last 500 chars): ... DD *"
+        },
+        {
+          "type": "EXEC",
+          "name": "EXEC",
+          "details": "//VSAM     EXEC PGM=IDCAMS"
+        },
+        {
+          "type": "DD",
+          "name": "DD",
+          "details": "//SYSPRINT DD SYSOUT=*"
+        },
+        {
+          "type": "DD",
+          "name": "DD",
+          "details": "//SYSIN    DD *"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    "ACCOUNT-VALIDATION",
+    "TRANSACTION-TYPES",
+    "ERROR-CODES",
+    "SECURITY-CONTROL"
+  ]
+}
+2025-07-16 13:13:48,445 - INFO -     Total Content Length: 39975 characters
+2025-07-16 13:13:48,447 - INFO - RESPONSE FROM GPT:
+2025-07-16 13:13:48,447 - INFO -   Response ID: chatcmpl-Btr5dOFeHXr1Crjb9OLPFIcGBpxGa
+2025-07-16 13:13:48,451 - INFO -   Model Used: gpt-4o-2024-08-06
+2025-07-16 13:13:48,451 - INFO -   Usage: CompletionUsage(completion_tokens=526, prompt_tokens=10944, total_tokens=11470, completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=0, rejected_prediction_tokens=0), prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0))
+2025-07-16 13:13:48,451 - INFO -   Finish Reason: stop
+2025-07-16 13:13:48,451 - INFO -   Response Length: 3073 characters
+2025-07-16 13:13:48,451 - INFO -   Response Preview (first 1000 chars): {
+  "Overview": {
+    "Purpose of the System": "The Comprehensive Banking System is designed to manage core banking operations, including account management, fund transfers, and transaction history tracking. It serves as a critical component of the bank's infrastructure, ensuring efficient and secure processing of customer transactions.",
+    "Context and Business Impact": "Operating within a CICS environment on an IBM mainframe, this system supports real-time transaction processing, which is vital for maintaining customer trust and operational efficiency. By handling large volumes of transactions, it directly contributes to the bank's ability to offer reliable and timely financial services."
+  },
+  "Objectives": {
+    "Primary Objective": "The main goal of the system is to facilitate seamless and secure banking transactions, including account inquiries, transfers, and transaction logging, while ensuring data integrity and compliance with financial regulations.",
+    "Key Outcomes": "E...
+2025-07-16 13:13:48,462 - INFO -   Response Preview (last 1000 chars): ...erate within the constraints of the mainframe environment, including resource limitations and compliance with financial industry regulations."
+  },
+  "Assumptions & Recommendations": {
+    "Assumptions": "It is assumed that the data in the VSAM files is accurate and up-to-date. The system relies on external services for user authentication and session validation.",
+    "Recommendations": "Consider modernizing the user interface to improve user experience. Explore opportunities to integrate with newer technologies for enhanced performance and scalability."
+  },
+  "Expected Output": {
+    "Output": "The system generates transaction logs, account updates, and audit records. It also provides real-time account information and transaction history to users.",
+    "Business Significance": "These outputs are crucial for maintaining accurate financial records, ensuring customer satisfaction through timely service, and providing necessary documentation for audits and regulatory compliance."
+  }
+}
+2025-07-16 13:13:48,467 - INFO - === END BUSINESS_REQUIREMENTS ===
+
+2025-07-16 13:13:48,467 - INFO -  === JSON EXTRACTION PROCESS ===
+2025-07-16 13:13:48,467 - INFO - Input text length: 3073 characters
+2025-07-16 13:13:48,475 - INFO - Input text preview: {
+  "Overview": {
+    "Purpose of the System": "The Comprehensive Banking System is designed to manage core banking operations, including account management, fund transfers, and transaction history tracking. It serves as a critical component of the bank's infrastructure, ensuring efficient and secur...
+2025-07-16 13:13:48,478 - INFO -  Direct JSON parsing successful
+2025-07-16 13:13:48,478 - INFO - STEP 7: Running technical requirements analysis
+2025-07-16 13:13:48,478 - INFO -   prompt_length: 39040
+2025-07-16 13:13:57,252 - INFO - === TECHNICAL_REQUIREMENTS - GPT INTERACTION ===
+2025-07-16 13:13:57,260 - INFO - Model: gpt-4o
+2025-07-16 13:13:57,261 - INFO - Timestamp: 2025-07-16T13:13:57.261122
+2025-07-16 13:13:57,261 - INFO - INPUT TO GPT:
+2025-07-16 13:13:57,261 - INFO -   Message 1 (system):
+2025-07-16 13:13:57,261 - INFO -     Content: You are an expert in COBOL to .NET 8 migration. You deeply understand both COBOL and .NET 8 and can identify technical challenges and requirements for migration. Use the provided COBOL analysis JSON to understand program structure, variables, and dependencies. Output your analysis in JSON format with the following structure:
+{
+  "technicalRequirements": [
+    {"id": "TR1", "description": "First technical requirement", "complexity": "High/Medium/Low"},
+    {"id": "TR2", "description": "Second technical requirement", "complexity": "High/Medium/Low"}
+  ],
+}
+2025-07-16 13:13:57,269 - INFO -   Message 2 (user):
+2025-07-16 13:13:57,269 - INFO -     Content Preview (first 500 chars):
+            Analyze the following COBOL code and extract the technical requirements for migrating it to C#.
+            Do not use any Markdown formatting (e.g., no **bold**, italics, or backticks).
+            Return plain text only.
+
+            Focus on implementation details such as:
+            1. Examine the entire codebase first to understand architectural patterns and dependencies.
+            2. Analyze code in logical sections, mapping technical components to system functions.
+       ...
+2025-07-16 13:13:57,269 - INFO -     Content Preview (last 500 chars): ... DD *"
+        },
+        {
+          "type": "EXEC",
+          "name": "EXEC",
+          "details": "//VSAM     EXEC PGM=IDCAMS"
+        },
+        {
+          "type": "DD",
+          "name": "DD",
+          "details": "//SYSPRINT DD SYSOUT=*"
+        },
+        {
+          "type": "DD",
+          "name": "DD",
+          "details": "//SYSIN    DD *"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    "ACCOUNT-VALIDATION",
+    "TRANSACTION-TYPES",
+    "ERROR-CODES",
+    "SECURITY-CONTROL"
+  ]
+}
+2025-07-16 13:13:57,277 - INFO -     Total Content Length: 39040 characters
+2025-07-16 13:13:57,277 - INFO - RESPONSE FROM GPT:
+2025-07-16 13:13:57,277 - INFO -   Response ID: chatcmpl-Btr5ou3SpeecB8TvlNxUj4As67V7s
+2025-07-16 13:13:57,285 - INFO -   Model Used: gpt-4o-2024-08-06
+2025-07-16 13:13:57,285 - INFO -   Usage: CompletionUsage(completion_tokens=671, prompt_tokens=10578, total_tokens=11249, completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=0, rejected_prediction_tokens=0), prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0))
+2025-07-16 13:13:57,290 - INFO -   Finish Reason: stop
+2025-07-16 13:13:57,292 - INFO -   Response Length: 2939 characters
+2025-07-16 13:13:57,293 - INFO -   Response Preview (first 1000 chars): {
+  "technicalRequirements": [
+    {
+      "id": "TR1",
+      "description": "The system must support indexed file organization for account and transaction data, similar to VSAM files in COBOL, using Entity Framework Core or equivalent in .NET 8.",
+      "complexity": "Medium"
+    },
+    {
+      "id": "TR2",
+      "description": "The system must implement dynamic access to data records, ensuring efficient retrieval and updates, akin to the ACCESS IS DYNAMIC clause in COBOL.",
+      "complexity": "Medium"
+    },
+    {
+      "id": "TR3",
+      "description": "The system should handle sequential file processing for audit logs, similar to the sequential organization in COBOL.",
+      "complexity": "Low"
+    },
+    {
+      "id": "TR4",
+      "description": "The system must convert COMP-3 packed decimal fields to appropriate .NET data types, ensuring precision for financial computations.",      
+      "complexity": "High"
+    },
+    {
+      "id": "TR5",
+      "description": "The system must implem...
+2025-07-16 13:13:57,301 - INFO -   Response Preview (last 1000 chars): ...,
+    {
+      "id": "TR10",
+      "description": "The system should ensure secure user session validation and authorization, integrating with external services as in CICS LINK.",
+      "complexity": "High"
+    },
+    {
+      "id": "TR11",
+      "description": "The system must handle data mapping and presentation, similar to BMS map control in COBOL, using .NET UI frameworks.",
+      "complexity": "Medium"
+    },
+    {
+      "id": "TR12",
+      "description": "The system should implement SQL operations for reporting, ensuring compatibility with .NET data access technologies.",
+      "complexity": "Medium"
+    },
+    {
+      "id": "TR13",
+      "description": "The system must integrate with existing batch processing systems, supporting container-based data exchange.",
+      "complexity": "High"
+    },
+    {
+      "id": "TR14",
+      "description": "The system should maintain audit logging capabilities, ensuring compliance with enterprise standards.",
+      "complexity": "Low"
+    }
+  ]
+}
+2025-07-16 13:13:57,310 - INFO - === END TECHNICAL_REQUIREMENTS ===
+
+2025-07-16 13:13:57,310 - INFO -  === JSON EXTRACTION PROCESS ===
+2025-07-16 13:13:57,316 - INFO - Input text length: 2939 characters
+2025-07-16 13:13:57,316 - INFO - Input text preview: {
+  "technicalRequirements": [
+    {
+      "id": "TR1",
+      "description": "The system must support indexed file organization for account and transaction data, similar to VSAM files in COBOL, using Entity Framework Core or equivalent in .NET 8.",
+      "complexity": "Medium"
+    },
+    {
+      "id...
+2025-07-16 13:13:57,318 - INFO -  Direct JSON parsing successful
+2025-07-16 13:13:57,318 - INFO - STEP 8: Analysis completed successfully
+2025-07-16 13:13:57,325 - INFO -   business_rules_count: 4
+2025-07-16 13:13:57,326 - INFO -   technical_requirements_count: 14
+2025-07-16 13:13:57,328 - INFO -   conversionContextReady: True
+2025-07-16 13:14:09,598 - INFO - Starting conversion for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:14:09,606 - INFO - Loaded analysis data for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:14:09,606 - INFO - Using source code from request
+2025-07-16 13:14:09,606 - INFO - Added COBOL file: ACCOUNT-VALIDATION.CPY
+2025-07-16 13:14:09,606 - INFO - Added COBOL file: BANKING.JCL
+2025-07-16 13:14:09,606 - INFO - Added COBOL file: BANKING.CBL
+2025-07-16 13:14:09,606 - INFO - Found 3 COBOL files for conversion
+2025-07-16 13:14:09,621 - WARNING - `embedding_function` is expected to be an Embeddings object, support for passing in a function will soon be removed.
+2025-07-16 13:14:09,622 - INFO - COBOL vector store loaded successfully for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:14:09,622 - WARNING - `embedding_function` is expected to be an Embeddings object, support for passing in a function will soon be removed.
+2025-07-16 13:14:09,622 - INFO - Standards vector store loaded successfully for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:14:09,622 - INFO - Combined 2 vector stores for project: b84e623b-a29a-432d-a776-7e5313aef24f
+2025-07-16 13:14:09,630 - INFO - Performing similarity search with query: 'Relevant COBOL program and C# conversion patterns' and k=5
+2025-07-16 13:14:09,630 - ERROR - Error querying vector store: 'AzureOpenAIEmbeddingWrapper' object is not callable
+2025-07-16 13:14:09,630 - INFO - Performing similarity search with query: 'Relevant coding standards and guidelines' and k=3
+2025-07-16 13:14:09,630 - ERROR - Error querying vector store: 'AzureOpenAIEmbeddingWrapper' object is not callable
+2025-07-16 13:14:09,635 - INFO - Added RAG and standards context
+2025-07-16 13:14:09,637 - INFO - Database usage detected with pattern: EXEC\s+SQL
+2025-07-16 13:14:09,639 - INFO - Calling Azure OpenAI for conversion
+2025-07-16 13:14:53,264 - INFO - Conversion response received. Usage: CompletionUsage(completion_tokens=3118, prompt_tokens=14336, total_tokens=17454, completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=0, rejected_prediction_tokens=0), prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0))
+2025-07-16 13:14:53,264 - INFO -  === JSON EXTRACTION PROCESS ===
+2025-07-16 13:14:53,270 - INFO - Input text length: 13989 characters
+2025-07-16 13:14:53,270 - INFO - Input text preview: ```json
+{
+  "converted_code": [
+    {
+      "file_name": "AccountValidation.cs",
+      "path": "Models",
+      "content": "using System.ComponentModel.DataAnnotations;\nusing System.ComponentModel.DataAnnotations.Schema;\n\nnamespace BankingSystem.Models\n{\n    public class AccountValidation\n    {...
+2025-07-16 13:14:53,271 - INFO -  Direct JSON parsing failed: Expecting value: line 1 column 1 (char 0)
+2025-07-16 13:14:53,271 - INFO - Trying alternative methods...
+2025-07-16 13:14:53,271 - INFO - Found 1 potential JSON blocks in markdown
+2025-07-16 13:14:53,271 - INFO -  Successfully parsed JSON from markdown block 1
+2025-07-16 13:14:53,287 - INFO - Converted C# code saved to: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\converted_csharp.json
+2025-07-16 13:14:53,295 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models/Models
+2025-07-16 13:14:53,304 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models/Data/ApplicationDbContext.cs
+2025-07-16 13:14:53,312 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models/Services/AccountService.cs
+2025-07-16 13:14:53,312 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models/Controllers/AccountController.cs
+2025-07-16 13:14:53,328 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models/Program.cs
+2025-07-16 13:14:53,328 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models/BankingSystem.Models.csproj
+2025-07-16 13:14:53,336 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models.Tests/BankingSystem.Models.Tests.csproj  
+2025-07-16 13:14:53,344 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models.Tests/UnitTests.cs
+2025-07-16 13:14:53,344 - INFO - Saved file: output\converted\b84e623b-a29a-432d-a776-7e5313aef24f\BankingSystem.Models.sln
+2025-07-16 13:14:53,344 - INFO - Generated 9 files for .NET project
