@@ -10,7 +10,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def detect_database_usage(source_code, source_language="COBOL"):
-
     """
     Detect if source code contains database operations or embedded SQL.
     
@@ -19,8 +18,11 @@ def detect_database_usage(source_code, source_language="COBOL"):
         source_language (str): The programming language of the source code
         
     Returns:
-        bool: True if database operations are detected, False otherwise
+        dict: Dictionary with 'has_db' (bool) and 'db_type' (str) keys
     """
+    # Initialize default response
+    result = {"has_db": False, "db_type": "none"}
+    
     # For COBOL, check for common database-related keywords and statements
     if source_language.upper() == "COBOL":
         # Check for embedded SQL
@@ -60,6 +62,8 @@ def detect_database_usage(source_code, source_language="COBOL"):
         for pattern in sql_patterns:
             if re.search(pattern, source_code, re.IGNORECASE):
                 logger.info(f"Database usage detected with pattern: {pattern}")
-                return True
+                result["has_db"] = True
+                result["db_type"] = "sql"  # Default to SQL; can be extended to detect specific DBs
+                return result
                 
-    return False
+    return result

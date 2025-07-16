@@ -2,8 +2,7 @@ import os
 import time       
 import json       
 import re
-from ..config import logger         
-
+from ..config import logger
 
 def extract_json_from_response(text):
     """
@@ -11,7 +10,7 @@ def extract_json_from_response(text):
     Handle cases where the model might wrap JSON in markdown code blocks,
     add additional text, or return truncated/incomplete JSON.
     """
-    logger.info("=== JSON EXTRACTION PROCESS ===")
+    logger.info(" === JSON EXTRACTION PROCESS === ")
     logger.info(f"Input text length: {len(text)} characters")
     logger.info(f"Input text preview: {text[:300]}...")
     

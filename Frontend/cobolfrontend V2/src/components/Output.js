@@ -44,16 +44,21 @@ export default function Output({
   const functionalTestsContentRef = useRef(null);
 
   useEffect(() => {
-    // Only use real files from backend
+    console.log("convertedFiles in Output:", convertedFiles);
     if (convertedFiles && Object.keys(convertedFiles).length > 0) {
       const structure = {
         files: convertedFiles
       };
       setFileStructure(structure);
       const firstFilePath = Object.keys(convertedFiles)[0];
-        setSelectedFile(firstFilePath);
+      setSelectedFile(firstFilePath);
       setSelectedFileContent(convertedFiles[firstFilePath]);
-      }
+    } else {
+      setFileStructure({ files: {} });
+      setSelectedFile(null);
+      setSelectedFileContent("");
+      console.warn("No converted files received from backend");
+    }
   }, [convertedFiles]);
 
   // Reset local copy status when the parent component's copy status changes

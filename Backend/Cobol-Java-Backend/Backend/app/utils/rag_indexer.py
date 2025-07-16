@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 from pathlib import Path
@@ -162,8 +163,8 @@ def index_standards_document(project_id: str, file_path: Path):
     
     logger.info(f"Standards document indexing completed for project: {project_id}")
 
-def index_files_for_rag(project_id: str, cobol_json: Dict[str, Any]):
-    """Index COBOL analysis JSON for RAG."""
+def index_files_for_rag(project_id: str, cobol_json: Dict[str, Any], file_data: Dict[str, Any]):
+    """Index COBOL files and analysis JSON for RAG."""
     logger.info(f"Indexing files for RAG: {project_id}")
     
     if not test_embedding_service():
@@ -174,289 +175,41 @@ def index_files_for_rag(project_id: str, cobol_json: Dict[str, Any]):
     output_dir.mkdir(parents=True, exist_ok=True)
     
     documents = []
-    files_data = cobol_json.get("files", [])
-    programs = cobol_json.get("programs", {})
     
-    if isinstance(files_data, list):
-        logger.info(f"Found {len(files_data)} files to process (list format)")
-        
-        for file_data in files_data:
-            if not isinstance(file_data, dict):
-                continue
-                
-            file_name = file_data.get("file_name", "Unknown")
-            file_type = file_data.get("file_type", "")
-            
-            logger.info(f"Processing file: {file_name} ({file_type})")
-            
-            content_parts = []
-            content_parts.append(f"File: {file_name}")
-            content_parts.append(f"Type: {file_type}")
-            
-            # Process divisions
-            divisions = file_data.get("divisions", {})
-            if divisions:
-                # Identification division
-                identification = divisions.get("identification", {})
-                if identification:
-                    program_id = identification.get("program_id")
-                    if program_id:
-                        content_parts.append(f"Program ID: {program_id}")
-                
-                # Data division
-                data_div = divisions.get("data", {})
-                if data_div:
-                    working_storage = data_div.get("working_storage", [])
-                    if working_storage:
-                        content_parts.append("Working Storage:")
-                        for var in working_storage:
-                            if isinstance(var, dict):
-                                var_details = f"  {var.get('name', '')}: level={var.get('level', '')}, type={var.get('type', '')}, picture={var.get('picture', '')}"
-                                content_parts.append(var_details)
-                    
-                    linkage_section = data_div.get("linkage_section", [])
-                    if linkage_section:
-                        content_parts.append("Linkage Section:")
-                        for var in linkage_section:
-                            if isinstance(var, dict):
-                                var_details = f"  {var.get('name', '')}: level={var.get('level', '')}, type={var.get('type', '')}, picture={var.get('picture', '')}"
-                                content_parts.append(var_details)
-                    
-                    file_section = data_div.get("file_section", [])
-                    if file_section:
-                        content_parts.append("File Section:")
-                        for var in file_section:
-                            if isinstance(var, dict):
-                                var_details = f"  {var.get('name', '')}: level={var.get('level', '')}, type={var.get('type', '')}, picture={var.get('picture', '')}"
-                                content_parts.append(var_details)
-                
-                # Procedure division
-                procedure_div = divisions.get("procedure", [])
-                if procedure_div:
-                    content_parts.append("Procedure Division:")
-                    for proc in procedure_div:
-                        if isinstance(proc, dict):
-                            proc_details = f"  {proc.get('paragraph', '')}: {', '.join(proc.get('code', []))}"
-                            content_parts.append(proc_details)
-                        else:
-                            content_parts.append(f"  {proc}")
-            
-            # Process CICS commands
-            cics_commands = file_data.get("cics_commands", [])
-            if cics_commands:
-                content_parts.append("CICS Commands:")
-                for cmd in cics_commands:
-                    if isinstance(cmd, dict):
-                        content_parts.append(f"  {cmd.get('command', '')}")
-                    else:
-                        content_parts.append(f"  {cmd}")
-            
-            # Process variables
-            variables = file_data.get("variables", [])
-            if variables:
-                content_parts.append("Variables:")
-                for var in variables:
-                    if isinstance(var, dict):
-                        var_details = f"  {var.get('name', '')}: level={var.get('level', '')}, type={var.get('type', '')}, picture={var.get('picture', '')}"
-                        content_parts.append(var_details)
-                    else:
-                        content_parts.append(f"  {var}")
-            
-            # Process paragraphs
-            paragraphs = file_data.get("paragraphs", [])
-            if paragraphs:
-                content_parts.append("Paragraphs:")
-                for para in paragraphs:
-                    if isinstance(para, dict):
-                        para_details = f"  {para.get('paragraph', '')}: {', '.join(para.get('code', []))}"
-                        content_parts.append(para_details)
-                    else:
-                        content_parts.append(f"  {para}")
-            
-            # Process copybooks
-            copybooks = file_data.get("copybooks", [])
-            if copybooks:
-                content_parts.append("Copybooks:")
-                for copybook in copybooks:
-                    if isinstance(copybook, dict):
-                        content_parts.append(f"  {copybook.get('name', '')}")
-                    else:
-                        content_parts.append(f"  {copybook}")
-            
-            # Process JCL definitions
-            jcl_definitions = file_data.get("jcl_definitions")
-            if jcl_definitions:
-                content_parts.append("JCL Definitions:")
-                for jcl in jcl_definitions:
-                    if isinstance(jcl, dict):
-                        content_parts.append(f"  {jcl.get('type', '')}: {jcl.get('details', '')}")
-                    else:
-                        content_parts.append(f"  {jcl}")
-            
-            if len(content_parts) > 2:  # More than just file name and type
-                content = "\n".join(str(part) for part in content_parts if part)
+    # Process original file_data from request
+    if file_data:
+        logger.info(f"Found {len(file_data)} files in file_data to process")
+        for file_name, file_info in file_data.items():
+            content = file_info.get("content", "")
+            file_type = file_info.get("type", "Unknown")
+            if content:
                 documents.append(Document(
-                    page_content=content,
+                    page_content=f"File: {file_name}\nType: {file_type}\nContent:\n{content}",
                     metadata={
                         "source": file_name,
-                        "type": f"cobol_{file_type.lstrip('.')}" if file_type else "cobol_file",
+                        "type": f"cobol_{file_type.lower()}",
                         "project_id": project_id
                     }
                 ))
                 logger.info(f"Added document for file: {file_name}")
     
-    elif isinstance(files_data, dict):
-        logger.info(f"Found {len(files_data)} files to process (dict format)")
-        for program_name, program_data in files_data.items():
-            content_parts = []
-            
-            logger.info(f"Processing program: {program_name}")
-            logger.info(f"Program data keys: {list(program_data.keys()) if isinstance(program_data, dict) else 'Not a dict'}")
-            
-            content_parts.append(f"Program: {program_name}")
-            
-            if isinstance(program_data, dict):
-                # Add description
-                if program_data.get("description"):
-                    content_parts.append(f"Description: {program_data['description']}")
-                
-                # Add working storage with details
-                working_storage = program_data.get("working_storage", {})
-                if not working_storage:
-                    working_storage = program_data.get("variables", {})
-                
-                if working_storage:
-                    content_parts.append("Working Storage/Variables:")
-                    for var_name, var_info in working_storage.items():
-                        if isinstance(var_info, dict):
-                            var_details = f"  {var_name}: type={var_info.get('type', '')}, "
-                            var_details += f"size={var_info.get('size', '')}, "
-                            var_details += f"usage={var_info.get('usage', '')}"
-                            content_parts.append(var_details.strip(", "))
-                        else:
-                            content_parts.append(f"  {var_name}: {var_info}")
-                
-                # Add procedures with details
-                procedures = program_data.get("procedures", {})
-                if not procedures:
-                    procedures = program_data.get("paragraphs", {})
-                    
-                if procedures:
-                    content_parts.append("Procedures/Paragraphs:")
-                    for proc_name, proc_info in procedures.items():
-                        proc_details = f"  {proc_name}: "
-                        if isinstance(proc_info, dict):
-                            proc_details += f"{proc_info.get('description', '')}"
-                            if proc_info.get('code'):
-                                proc_details += f"\n    Code: {proc_info['code']}"
-                            if proc_info.get('content'):
-                                proc_details += f"\n    Content: {proc_info['content']}"
-                        else:
-                            proc_details += str(proc_info)
-                        content_parts.append(proc_details)
-                
-                # Add file operations
-                file_operations = program_data.get("file_operations", [])
-                if file_operations:
-                    content_parts.append("File Operations:")
-                    for op in file_operations:
-                        content_parts.append(f"  {op}")
-                
-                # Add database operations
-                db_operations = program_data.get("database_operations", [])
-                if db_operations:
-                    content_parts.append("Database Operations:")
-                    for op in db_operations:
-                        content_parts.append(f"  {op}")
-                
-                # Add CICS commands
-                cics_commands = program_data.get("cics_commands", [])
-                if cics_commands:
-                    content_parts.append("CICS Commands:")
-                    for cmd in cics_commands:
-                        content_parts.append(f"  {cmd}")
-                
-                # Add any other relevant data
-                for key, value in program_data.items():
-                    if key not in ["description", "working_storage", "variables", "procedures", "paragraphs", 
-                                 "file_operations", "database_operations", "cics_commands"]:
-                        if value and str(value).strip():
-                            content_parts.append(f"{key.replace('_', ' ').title()}: {value}")
-            
-            else:
-                content_parts.append(f"Content: {program_data}")
-            
-            if len(content_parts) > 1:  # More than just the program name
-                content = "\n".join(str(part) for part in content_parts if part)
-                documents.append(Document(
-                    page_content=content,
-                    metadata={
-                        "source": program_name,
-                        "type": "cobol_program",
-                        "project_id": project_id
-                    }
-                ))
-                logger.info(f"Added document for program: {program_name}")
-    
-    # Process dependencies
-    dependencies = cobol_json.get("dependencies", {})
-    if dependencies:
-        logger.info(f"Found dependencies to process")
-        content_parts = ["Dependencies:"]
-        
-        if isinstance(dependencies, dict):
-            for dep_name, dep_info in dependencies.items():
-                content_parts.append(f"  {dep_name}: {dep_info}")
-        else:
-            content_parts.append(f"  {dependencies}")
-        
-        if len(content_parts) > 1:
-            content = "\n".join(str(part) for part in content_parts if part)
+    # Process cobol_analysis.json
+    analysis_path = Path(output_dir).parent.parent / "analysis" / project_id / "cobol_analysis.json"
+    if analysis_path.exists():
+        with open(analysis_path, "r", encoding="utf-8") as f:
+            analysis_content = json.load(f)
             documents.append(Document(
-                page_content=content,
+                page_content=f"File: cobol_analysis.json\nType: Analysis\nContent:\n{json.dumps(analysis_content, indent=2)}",
                 metadata={
-                    "source": "project_dependencies",
-                    "type": "dependencies",
-                    "project_id": project_id
-                }
-            ))
-            logger.info(f"Added document for dependencies")
-    
-    # Fallback extraction if no documents found
-    if not documents:
-        logger.warning("No documents found with standard keys. Attempting to extract any available content...")
-        
-        all_content = []
-        
-        def extract_text_content(obj, prefix=""):
-            if isinstance(obj, dict):
-                for key, value in obj.items():
-                    if isinstance(value, (str, int, float)) and str(value).strip():
-                        all_content.append(f"{prefix}{key}: {value}")
-                    elif isinstance(value, (dict, list)):
-                        extract_text_content(value, f"{prefix}{key}.")
-            elif isinstance(obj, list):
-                for i, item in enumerate(obj):
-                    extract_text_content(item, f"{prefix}[{i}].")
-            elif isinstance(obj, (str, int, float)) and str(obj).strip():
-                all_content.append(f"{prefix}: {obj}")
-        
-        extract_text_content(cobol_json)
-        
-        if all_content:
-            content = "\n".join(all_content)
-            documents.append(Document(
-                page_content=content,
-                metadata={
-                    "source": f"project_{project_id}",
+                    "source": "cobol_analysis.json",
                     "type": "cobol_analysis",
                     "project_id": project_id
                 }
             ))
-            logger.info(f"Created fallback document with {len(all_content)} content items")
+            logger.info(f"Added document for cobol_analysis.json")
     
     if not documents:
-        logger.error("No documents found to index even after fallback extraction")
+        logger.error("No documents found to index")
         raise ValueError("No content found in COBOL analysis to index")
     
     logger.info(f"Prepared {len(documents)} documents for indexing")
@@ -539,8 +292,7 @@ def load_vector_store(project_id: str):
                 combined_vector_store.merge_from(vs)
             logger.info(f"Combined {len(vector_stores)} vector stores for project: {project_id}")
             return combined_vector_store
-        else:
-            return vector_stores[0]
+        return vector_stores[0]
         
     except Exception as e:
         logger.error(f"Error loading vector store for project {project_id}: {str(e)}")

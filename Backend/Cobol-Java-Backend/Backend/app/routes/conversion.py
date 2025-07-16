@@ -3,13 +3,13 @@ from ..config import logger, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_
 from openai import AzureOpenAI
 import logging
 import os
-from ..config import logger, output_dir
 from ..utils.code_converter import create_code_converter
-from ..utils.prompts import create_code_conversion_prompt, create_unit_test_prompt, create_functional_test_prompt, create_business_requirements_prompt, create_technical_requirements_prompt
+from ..utils.prompts import create_code_conversion_prompt, create_unit_test_prompt, create_functional_test_prompt
 from ..utils.logs import log_request_details, log_processing_step, log_gpt_interaction
 from ..utils.response import extract_json_from_response
 from ..utils.db_usage import detect_database_usage
 from ..utils.db_templates import get_db_template
+from ..utils.rag_indexer import load_vector_store, query_vector_store
 import json
 import re
 import time
@@ -18,7 +18,6 @@ import uuid
 
 bp = Blueprint('conversion', __name__, url_prefix='/cobo')
 
-# Initialize OpenAI.
 client = AzureOpenAI(
     api_key=AZURE_OPENAI_API_KEY,
     api_version="2023-05-15",
@@ -37,8 +36,6 @@ def save_json_response(cobol_filename, json_obj):
         json.dump(json_obj, f, indent=2, ensure_ascii=False)
     return output_path
 
-
-
 def build_conversion_instructions():
     """Build basic conversion instructions"""
     return """
@@ -50,7 +47,6 @@ BASIC CONVERSION INSTRUCTIONS:
 """
 
 def extract_project_name(converted_code):
-    # Prefer namespace from Program.cs or any .cs file
     for key, info in converted_code.items():
         if isinstance(info, dict):
             file_name = info.get("FileName", "")
@@ -59,60 +55,69 @@ def extract_project_name(converted_code):
                 match = re.search(r'namespace ([^\s{]+)', content)
                 if match:
                     return match.group(1)
-    # Fallback: Try Project.csproj
     proj = converted_code.get("ProjectFile") or converted_code.get("Project")
     if proj and isinstance(proj, dict):
         content = proj.get("content", "")
         match = re.search(r'<RootNamespace>(.*?)</RootNamespace>', content)
         if match:
             return match.group(1)
-        # Fallback: use file name without extension
         file_name = proj.get("FileName")
         if file_name and file_name.endswith(".csproj"):
             return file_name[:-7]
     return "Project"
 
 def flatten_converted_code(converted_code, unit_test_code=None):
+    """Create a standard .NET 8 folder structure and save it to the filesystem."""
     files = {}
-    top_level_files = [
-        "Program.cs",
-        "Startup.cs",
-        "appsettings.json",
-        "appsettings.Development.json"
-    ]
-    project_name = extract_project_name(converted_code)
-    # Find the relevant service or controller filename for the test file
-    test_file_name = "UnitTests.cs"
-    test_folder = "Services"
-    if "ServiceImpl" in converted_code and isinstance(converted_code["ServiceImpl"], dict):
-        service_file = converted_code["ServiceImpl"].get("FileName")
-        if service_file and service_file.endswith(".cs"):
-            test_file_name = service_file.replace(".cs", "Tests.cs")
-            test_folder = "Services"
-    elif "Controller" in converted_code and isinstance(converted_code["Controller"], dict):
-        controller_file = converted_code["Controller"].get("FileName")
-        if controller_file and controller_file.endswith(".cs"):
-            test_file_name = controller_file.replace(".cs", "Tests.cs")
-            test_folder = "Controllers"
-    for section, info in converted_code.items():
-        if isinstance(info, dict):
-            file_name = info.get("FileName") or f"{section}.txt"
-            if file_name == "Dependencies.txt":
-                continue  # Skip Dependencies.txt
-            file_path = info.get("Path") or ""
-            # Place any .csproj file in the project_name/ directory, like Program.cs
-            if file_name.lower().endswith(".csproj"):
-                rel_path = f"{project_name}/{file_name}"
-            elif file_name in top_level_files:
-                rel_path = f"{project_name}/{file_name}"
-            else:
-                rel_path = os.path.join(project_name, file_path, file_name).replace("\\", "/")
-            content = info.get("content", "")
-            files[rel_path] = content
-    # Add unit test code and test .csproj with the correct name and folder
-    test_project_folder = f"{project_name}.Tests"
-    test_csproj_name = f"{project_name}.Tests.csproj"
-    test_csproj_content = f'''<Project Sdk="Microsoft.NET.Sdk">
+    project_name = "ConvertedApp"  # Default project name
+    test_project_name = f"{project_name}.Tests"
+
+    # Standard .NET 8 folder structure
+    folders = {
+        "Controllers": [],
+        "Services": [],
+        "Models": [],
+        "Data": [],
+        "Configuration": [],
+        "Program.cs": None,
+        "appsettings.json": None,
+    }
+
+    # Process each file in converted_code
+    for file_info in converted_code:  # Iterate over the list
+        file_name = file_info.get("file_name", "")
+        content = file_info.get("content", "")
+        path = file_info.get("path", "")
+
+        # Ensure path is relative to project root
+        if path.startswith("src/"):
+            path = path.replace("src/", f"{project_name}/")
+        elif not path.startswith(project_name):
+            path = f"{project_name}/{path}"
+
+        # Categorize files based on type
+        if file_name.endswith(".csproj"):
+            files[f"{project_name}/{file_name}"] = content
+        elif file_name in ["Program.cs", "appsettings.json"]:
+            files[f"{project_name}/{file_name}"] = content
+        elif "Controller" in file_name:
+            folders["Controllers"].append(file_info)
+            files[f"{project_name}/Controllers/{file_name}"] = content
+        elif "Service" in file_name:
+            folders["Services"].append(file_info)
+            files[f"{project_name}/Services/{file_name}"] = content
+        elif "Model" in file_name or "Entity" in file_name:
+            folders["Models"].append(file_info)
+            files[f"{project_name}/Models/{file_name}"] = content
+        elif "Repository" in file_name or "Context" in file_name:
+            folders["Data"].append(file_info)
+            files[f"{project_name}/Data/{file_name}"] = content
+        else:
+            files[path] = content
+
+    # Add test project if unit_test_code is provided
+    if unit_test_code:
+        test_csproj_content = f'''<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
@@ -127,10 +132,10 @@ def flatten_converted_code(converted_code, unit_test_code=None):
     <ProjectReference Include="../{project_name}/{project_name}.csproj" />
   </ItemGroup>
 </Project>'''
-    if unit_test_code and unit_test_code.strip():
-        files[f"{test_project_folder}/{test_folder}/{test_file_name}"] = unit_test_code
-        files[f"{test_project_folder}/{test_csproj_name}"] = test_csproj_content
-        # Add a minimal .sln file at the root referencing both projects
+        files[f"{test_project_name}/{test_project_name}.csproj"] = test_csproj_content
+        files[f"{test_project_name}/Tests/UnitTests.cs"] = unit_test_code
+
+        # Add solution file
         sln_content = f"""
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
@@ -138,473 +143,195 @@ VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "{project_name}", "{project_name}/{project_name}.csproj", "{{11111111-1111-1111-1111-111111111111}}"
 EndProject
-Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "{project_name}.Tests", "{project_name}.Tests/{project_name}.Tests.csproj", "{{22222222-2222-2222-2222-222222222222}}"
+Project("{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}") = "{test_project_name}", "{test_project_name}/{test_project_name}.csproj", "{{22222222-2222-2222-2222-222222222222}}"
 EndProject
 Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{{11111111-1111-1111-1111-111111111111}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{{11111111-1111-1111-1111-111111111111}}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{{11111111-1111-1111-1111-111111111111}}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{{11111111-1111-1111-1111-111111111111}}.Release|Any CPU.Build.0 = Release|Any CPU
-		{{22222222-2222-2222-2222-222222222222}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{{22222222-2222-2222-2222-222222222222}}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{{22222222-2222-2222-2222-222222222222}}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{{22222222-2222-2222-2222-222222222222}}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
+    GlobalSection(SolutionConfigurationPlatforms) = preSolution
+        Debug|Any CPU = Debug|Any CPU
+        Release|Any CPU = Release|Any CPU
+    GlobalSection
+    GlobalSection(ProjectConfigurationPlatforms) = postSolution
+        {{11111111-1111-1111-1111-111111111111}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {{11111111-1111-1111-1111-111111111111}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {{11111111-1111-1111-1111-111111111111}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {{11111111-1111-1111-1111-111111111111}}.Release|Any CPU.Build.0 = Release|Any CPU
+        {{22222222-2222-2222-2222-222222222222}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {{22222222-2222-2222-2222-222222222222}}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {{22222222-2222-2222-2222-222222222222}}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {{22222222-2222-2222-2222-222222222222}}.Release|Any CPU.Build.0 = Release|Any CPU
+    GlobalSection
 EndGlobal
 """
         files[f"{project_name}.sln"] = sln_content.strip()
+
+    # Save files to the filesystem
+    output_dir = os.path.join("output", "converted", project_id)
+    os.makedirs(output_dir, exist_ok=True)
+    for file_path, content in files.items():
+        full_path = os.path.join(output_dir, file_path)
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        logger.info(f"Saved file: {full_path}")
+
     return files
 
-@bp.route("/convert", methods=["POST"])
-def convert_code():
-    """Enhanced endpoint to convert COBOL code to .NET 8 using comprehensive analysis results"""
     
-    conversion_start_time = time.time()
-    conversion_logger = logging.getLogger('conversion')
-    logger.info("Starting code conversion process")
-
+@bp.route("/convert", methods=["POST"])
+def convert_cobol_to_csharp():
     try:
-        conversion_id = str(uuid.uuid4())
         data = request.json
-        log_request_details("ENHANCED CODE CONVERSION", data)
-        
-        if not data:
-            logger.error("No data provided in conversion request")
-            return jsonify({
-                "status": "error",
-                "message": "No data provided",
-                "convertedCode": "", "conversionNotes": "", "potentialIssues": [],
-                "unitTests": "", "unitTestDetails": {}, "functionalTests": {},
-                "sourceLanguage": "", "targetLanguage": "", "databaseUsed": False
-            }), 400
+        global project_id  # Note: Using global is not ideal; consider passing project_id explicitly
+        project_id = data.get("projectId")
+        if not project_id:
+            logger.error("Project ID is missing in request")
+            return jsonify({"error": "Project ID is missing. Please upload files first.", "files": {}}), 400
 
-        source_language = data.get("sourceLanguage")
-        target_language = data.get("targetLanguage")
-        source_code = data.get("sourceCode")
-        business_requirements = data.get("businessRequirements", "")
-        technical_requirements = data.get("technicalRequirements", "")
-        vsam_definition = data.get("vsam_definition", "")
+        # Load analysis data
+        analysis_path = os.path.join("output", "analysis", project_id, "cobol_analysis.json")
+        if not os.path.exists(analysis_path):
+            logger.error(f"No analysis data found for project: {project_id}")
+            return jsonify({"error": "No analysis data found. Please run analysis first.", "files": {}}), 400
+        
+        with open(analysis_path, "r", encoding="utf-8") as f:
+            cobol_json = json.load(f)
 
-        logger.info(f"Converting {source_language} to {target_language} - {len(source_code) if source_code else 0} characters")
+        # Handle sourceCode field
+        source_code = data.get("sourceCode", {})
+        if isinstance(source_code, str):
+            try:
+                source_code = json.loads(source_code)  # Attempt to parse if it's a JSON string
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse sourceCode JSON: {str(e)}")
+                return jsonify({"error": "Invalid sourceCode format. Expected a JSON object.", "files": {}}), 400
 
-        if not all([source_language, target_language, source_code]):
-            logger.error("Missing required fields for conversion")
-            return jsonify({
-                "status": "error", "message": "Missing required fields",
-                "convertedCode": "", "conversionNotes": "", "potentialIssues": [],
-                "unitTests": "", "unitTestDetails": {}, "functionalTests": {},
-                "sourceLanguage": source_language if source_language else "",
-                "targetLanguage": target_language if target_language else "",
-                "databaseUsed": False
-            }), 400
+        # Extract COBOL code
+        if not isinstance(source_code, dict):
+            logger.error("sourceCode must be a dictionary")
+            return jsonify({"error": "sourceCode must be a dictionary with file contents.", "files": {}}), 400
 
-        # Validate that source is COBOL and target is .NET 8
-        if source_language.lower() != "cobol" or target_language.lower() not in ["c#", ".net", ".net 8"]:
-            logger.error("Invalid language pair for conversion")
-            return jsonify({
-                "status": "error", "message": "Conversion only supported from COBOL to .NET 8",
-                "convertedCode": "", "conversionNotes": "", "potentialIssues": [],
-                "unitTests": "", "unitTestDetails": {}, "functionalTests": {},
-                "sourceLanguage": source_language if source_language else "",
-                "targetLanguage": target_language if target_language else "",
-                "databaseUsed": False
-            }), 400
+        cobol_code_list = [content for content in source_code.values() if isinstance(content, str)]
+        if not cobol_code_list:
+            logger.error("No valid COBOL code found in sourceCode")
+            return jsonify({"error": "No valid COBOL code found for conversion.", "files": {}}), 400
 
-        # Analyze the code to detect if it contains database operations
-        log_processing_step("Analyzing source code for database operations", {
-            "source_language": source_language,
-            "code_preview": source_code[:200] + "..." if len(source_code) > 200 else source_code
-        }, 2)
-        
-        has_database = detect_database_usage(source_code, source_language)
-        
-        log_processing_step("Database detection completed", {
-            "database_detected": has_database,
-            "will_include_db_template": has_database
-        }, 3)
-        
-        # Only get DB template if database operations are detected
-        if has_database:
-            logger.info(f"📊 Database operations detected in COBOL code. Including DB setup in conversion.")
-            db_setup_template = get_db_template("C#")
-            log_processing_step("Database template retrieved", {
-                "target_language": "C#",
-                "template_length": len(db_setup_template)
-            })
-        else:
-            logger.info(f"📋 No database operations detected in COBOL code. Skipping DB setup.")
-            db_setup_template = ""
-        
-        # Create a code converter instance
-        converter = create_code_converter(client, AZURE_OPENAI_DEPLOYMENT_NAME)
-        
-        # Create base prompt for code conversion
-        log_processing_step("Creating code conversion prompt", {
-            "including_db_template": bool(db_setup_template),
-            "business_req_length": len(str(business_requirements)),
-            "technical_req_length": len(str(technical_requirements))
-        }, 4)
-        
-        base_prompt = create_code_conversion_prompt(
-            source_language, "C#", source_code,
-            business_requirements, technical_requirements, db_setup_template
+        cobol_code_str = "\n".join(cobol_code_list)
+        cobol_analysis_str = json.dumps(cobol_json, indent=2)
+        business_requirements = json.dumps(data.get("businessRequirements", {}), indent=2)
+        technical_requirements = json.dumps(data.get("technicalRequirements", {}), indent=2)
+
+        # Load RAG context
+        vector_store = load_vector_store(project_id)
+        rag_context = ""
+        standards_context = ""
+        if vector_store:
+            rag_results = query_vector_store(vector_store, "Relevant COBOL program and C# conversion patterns", k=5)
+            rag_context = "\n\nRAG CONTEXT:\n" + "\n".join([f"Source: {r.metadata['source']}\n{r.page_content}\n" for r in rag_results])
+            standards_results = query_vector_store(vector_store, "Relevant coding standards and guidelines", k=3)
+            standards_context = "\n\nSTANDARDS CONTEXT:\n" + "\n".join([f"Source: {r.metadata['source']}\n{r.page_content}\n" for r in standards_results])
+
+        # Detect database usage and get DB template
+        db_usage = detect_database_usage(cobol_code_str, source_language="COBOL")
+        db_type = db_usage.get("db_type", "none")
+        db_setup_template = get_db_template("C#") if db_usage.get("has_db", False) else ""
+
+        # Create conversion prompt
+        conversion_prompt = f"""
+        Convert the following COBOL code to C# (.NET 8), adhering to the business and technical requirements.
+        Source Language: COBOL
+        Target Language: C#
+        COBOL Code:
+        {cobol_code_str}
+        COBOL Analysis:
+        {cobol_analysis_str}
+        Business Requirements:
+        {business_requirements}
+        Technical Requirements:
+        {technical_requirements}
+        Database Setup Template:
+        {db_setup_template}
+        {rag_context}
+        {standards_context}
+        """
+
+        # Call Azure OpenAI
+        client = AzureOpenAI(
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            api_version="2024-02-15-preview"
         )
-
-        # Add database-specific instructions
-        database_instruction = (
-            "\n\nIMPORTANT: Only include database initialization code if the source COBOL code contains "
-            "database or SQL operations. If the code is a simple algorithm (like sorting, calculation, etc.) "
-            "without any database interaction, do NOT include any database setup code in the converted .NET 8 code."
-        )
-
-        # Build conversion instructions
-        conversion_instructions = build_conversion_instructions()
-
-        # Combine all prompt parts
-        final_prompt = base_prompt + database_instruction + conversion_instructions
-
-        # Create system message for code conversion
-        system_message = (
-            "You are an expert COBOL to .NET 8 code converter. "
-            "You convert legacy COBOL code to modern .NET 8 applications while maintaining all business logic. "
-            "Only include database setup/initialization if the original COBOL code uses databases or SQL. "
-            "For simple algorithms or calculations without database operations, do NOT add any database code. "
-            "Generate a complete .NET 8 application structure following clean architecture, DDD principles, and best practices. "
-            "Include Entity Framework Core models, repositories, services, controllers, and configuration files as needed. "
-            "Please generate the database connection string for MySQL Server. Ensure the model definitions do not use precision attributes. "
-            "The code should be compatible with .NET 8, and all necessary dependencies should be included in the .csproj file. "
-            "Follow standard .NET patterns and conventions to ensure scalable, maintainable code. "
-            "Return your response in JSON format always with the following structure:\n"
-            "{\n"
-            '  "convertedCode": {\n'
-            '    "Entity": {"FileName": "","Path": "Models/", "content": ""},\n'
-            '    "Repository": {"FileName": "","Path": "Repositories/Interfaces/", "content": ""},\n'
-            '    "RepositoryImpl": {"FileName": "","Path": "Repositories/", "content": ""},\n'
-            '    "Service": {"FileName": "","Path": "Services/Interfaces/", "content": ""},\n'
-            '    "ServiceImpl": {"FileName": "","Path": "Services/", "content": ""},\n'
-            '    "Controller": {"FileName": "","Path": "Controllers/", "content": ""},\n'
-            '    "DbContext": {"FileName": "","Path": "Data/", "content": ""},\n'
-            '    "Program": {"FileName": "","Path": "./", "content": ""},\n'
-            '    "Startup": {"FileName": "","Path": "./", "content": ""},\n'
-            '    "AppSettings": {"FileName": "","Path": "./", "content": ""},\n'
-            '    "AppSettingsDev": {"FileName": "","Path": "./", "content": ""},\n'
-            '    "ProjectFile": {"FileName": "","Path": "./", "content": ""},\n'
-            '    "Dependencies": {"content": "NuGet packages and .NET dependencies needed"}\n'
-            "  },\n"
-            '  "databaseUsed": true/false,\n'
-            '  "conversionNotes": "Detailed notes about the conversion process including comprehensive analysis insights",\n'
-            '  "potentialIssues": ["List of potential issues or considerations"],\n'
-            '  "analysisEnhanced": true/false,\n'
-            '  "architectureRecommendations": ["List of implemented architecture patterns"],\n'
-            '  "technologyStack": {"database": "", "caching": "", "messaging": ""}\n'
-            "}\n"
-            "IMPORTANT: Always return the response in this JSON format. Include proper .NET attributes ([ApiController], [Route], [HttpGet], etc.). "
-            "Use Entity Framework Core for database operations. Follow .NET best practices, SOLID principles, and naming conventions. "
-            "Implement proper dependency injection, async/await patterns, and error handling. Ensure everything is compatible with .NET 8. "
-            "Leverage the provided comprehensive analysis context to create more accurate business domain models and relationships. "
-            "Implement the recommended microservices patterns, caching strategies, and security measures from the analysis."
-        )
-
-        # Build final messages for code conversion
-        conversion_messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": final_prompt}
+        
+        conversion_msgs = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert in COBOL to C# migration. "
+                    "Convert the provided COBOL code to C# (.NET 8), adhering to the business, technical requirements, and coding standards. "
+                    "Use the COBOL analysis JSON to understand program structure, variables, and dependencies. "
+                    "Incorporate the provided database setup template for database operations. "
+                    "Organize the output in a standard .NET 8 folder structure (e.g., Controllers, Services, Models, Data). "
+                    "Output the C# code as a JSON object with the following structure:\n"
+                    "{\n"
+                    "  \"converted_code\": [\n"
+                    "    {\n"
+                    "      \"file_name\": \"string\",\n"
+                    "      \"path\": \"string\",\n"
+                    "      \"content\": \"string\"\n"
+                    "    }\n"
+                    "  ],\n"
+                    "  \"conversion_notes\": [\n"
+                    "    {\"note\": \"string\", \"severity\": \"Info/Warning/Error\"}\n"
+                    "  ],\n"
+                    "  \"unit_tests\": \"string\",\n"
+                    "  \"functional_tests\": \"string\"\n"
+                    "}"
+                )
+            },
+            {
+                "role": "user",
+                "content": conversion_prompt
+            }
         ]
 
-        # Call Azure OpenAI API for code conversion
-        log_processing_step("Calling GPT for code conversion", {
-            "model": AZURE_OPENAI_DEPLOYMENT_NAME,
-            "temperature": 0.1,
-            "max_tokens": 4000,
-            "prompt_length": len(final_prompt),
-            "target_language": "C#"
-        }, 5)
-
-        response = client.chat.completions.create(
-            model=AZURE_OPENAI_DEPLOYMENT_NAME,
-            messages=conversion_messages,
-            temperature=0.1,
-            max_tokens=4000,
-            response_format={"type": "json_object"}
+        conversion_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=conversion_msgs,
+            temperature=0.3,
+            max_tokens=8000
         )
 
-        log_gpt_interaction("Code Conversion", AZURE_OPENAI_DEPLOYMENT_NAME, 
-                          conversion_messages, response, 5)
+        logger.info(f"=== C# CONVERSION - GPT INTERACTION ===")
+        logger.info(f"Model: gpt-4o")
+        logger.info(f"Response ID: {conversion_response.id}")
+        logger.info(f"Usage: {conversion_response.usage}")
+        logger.info(f"Finish Reason: {conversion_response.choices[0].finish_reason}")
 
-        # Parse the JSON response
-        log_processing_step("Parsing code conversion response", {
-            "response_length": len(response.choices[0].message.content)
-        }, 6)
-        
-        conversion_content = response.choices[0].message.content.strip()
-        try:
-            conversion_json = json.loads(conversion_content)
-            logger.info("✅ Code conversion JSON parsed successfully")
-        except json.JSONDecodeError:
-            logger.warning("⚠️ Failed to parse code conversion JSON directly")
-            conversion_json = extract_json_from_response(conversion_content)
-        
-        # Extract conversion results
-        converted_code = conversion_json.get("convertedCode", {})
-        conversion_notes = conversion_json.get("conversionNotes", "")
-        potential_issues = conversion_json.get("potentialIssues", [])
-        database_used = conversion_json.get("databaseUsed", False)
+        converted_json = extract_json_from_response(conversion_response.choices[0].message.content)
 
-        # Save converted code to file (if original filename is provided)
-        cobol_filename = data.get("cobolFilename") or data.get("sourceFilename")
-        base_name = os.path.splitext(os.path.basename(cobol_filename))[0] if cobol_filename else "ConvertedCode"
-        # Use uuid for output folder
-        converted_code_dir = os.path.join(output_dir, conversion_id)
-        os.makedirs(converted_code_dir, exist_ok=True)
-        
-        # Save the full JSON response
-        base_name = os.path.splitext(os.path.basename(cobol_filename))[0] if cobol_filename else f"converted_{int(time.time())}"
-        json_filename = f"{base_name}_llm_output.json"
-        json_path = os.path.join(converted_code_dir, json_filename)
-        # with open(json_path, 'w', encoding='utf-8') as f:
-        #     json.dump(conversion_json, f, indent=2, ensure_ascii=False)
-        
-        # Extract and save each code section
-        for section, info in converted_code.items():
-            if isinstance(info, dict):
-                file_name = info.get("FileName") or f"{section}.txt"
-                file_path = info.get("Path") or ""
-                content = info.get("content", "")
-                # Compose full path
-                section_dir = os.path.join(converted_code_dir, file_path)
-                os.makedirs(section_dir, exist_ok=True)
-                section_file_path = os.path.join(section_dir, file_name)
-                with open(section_file_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-        
-        log_processing_step("Code conversion completed", {
-            "converted_code_length": len(str(converted_code)),
-            "conversion_notes_length": len(conversion_notes),
-            "potential_issues_count": len(potential_issues),
-            "database_used": database_used
-        }, 7)
-        
-        # Generate unit test cases
-        log_processing_step("Creating unit test prompt", {
-            "target_language": "C#",
-            "code_length": len(str(converted_code))
-        }, 8)
-        
-        unit_test_prompt = create_unit_test_prompt(
-            "C#",
-            converted_code,
-            business_requirements,
-            technical_requirements
-        )
-        
-        # Unit test system message
-        unit_test_system = (
-            "You are an expert test engineer specializing in writing comprehensive unit tests for .NET 8 applications. "
-            "You create unit tests that verify all business logic, edge cases, and domain rules. "
-            "Return your response in JSON format with the following structure:\n"
-            "{\n"
-            '  "unitTestCode": "The complete unit test code here",\n'
-            '  "testDescription": "Description of the test strategy",\n'
-            '  "coverage": ["List of functionalities covered by the tests"],\n'
-            '  "businessRuleTests": ["List of business rules being tested"]\n'
-            "}"
-        )
-        
-        # Prepare unit test messages
-        unit_test_messages = [
-            {"role": "system", "content": unit_test_system},
-            {"role": "user", "content": unit_test_prompt}
-        ]
-        
-        log_processing_step("Calling GPT for unit test generation", {
-            "model": AZURE_OPENAI_DEPLOYMENT_NAME,
-            "temperature": 0.1,
-            "max_tokens": 3000,
-            "prompt_length": len(unit_test_prompt)
-        }, 9)
-        
-        unit_test_response = client.chat.completions.create(
-            model=AZURE_OPENAI_DEPLOYMENT_NAME,
-            messages=unit_test_messages,
-            temperature=0.1,
-            max_tokens=3000,
-            response_format={"type": "json_object"}
-        )
-        
-        log_gpt_interaction("Unit Test Generation", AZURE_OPENAI_DEPLOYMENT_NAME, 
-                          unit_test_messages, unit_test_response, 9)
-        
-        # Parse unit test response
-        log_processing_step("Parsing unit test response", {
-            "response_length": len(unit_test_response.choices[0].message.content)
-        }, 10)
-        
-        unit_test_content = unit_test_response.choices[0].message.content.strip()
-        try:
-            unit_test_json = json.loads(unit_test_content)
-            logger.info("✅ Unit test JSON parsed successfully")
-        except json.JSONDecodeError:
-            logger.warning("⚠️ Failed to parse unit test JSON directly")
-            unit_test_json = extract_json_from_response(unit_test_content)
-        
-        unit_test_code_raw = unit_test_json.get("unitTestCode", "")
-        unit_test_code = re.sub(r"^```[a-zA-Z]*\s*|\s*```$", "", unit_test_code_raw.strip())
-        
-        log_processing_step("Unit test generation completed", {
-            "unit_test_code_length": len(unit_test_code),
-            "test_description": unit_test_json.get("testDescription", "")[:100] + "..." if len(unit_test_json.get("testDescription", "")) > 100 else unit_test_json.get("testDescription", ""),
-            "coverage_items": len(unit_test_json.get("coverage", [])),
-            "business_rule_tests": len(unit_test_json.get("businessRuleTests", []))
-        }, 11)
-        
-        # Generate functional test cases
-        log_processing_step("Creating functional test prompt", {
-            "target_language": "C#",
-            "business_requirements_available": bool(business_requirements)
-        }, 12)
-        
-        functional_test_prompt = create_functional_test_prompt(
-            "C#",
-            converted_code,
-            business_requirements
-        )
-        
-        # Functional test system message
-        functional_test_system = (
-            "You are an expert QA engineer specializing in creating functional tests for .NET 8 applications. "
-            "You create comprehensive test scenarios that verify the application meets all business requirements. "
-            "Focus on user journey tests, acceptance criteria, and business domain validation. "
-            "Return your response in JSON format with the following structure:\n"
-            "{\n"
-            '  "functionalTests": [\n'
-            '    {"id": "FT1", "title": "Test scenario title", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"},\n'
-            '    {"id": "FT2", "title": "Another test scenario", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"}\n'
-            '  ],\n'
-            '  "testStrategy": "Description of the overall testing approach",\n'
-            '  "domainCoverage": ["List of business domain areas covered"]\n'
-            "}"
-        )
-        
-        # Prepare functional test messages
-        functional_test_messages = [
-            {"role": "system", "content": functional_test_system},
-            {"role": "user", "content": functional_test_prompt}
-        ]
-        
-        log_processing_step("Calling GPT for functional test generation", {
-            "model": AZURE_OPENAI_DEPLOYMENT_NAME,
-            "temperature": 0.1,
-            "max_tokens": 3000,
-            "prompt_length": len(functional_test_prompt)
-        }, 12)
-        
-        functional_test_response = client.chat.completions.create(
-            model=AZURE_OPENAI_DEPLOYMENT_NAME,
-            messages=functional_test_messages,
-            temperature=0.1,
-            max_tokens=3000,
-            response_format={"type": "json_object"}
-        )
-        
-        log_gpt_interaction("Functional Test Generation", AZURE_OPENAI_DEPLOYMENT_NAME, 
-                          functional_test_messages, functional_test_response, 12)
-        
-        # Parse functional test response
-        log_processing_step("Parsing functional test response", {
-            "response_length": len(functional_test_response.choices[0].message.content)
-        }, 13)
-        
-        functional_test_content = functional_test_response.choices[0].message.content.strip()
-        try:
-            functional_test_json = json.loads(functional_test_content)
-            logger.info("✅ Functional test JSON parsed successfully")
-        except json.JSONDecodeError:
-            logger.warning("⚠️ Failed to parse functional test JSON directly")
-            functional_test_json = extract_json_from_response(functional_test_content)
-        
-        log_processing_step("Functional test generation completed", {
-            "functional_tests_count": len(functional_test_json.get("functionalTests", [])),
-            "test_strategy_length": len(functional_test_json.get("testStrategy", "")),
-            "domain_coverage": len(functional_test_json.get("domainCoverage", []))
-        }, 14)
-        
-        # Build the final response
-        conversion_end_time = time.time()
-        total_time = conversion_end_time - conversion_start_time
-        
-        log_processing_step("Building final response", {
-            "total_conversion_time": f"{total_time:.2f} seconds",
-            "converted_code_length": len(str(converted_code)),
-            "unit_tests_length": len(unit_test_code),
-            "functional_tests_count": len(functional_test_json.get("functionalTests", [])),
-            "database_used": database_used
-        }, 15)
-        
-        result = {
+        # Save converted code JSON
+        output_dir = os.path.join("output", "converted", project_id)
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, "converted_csharp.json")
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(converted_json, f, indent=2)
+        logger.info(f"Converted C# code saved to: {output_path}")
+
+        # Create and save .NET folder structure
+        files = flatten_converted_code(converted_json.get("converted_code", []), converted_json.get("unit_tests", ""))
+
+        return jsonify({
             "status": "success",
-            "convertedCode": converted_code,
-            "conversionNotes": conversion_notes,
-            "potentialIssues": potential_issues,
-            "unitTests": unit_test_code,
-            "unitTestDetails": unit_test_json,
-            "functionalTests": functional_test_json,
-            "sourceLanguage": source_language,
-            "targetLanguage": "C#",
-            "databaseUsed": database_used,
-            "technicalRequirements": technical_requirements
-        }
-        result["files"] = flatten_converted_code(converted_code, unit_test_code)
-        # Save the full JSON response to output directory
-        try:
-            json_output_path = save_json_response(cobol_filename, result)
-            logger.info(f"💾 JSON response saved to: {json_output_path}")
-        except Exception as save_json_exc:
-            logger.warning(f"⚠️ Failed to save JSON response: {save_json_exc}")
-        
-        conversion_logger.info("="*80)
-        conversion_logger.info("✅ CODE CONVERSION COMPLETED SUCCESSFULLY")
-        conversion_logger.info(f"⏱️ Total Processing Time: {total_time:.2f} seconds")
-        conversion_logger.info(f"📝 Converted Code Length: {len(str(converted_code))} characters")
-        conversion_logger.info(f"🧪 Unit Tests Generated: {len(unit_test_code)} characters")
-        conversion_logger.info(f"🔍 Functional Tests: {len(functional_test_json.get('functionalTests', []))} scenarios")
-        conversion_logger.info(f"💾 Database Usage: {database_used}")
-        conversion_logger.info("="*80)
-        
-        logger.info("=== CODE CONVERSION REQUEST COMPLETED SUCCESSFULLY ===")
-        return jsonify(result)
+            "project_id": project_id,
+            "converted_code": converted_json.get("converted_code", []),
+            "conversion_notes": converted_json.get("conversion_notes", []),
+            "unit_tests": converted_json.get("unit_tests", ""),
+            "functional_tests": converted_json.get("functional_tests", ""),
+            "files": files
+        })
 
     except Exception as e:
-        conversion_end_time = time.time()
-        total_time = conversion_end_time - conversion_start_time
-        
-        logger.error(f"❌ Error in code conversion or test generation: {str(e)}")
-        logger.error(f"🔍 Traceback: {traceback.format_exc()}")
-        
-        conversion_logger.error("="*80)
-        conversion_logger.error("❌ CODE CONVERSION PROCESS FAILED")
-        conversion_logger.error(f"⏱️ Time Before Failure: {total_time:.2f} seconds")
-        conversion_logger.error(f"🚨 Error: {str(e)}")
-        conversion_logger.error(f"📋 Traceback: {traceback.format_exc()}")
-        conversion_logger.error("="*80)
-        
-        return jsonify({
-            "status": "error",
-            "message": f"Conversion failed: {str(e)}",
-            "convertedCode": "",
-            "conversionNotes": "",
-            "potentialIssues": [],
-            "unitTests": "",
-            "unitTestDetails": {},
-            "functionalTests": {},
-            "sourceLanguage": source_language if 'source_language' in locals() else "",
-            "targetLanguage": "C#" if 'target_language' in locals() else "",
-            "databaseUsed": False
-        }), 500
+        logger.error(f"❌ Conversion failed: {str(e)}")
+        return jsonify({"error": str(e), "files": {}}), 500
 
 @bp.route("/converted-files/<base_name>", methods=["GET"])
 def get_converted_files(base_name):
@@ -615,7 +342,6 @@ def get_converted_files(base_name):
     converted_code_dir = os.path.join(output_dir, "ConvertedCode")
     base_dir = os.path.join(converted_code_dir, base_name)
     if not os.path.exists(base_dir):
-        # Fallback: try to find files with base_name as prefix (for flat structure)
         files = [f for f in os.listdir(converted_code_dir) if f.startswith(base_name)]
         file_tree = {"files": {}}
         for file in files:
@@ -624,7 +350,6 @@ def get_converted_files(base_name):
                 with open(file_path, "r", encoding="utf-8") as f:
                     file_tree["files"][file] = f.read()
         return jsonify(file_tree)
-    # Recursively walk the directory
     file_tree = {"files": {}}
     for root, dirs, files in os.walk(base_dir):
         for file in files:

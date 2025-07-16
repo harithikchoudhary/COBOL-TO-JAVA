@@ -15,6 +15,8 @@ from ..utils.logs import (
 )
 from ..utils.response import extract_json_from_response
 from ..utils.file_classifier import classify_uploaded_files
+from ..utils.rag_indexer import load_vector_store, query_vector_store, index_files_for_rag
+from ..utils.cobol_analyzer import create_cobol_json
 
 bp = Blueprint('analysis', __name__, url_prefix='/cobo')
 
@@ -28,10 +30,8 @@ def enhanced_classify_files(file_data: Dict[str, Any]) -> Dict[str, List[Dict[st
     """Enhanced file classification using existing classifier"""
     logger.info("=== ENHANCED FILE CLASSIFICATION STARTED ===")
     
-    # Use existing classifier first
     basic_classified = classify_uploaded_files(file_data)
     
-    # Convert to enhanced format
     enhanced = {
         "COBOL Code": [],
         "JCL": [],
@@ -43,11 +43,9 @@ def enhanced_classify_files(file_data: Dict[str, Any]) -> Dict[str, List[Dict[st
         "Unknown": []
     }
     
-    # Map basic classification to enhanced
     for category, files in basic_classified.items():
         if category in enhanced:
             for file_info in files:
-                # Ensure file_info has the right structure
                 if isinstance(file_info, dict) and "fileName" in file_info:
                     enhanced_file_info = {
                         "fileName": file_info["fileName"],
@@ -65,26 +63,45 @@ def get_cobol_files_for_analysis(classified_files: Dict[str, List[Dict[str, Any]
     """Extract COBOL-related files for analysis"""
     analysis_files = {}
     
-    # Include COBOL programs
     for file_info in classified_files.get("COBOL Code", []):
         analysis_files[file_info["fileName"]] = file_info["content"]
     
-    # Include copybooks
     for file_info in classified_files.get("Copybooks", []):
         analysis_files[file_info["fileName"]] = file_info["content"]
     
-    # Include JCL files
     for file_info in classified_files.get("JCL", []):
         analysis_files[file_info["fileName"]] = file_info["content"]
     
     return analysis_files
 
+@bp.route("/analysis-status", methods=["GET"])
+def analysis_status():
+    """Return the current analysis status for the project"""
+    try:
+        project_id = current_app.comprehensive_analysis_data.get("project_id", "N/A")
+        cobol_files = current_app.comprehensive_analysis_data.get("cobol_files", {})
+        rag_status = {
+            "standards_rag_active": hasattr(current_app, 'standards_documents') and bool(current_app.standards_documents),
+            "project_rag_active": bool(cobol_files)
+        }
+        return jsonify({
+            "project_id": project_id,
+            "project_files_loaded": len(cobol_files),
+            "conversion_context_ready": bool(cobol_files and current_app.comprehensive_analysis_data.get("analysis_results")),
+            "rag_status": rag_status
+        })
+    except Exception as e:
+        logger.error(f"Error fetching analysis status: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @bp.route("/analyze-requirements", methods=["POST"])
 def analyze_requirements():
     """
-    Simplified flow: 
+    Enhanced flow:
     1) Classify uploaded files
-    2) Run GPT for business & technical requirements
+    2) Generate cobol_analysis.json
+    3) Index files for RAG
+    4) Run GPT for business & technical requirements
     """
     try:
         data = request.json
@@ -92,10 +109,15 @@ def analyze_requirements():
         if not data:
             return jsonify({"error": "No data provided"}), 400
 
+        project_id = data.get("projectId")
+        if not project_id:
+            return jsonify({"error": "Project ID is required"}), 400
+
         log_processing_step("Parsing request data", {
             "has_file_data": "file_data" in data,
             "source_language": data.get("sourceLanguage"),
-            "target_language": data.get("targetLanguage")
+            "target_language": data.get("targetLanguage"),
+            "project_id": project_id
         }, 1)
 
         # 1) CLASSIFY FILES
@@ -103,15 +125,35 @@ def analyze_requirements():
         if isinstance(file_data, str):
             file_data = json.loads(file_data)
         
+        if not file_data:
+            return jsonify({"error": "No file data provided"}), 400
+        
         classified = enhanced_classify_files(file_data)
         
         log_processing_step("File classification completed", {
             "total_files": sum(len(files) for files in classified.values()),
             "cobol_files": len(classified.get("COBOL Code", [])),
-            "copybooks": len(classified.get("Copybooks", []))
+            "copybooks": len(classified.get("Copybooks", [])),
+            "jcl_files": len(classified.get("JCL", []))
         }, 2)
 
-        # 2) GPT REQUIREMENTS ANALYSIS
+        # 2) GENERATE COBOL ANALYSIS JSON
+        log_processing_step("Generating COBOL analysis JSON", {"project_id": project_id}, 3)
+        cobol_json = create_cobol_json(project_id)
+        
+        # Save COBOL JSON
+        output_dir = os.path.join("output", "analysis", project_id)
+        os.makedirs(output_dir, exist_ok=True)
+        analysis_path = os.path.join(output_dir, "cobol_analysis.json")
+        with open(analysis_path, "w") as f:
+            json.dump(cobol_json, f, indent=2)
+        logger.info(f"COBOL JSON created at: {analysis_path}")
+
+        # 3) INDEX FOR RAG
+        log_processing_step("Indexing files for RAG", {"project_id": project_id}, 4)
+        index_files_for_rag(project_id, cobol_json, file_data)  # Pass file_data
+        
+        # 4) GPT REQUIREMENTS ANALYSIS
         src = data.get("sourceLanguage")
         tgt = data.get("targetLanguage")
         cobol_list = [f["content"] for f in classified.get("COBOL Code", [])]
@@ -123,19 +165,27 @@ def analyze_requirements():
             "source_language": src,
             "target_language": tgt,
             "cobol_files_count": len(cobol_list)
-        }, 3)
+        }, 5)
 
-        # Ensure cobol_list is a string for prompt functions
-        cobol_code_str = cobol_list if isinstance(cobol_list, str) else "\n".join(cobol_list)
+        # Combine COBOL code and analysis
+        cobol_code_str = "\n".join(cobol_list)
+        cobol_analysis_str = json.dumps(cobol_json, indent=2)
         
-        # Add standards context if available
+        # Add standards and RAG context
         standards_context = ""
         if hasattr(current_app, 'standards_documents') and current_app.standards_documents:
             standards_context = f"\n\nSTANDARDS DOCUMENTS CONTEXT:\n{chr(10).join(current_app.standards_documents)}\n"
             logger.info(f"Adding standards context with {len(current_app.standards_documents)} documents")
         
-        bus_prompt = create_business_requirements_prompt(src, cobol_code_str) + standards_context
-        tech_prompt = create_technical_requirements_prompt(src, tgt, cobol_code_str) + standards_context
+        vector_store = load_vector_store(project_id)
+        rag_context = ""
+        if vector_store:
+            rag_results = query_vector_store(vector_store, "Relevant COBOL program and standards information", k=5)
+            rag_context = "\n\nRAG CONTEXT:\n" + "\n".join([f"Source: {r.metadata['source']}\n{r.page_content}\n" for r in rag_results])
+            logger.info(f"Added RAG context with {len(rag_results)} results")
+        
+        bus_prompt = create_business_requirements_prompt(src, cobol_code_str) + standards_context + rag_context + f"\n\nCOBOL ANALYSIS:\n{cobol_analysis_str}"
+        tech_prompt = create_technical_requirements_prompt(src, tgt, cobol_code_str) + standards_context + rag_context + f"\n\nCOBOL ANALYSIS:\n{cobol_analysis_str}"
 
         # Business Requirements Analysis
         business_msgs = [
@@ -144,7 +194,8 @@ def analyze_requirements():
                 "content": (
                     f"You are an expert in analyzing COBOL/CICS code to extract business requirements. "
                     f"You understand COBOL, CICS commands, and mainframe business processes deeply. "
-                    f"You have access to comprehensive analysis results including CICS patterns and RAG context. "
+                    f"You have access to comprehensive analysis results including CICS patterns, RAG context, and standards documents. "
+                    f"Use the provided COBOL analysis JSON to understand program structure, variables, and dependencies. "
                     f"Output your analysis in JSON format with the following structure:\n\n"
                     f"{{\n"
                     f'  "Overview": {{\n'
@@ -180,7 +231,7 @@ def analyze_requirements():
 
         log_processing_step("Running business requirements analysis", {
             "prompt_length": len(bus_prompt)
-        }, 4)
+        }, 6)
 
         business_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
@@ -195,17 +246,20 @@ def analyze_requirements():
 
         # Technical Requirements Analysis
         technical_msgs = [
-             {
-                "role": "system", 
-                "content": f"You are an expert in COBOL to .NET 8 migration. "
-                          f"You deeply understand both COBOL and .NET 8 and can identify technical challenges and requirements for migration. "
-                          f"Output your analysis in JSON format with the following structure:\n"
-                          f"{{\n"
-                          f'  "technicalRequirements": [\n'
-                          f'    {{"id": "TR1", "description": "First technical requirement", "complexity": "High/Medium/Low"}},\n'
-                          f'    {{"id": "TR2", "description": "Second technical requirement", "complexity": "High/Medium/Low"}}\n'
-                          f'  ],\n'
-                          f"}}"
+            {
+                "role": "system",
+                "content": (
+                    f"You are an expert in COBOL to .NET 8 migration. "
+                    f"You deeply understand both COBOL and .NET 8 and can identify technical challenges and requirements for migration. "
+                    f"Use the provided COBOL analysis JSON to understand program structure, variables, and dependencies. "
+                    f"Output your analysis in JSON format with the following structure:\n"
+                    f"{{\n"
+                    f'  "technicalRequirements": [\n'
+                    f'    {{"id": "TR1", "description": "First technical requirement", "complexity": "High/Medium/Low"}},\n'
+                    f'    {{"id": "TR2", "description": "Second technical requirement", "complexity": "High/Medium/Low"}}\n'
+                    f'  ],\n'
+                    f"}}"
+                )
             },
             {
                 "role": "user",
@@ -215,7 +269,7 @@ def analyze_requirements():
 
         log_processing_step("Running technical requirements analysis", {
             "prompt_length": len(tech_prompt)
-        }, 5)
+        }, 7)
 
         technical_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
@@ -230,8 +284,10 @@ def analyze_requirements():
 
         # Store analysis data for conversion use
         current_app.comprehensive_analysis_data = {
+            "project_id": project_id,
             "cobol_files": get_cobol_files_for_analysis(classified),
             "classified_files": classified,
+            "cobol_analysis": cobol_json,
             "analysis_results": {
                 "business_requirements": business_json,
                 "technical_requirements": technical_json,
@@ -240,78 +296,22 @@ def analyze_requirements():
         }
 
         log_processing_step("Analysis completed successfully", {
-            "business_rules_count": len(business_json.get("Business_Rules", [])),
-            "technical_challenges_count": len(technical_json.get("Technical_Challenges", [])),
+            "business_rules_count": len(business_json.get("Business Rules & Requirements", {}).get("Business Rules", [])),
+            "technical_requirements_count": len(technical_json.get("technicalRequirements", [])),
             "conversionContextReady": True
-        }, 6)
+        }, 8)
 
         return jsonify({
             "status": "success",
+            "project_id": project_id,
             "business_requirements": business_json,
             "technical_requirements": technical_json,
             "file_classification": classified,
+            "cobol_analysis": cobol_json,
             "conversionContextReady": True
         })
 
     except Exception as e:
-        logger.error(f"❌ Analysis failed: {e}")
+        logger.error(f"❌ Analysis failed: {str(e)}")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
-@bp.route("/upload-standards", methods=["POST"])
-def upload_standards():
-    """Upload standards documents for requirements analysis context"""
-    try:
-        if 'files' not in request.files:
-            return jsonify({"error": "No files provided"}), 400
-        
-        files = request.files.getlist('files')
-        if not files:
-            return jsonify({"error": "No files selected"}), 400
-
-        processed_files = []
-        standards_content = []
-        
-        for file in files:
-            if file.filename:
-                try:
-                    # Read file content
-                    content = file.read()
-                    if hasattr(content, 'decode'):
-                        content = content.decode('utf-8', errors='ignore')
-                    
-                    # Store file info and content
-                    processed_files.append({
-                        "filename": file.filename,
-                        "size": len(content),
-                        "status": "processed"
-                    })
-                    
-                    # Extract text content for analysis context
-                    standards_content.append(f"Document: {file.filename}\n{content[:2000]}...")
-                    
-                except Exception as e:
-                    logger.error(f"Error processing file {file.filename}: {e}")
-                    processed_files.append({
-                        "filename": file.filename,
-                        "size": 0,
-                        "status": "error",
-                        "error": str(e)
-                    })
-
-        # Store standards content in current_app for use in requirements analysis
-        if standards_content:
-            current_app.standards_documents = standards_content
-            logger.info(f"Stored {len(standards_content)} standards documents for analysis context")
-
-        return jsonify({
-            "status": "success",
-            "files_processed": len(processed_files),
-            "standards_rag_active": len(standards_content) > 0,
-            "message": f"Successfully processed {len(processed_files)} standards documents"
-        })
-
-    except Exception as e:
-        logger.error(f"❌ Standards upload failed: {e}")
-        return jsonify({"error": str(e)}), 500
-

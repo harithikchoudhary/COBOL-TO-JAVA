@@ -23,6 +23,7 @@ export default function Cobol({ children }) {
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [sourceCodeJson, setSourceCodeJson] = useState(null);
   const [conversionResponse, setConversionResponse] = useState(null);
+  const [projectId, setProjectId] = useState(null);
 
   const targetLanguages = [
     { name: "C#", icon: "🔷" },
@@ -46,10 +47,14 @@ export default function Cobol({ children }) {
     checkBackendStatus();
   }, []);
 
-  const handleGenerateRequirements = async (setActiveTab, sourceCodeJson) => {
+  const handleGenerateRequirements = async (setActiveTab, sourceCodeJson, projectId) => {
     setError("");
     if (!sourceCodeJson) {
       setError("Please upload COBOL files to analyze");
+      return;
+    }
+    if (!projectId) {
+      setError("Project ID is missing. Please upload files first.");
       return;
     }
 
@@ -101,10 +106,11 @@ export default function Cobol({ children }) {
         body: JSON.stringify({
           sourceLanguage: "COBOL",
           targetLanguage,
-          file_data: filesData
+          file_data: filesData,
+          projectId
         })
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Requirements analysis failed:", errorText);
@@ -114,17 +120,16 @@ export default function Cobol({ children }) {
       const data = await response.json();
       console.log("✅ Requirements analysis completed:", data);
 
-      // Process business requirements
+      setProjectId(data.project_id || projectId);
+
       let formattedBusinessReqs = "";
       if (data.business_requirements) {
         if (typeof data.business_requirements === "string") {
           formattedBusinessReqs = data.business_requirements;
         } else {
-          // Convert JSON format to the expected display format
           const br = data.business_requirements;
           formattedBusinessReqs = "# Business Requirements\n\n";
-          
-          // Handle Overview section
+
           if (br.Overview) {
             formattedBusinessReqs += "## Overview\n";
             if (br.Overview["Purpose of the System"]) {
@@ -135,8 +140,7 @@ export default function Cobol({ children }) {
             }
             formattedBusinessReqs += "\n";
           }
-          
-          // Handle Objectives section
+
           if (br.Objectives) {
             formattedBusinessReqs += "## Objectives\n";
             if (br.Objectives["Primary Objective"]) {
@@ -147,8 +151,7 @@ export default function Cobol({ children }) {
             }
             formattedBusinessReqs += "\n";
           }
-          
-          // Handle Business Rules & Requirements section
+
           if (br["Business Rules & Requirements"]) {
             formattedBusinessReqs += "## Business Rules & Requirements\n";
             if (br["Business Rules & Requirements"]["Business Purpose"]) {
@@ -165,8 +168,7 @@ export default function Cobol({ children }) {
             }
             formattedBusinessReqs += "\n";
           }
-          
-          // Handle Assumptions & Recommendations section
+
           if (br["Assumptions & Recommendations"]) {
             formattedBusinessReqs += "## Assumptions & Recommendations\n";
             if (br["Assumptions & Recommendations"]["Assumptions"]) {
@@ -177,8 +179,7 @@ export default function Cobol({ children }) {
             }
             formattedBusinessReqs += "\n";
           }
-          
-          // Handle Expected Output section
+
           if (br["Expected Output"]) {
             formattedBusinessReqs += "## Expected Output\n";
             if (br["Expected Output"]["Output"]) {
@@ -192,23 +193,19 @@ export default function Cobol({ children }) {
         }
       }
 
-      // Process technical requirements
       let formattedTechReqs = "";
       if (data.technical_requirements) {
         if (typeof data.technical_requirements === "string") {
           formattedTechReqs = data.technical_requirements;
         } else {
-          // Convert JSON format to the expected display format
           const tr = data.technical_requirements;
           formattedTechReqs = "# Technical Requirements\n\n";
-          
-          // Handle the new technicalRequirements array format
+
           if (tr.technicalRequirements && Array.isArray(tr.technicalRequirements)) {
             tr.technicalRequirements.forEach((req, index) => {
               formattedTechReqs += `${index + 1}. ${req.description} (Complexity: ${req.complexity || "Medium"})\n\n`;
             });
           }
-          // Handle legacy format for backward compatibility
           else if (tr.Technical_Challenges && Array.isArray(tr.Technical_Challenges)) {
             tr.Technical_Challenges.forEach((challenge, index) => {
               formattedTechReqs += `${index + 1}. The system must ${challenge.description}\n\n`;
@@ -221,8 +218,7 @@ export default function Cobol({ children }) {
               formattedTechReqs += `${startIndex}. The system must integrate with ${integration.name} for ${integration.description}\n\n`;
             });
           }
-          
-          // Add default technical requirements if none found
+
           if (!formattedTechReqs.includes("1.")) {
             formattedTechReqs += "1. The system must migrate from COBOL to C# while preserving all business logic (Complexity: High)\n\n";
             formattedTechReqs += "2. The system must implement proper error handling using modern exception handling (Complexity: Medium)\n\n";
@@ -248,57 +244,61 @@ export default function Cobol({ children }) {
   };
 
   const parseRequirementsList = (requirementsText) => {
-  if (!requirementsText) return [];
-  
-  const lines = requirementsText.split("\n");
-  const reqList = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Match numbered requirements (1., 2., etc.) and extract everything after the number
-    const numberedMatch = line.match(/^(\d+\.)\s+(.*)/);
-    if (numberedMatch) {
-      const description = numberedMatch[2].trim();
-      if (description && !description.startsWith("**")) {
-        reqList.push({ text: description });
+    if (!requirementsText) return [];
+
+    const lines = requirementsText.split("\n");
+    const reqList = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      const numberedMatch = line.match(/^(\d+\.)\s+(.*)/);
+      if (numberedMatch) {
+        const description = numberedMatch[2].trim();
+        if (description && !description.startsWith("**")) {
+          reqList.push({ text: description });
+        }
+        continue;
       }
-      continue;
+
+      const bulletMatch = line.match(/^([*-•])\s+(.*)/);
+      if (bulletMatch) {
+        const description = bulletMatch[2].trim();
+        if (description && !description.startsWith("**")) {
+          reqList.push({ text: description });
+        }
+        continue;
+      }
+
+      const sectionMatch = line.match(/^##\s+(.*)/);
+      if (sectionMatch) {
+        const sectionName = sectionMatch[1].trim();
+        if (sectionName) {
+          reqList.push({ text: sectionName });
+        }
+        continue;
+      }
     }
-    
-    // Match bullet points (-, *, •)
-    const bulletMatch = line.match(/^([*-•])\s+(.*)/);
-    if (bulletMatch) {
-      const description = bulletMatch[2].trim();
-      if (description && !description.startsWith("**")) {
-        reqList.push({ text: description });
-      }
-      continue;
+
+    if (reqList.length === 0) {
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith("#") && !trimmed.startsWith("-") && trimmed.length > 10) {
+          reqList.push({ text: trimmed });
+        }
+      });
     }
-    
-    // Match section headers (##) and convert them to requirements
-    const sectionMatch = line.match(/^##\s+(.*)/);
-    if (sectionMatch) {
-      const sectionName = sectionMatch[1].trim();
-      if (sectionName) {
-        reqList.push({ text: sectionName });
-      }
-      continue;
-    }
-  }
-  
-  // If no numbered or bulleted requirements found, try to extract substantive lines
-  if (reqList.length === 0) {
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith("#") && !trimmed.startsWith("-") && trimmed.length > 10) {
-        reqList.push({ text: trimmed });
-      }
+
+    return reqList;
+  };
+
+  const flattenConvertedCode = (convertedCode) => {
+    const files = {};
+    convertedCode.forEach((file) => {
+      files[file.file_name] = file.content;
     });
-  }
-  
-  return reqList;
-};
+    return files;
+  };
 
   const handleConvert = async (setActiveTab) => {
     setError("");
@@ -306,26 +306,34 @@ export default function Cobol({ children }) {
       setError("Please upload COBOL files to convert");
       return;
     }
-
+    if (!projectId) {
+      setError("Project ID is missing. Please upload files first.");
+      return;
+    }
+  
     setIsLoading(true);
     console.log("🚀 Starting code conversion");
-
+  
     try {
-      if (!isBackendAvailable) {
-        setTimeout(() => {
-          const simulatedCode = `// Simulated C# code\npublic class CobolConverter {\n    public static void Main(string[] args) {\n        Console.WriteLine(\"This is a simulated conversion\");\n    }\n}`;
-          const simulatedUnitTests = `// Simulated Unit Tests\n@Test\npublic void testConversion() {\n    assertTrue(true);\n}`;
-          const simulatedFunctionalTests = `// Simulated Functional Tests\nFeature: Basic Functionality\n  Scenario: Test basic conversion\n    Given the COBOL code is valid\n    When the conversion is performed\n    Then the output should be valid ${targetLanguage} code`;
-
-          setConvertedCode(simulatedCode);
-          setUnitTests(simulatedUnitTests);
-          setFunctionalTests(simulatedFunctionalTests);
+      // Ensure sourceCodeJson is an object
+      let sourceCode = sourceCodeJson;
+      if (typeof sourceCodeJson === 'string') {
+        try {
+          sourceCode = JSON.parse(sourceCodeJson);
+        } catch (e) {
+          console.error("Failed to parse sourceCodeJson:", e);
+          setError("Invalid sourceCode format. Expected a JSON object.");
           setIsLoading(false);
-          setActiveTab("output");
-        }, 1500);
+          return;
+        }
+      }
+  
+      if (!Object.keys(sourceCode).length) {
+        setError("sourceCode is empty. Please upload valid COBOL files.");
+        setIsLoading(false);
         return;
       }
-
+  
       const response = await fetch(`${API_BASE_URL}/convert`, {
         method: "POST",
         headers: {
@@ -333,41 +341,47 @@ export default function Cobol({ children }) {
         },
         body: JSON.stringify({
           sourceLanguage: "COBOL",
-          targetLanguage,
-          sourceCode: sourceCodeJson,
+          targetLanguage: "C#",
+          sourceCode, // Use the parsed object
           businessRequirements,
           technicalRequirements,
+          projectId,
+          cobolFilename: Object.keys(uploadedFiles)[0] || "BANKING.CBL"
         }),
       });
-
+  
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Conversion failed:", errorText);
         let errorMessage = `Conversion failed: ${response.status}`;
         try {
           const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
+          errorMessage = errorData.error || errorText || errorMessage;
         } catch (e) {
           errorMessage = errorText || errorMessage;
         }
         throw new Error(errorMessage);
       }
-
+  
       const data = await response.json();
       console.log("✅ Conversion completed:", data);
-
-      // Store the full response
+  
       setConversionResponse(data);
-
-      // Handle the complex convertedCode structure
-      setConvertedCode(data.convertedCode || "");
-      setUnitTests(data.unitTests || "");
-      setFunctionalTests(data.functionalTests || "");
-      setConvertedFiles(data.files || {});
+  
+      const files = data.files || {};
+      setConvertedFiles(files);
+      setConvertedCode(data.converted_code?.[0]?.content || "");
+      setUnitTests(data.unit_tests || "");
+      setFunctionalTests(data.functional_tests || "");
       setActiveTab("output");
-
+  
+      if (Object.keys(files).length === 0) {
+        console.warn("No converted files received in response");
+        setError("Conversion completed, but no files were generated. Please check the backend logs.");
+      }
+  
       console.log("✅ All conversion data processed successfully");
-
+  
     } catch (error) {
       console.error("Error during conversion:", error);
       setError(error.message || "Failed to convert code. Please try again.");
@@ -375,6 +389,7 @@ export default function Cobol({ children }) {
       setIsLoading(false);
     }
   };
+
 
   const handleReset = () => {
     setConvertedCode("");
@@ -387,27 +402,27 @@ export default function Cobol({ children }) {
     setConversionResponse(null);
     setError("");
     setUploadedFiles({});
+    setSourceCodeJson(null);
+    setProjectId(null);
   };
 
   const handleCopyRequirements = () => {
-  // Use a ref or get the element directly
-  const elementId = activeRequirementsTab === "business" ? "businessReq" : "technicalReq";
-  const element = document.getElementById(elementId);
+    const elementId = activeRequirementsTab === "business" ? "businessReq" : "technicalReq";
+    const element = document.getElementById(elementId);
 
-  if (element) {
-    const textToCopy = element.innerText; // Copies what’s actually displayed
+    if (element) {
+      const textToCopy = element.innerText;
 
-    navigator.clipboard.writeText(textToCopy)
-      .then(() => {
-        setCopyStatus(true);
-        setTimeout(() => setCopyStatus(false), 2000);
-      })
-      .catch(err => {
-        console.error("Failed to copy: ", err);
-      });
-  }
-};
-
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+          setCopyStatus(true);
+          setTimeout(() => setCopyStatus(false), 2000);
+        })
+        .catch(err => {
+          console.error("Failed to copy: ", err);
+        });
+    }
+  };
 
   const handleDownloadRequirements = () => {
     const textToDownload =
@@ -518,6 +533,8 @@ export default function Cobol({ children }) {
     setSourceCodeJson,
     conversionResponse,
     setConversionResponse,
+    projectId,
+    setProjectId,
   };
 
   return <>{children(enhancedProps)}</>;
