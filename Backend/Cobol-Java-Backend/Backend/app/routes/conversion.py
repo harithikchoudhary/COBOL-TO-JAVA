@@ -47,25 +47,18 @@ BASIC CONVERSION INSTRUCTIONS:
 4. Follow SOLID principles and clean architecture
 """
 
-def extract_project_name(converted_code):
-    """Extract project name from converted code"""
-    if isinstance(converted_code, list) and len(converted_code) > 0:
-        for file_info in converted_code:
-            if isinstance(file_info, dict):
-                file_name = file_info.get("file_name", "")
-                if file_name.endswith(".csproj"):
-                    return file_name[:-7]  # Remove .csproj extension
-                elif file_name.endswith(".cs"):
-                    content = file_info.get("content", "")
-                    match = re.search(r'namespace ([^\s{]+)', content)
-                    if match:
-                        return match.group(1)
-    return "ConvertedApp"
+def extract_project_name(target_structure):
+    """Extract project name from target structure"""
+    if isinstance(target_structure, dict):
+        return target_structure.get("project_name", "BankingSystem")
+    return "BankingSystem"
 
-def flatten_converted_code(converted_code, unit_test_code=None, project_id=None):
+def flatten_converted_code(converted_code, unit_test_code=None, project_id=None, target_structure=None):
     """Create a standard .NET 8 folder structure and save it to the filesystem."""
     files = {}
-    project_name = extract_project_name(converted_code)
+    
+    # Extract project name from target structure
+    project_name = extract_project_name(target_structure) if target_structure else "BankingSystem"
     test_project_name = f"{project_name}.Tests"
 
     # Process each file in converted_code
@@ -76,27 +69,16 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None)
                 content = file_info.get("content", "")
                 path = file_info.get("path", "")
 
-                # Ensure path is relative to project root
-                if path.startswith("src/"):
-                    path = path.replace("src/", f"{project_name}/")
-                elif not path.startswith(project_name):
-                    path = f"{project_name}/{path}"
-
-                # Categorize files based on type
-                if file_name.endswith(".csproj"):
-                    files[f"{project_name}/{file_name}"] = content
-                elif file_name in ["Program.cs", "appsettings.json", "Startup.cs"]:
-                    files[f"{project_name}/{file_name}"] = content
-                elif "Controller" in file_name:
-                    files[f"{project_name}/Controllers/{file_name}"] = content
-                elif "Service" in file_name:
-                    files[f"{project_name}/Services/{file_name}"] = content
-                elif "Model" in file_name or "Entity" in file_name:
-                    files[f"{project_name}/Models/{file_name}"] = content
-                elif "Repository" in file_name or "Context" in file_name:
-                    files[f"{project_name}/Data/{file_name}"] = content
+                # Create proper file path based on target structure
+                if path:
+                    if not path.startswith(project_name):
+                        file_path = f"{project_name}/{path}/{file_name}"
+                    else:
+                        file_path = f"{path}/{file_name}"
                 else:
-                    files[path] = content
+                    file_path = f"{project_name}/{file_name}"
+
+                files[file_path] = content
 
     # Add main project file if not exists
     if not any(f.endswith(".csproj") for f in files.keys()):
@@ -110,9 +92,30 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None)
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
   </ItemGroup>
 </Project>'''
         files[f"{project_name}/{project_name}.csproj"] = csproj_content
+
+    # Add appsettings.json if not exists
+    if not any("appsettings.json" in f for f in files.keys()):
+        appsettings_content = '''{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=BankingSystem;Trusted_Connection=true;TrustServerCertificate=true;"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}'''
+        files[f"{project_name}/appsettings.json"] = appsettings_content
 
     # Add test project if unit_test_code is provided
     if unit_test_code:
@@ -127,6 +130,7 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None)
     <PackageReference Include="xunit" Version="2.4.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
     <PackageReference Include="Moq" Version="4.20.70" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../{project_name}/{project_name}.csproj" />
@@ -209,6 +213,30 @@ def get_source_code_from_project(project_id):
         logger.error(f"Error getting source code for project {project_id}: {str(e)}")
         return {}
 
+def load_analysis_data(project_id):
+    """Load analysis data including cobol_analysis.json and target_structure.json"""
+    analysis_data = {}
+    
+    # Load COBOL analysis
+    cobol_analysis_path = os.path.join("output", "analysis", project_id, "cobol_analysis.json")
+    if os.path.exists(cobol_analysis_path):
+        with open(cobol_analysis_path, "r", encoding="utf-8") as f:
+            analysis_data["cobol_analysis"] = json.load(f)
+        logger.info(f"Loaded COBOL analysis for project: {project_id}")
+    else:
+        logger.warning(f"COBOL analysis not found for project: {project_id}")
+    
+    # Load target structure
+    target_structure_path = os.path.join("output", "analysis", project_id, "target_structure.json")
+    if os.path.exists(target_structure_path):
+        with open(target_structure_path, "r", encoding="utf-8") as f:
+            analysis_data["target_structure"] = json.load(f)
+        logger.info(f"Loaded target structure for project: {project_id}")
+    else:
+        logger.warning(f"Target structure not found for project: {project_id}")
+    
+    return analysis_data
+
 @bp.route("/convert", methods=["POST"])
 def convert_cobol_to_csharp():
     try:
@@ -221,14 +249,15 @@ def convert_cobol_to_csharp():
 
         logger.info(f"Starting conversion for project: {project_id}")
 
-        # Load analysis data
-        analysis_path = os.path.join("output", "analysis", project_id, "cobol_analysis.json")
-        if not os.path.exists(analysis_path):
-            logger.error(f"No analysis data found for project: {project_id}")
+        # Load analysis data (cobol_analysis.json and target_structure.json)
+        analysis_data = load_analysis_data(project_id)
+        
+        if not analysis_data.get("cobol_analysis"):
+            logger.error(f"No COBOL analysis data found for project: {project_id}")
             return jsonify({"error": "No analysis data found. Please run analysis first.", "files": {}}), 400
         
-        with open(analysis_path, "r", encoding="utf-8") as f:
-            cobol_json = json.load(f)
+        cobol_json = analysis_data["cobol_analysis"]
+        target_structure = analysis_data.get("target_structure", {})
         
         logger.info(f"Loaded analysis data for project: {project_id}")
 
@@ -282,6 +311,7 @@ def convert_cobol_to_csharp():
         # Prepare conversion data
         cobol_code_str = "\n".join(cobol_code_list)
         cobol_analysis_str = json.dumps(cobol_json, indent=2)
+        target_structure_str = json.dumps(target_structure, indent=2)
         business_requirements = json.dumps(data.get("businessRequirements", {}), indent=2)
         technical_requirements = json.dumps(data.get("technicalRequirements", {}), indent=2)
 
@@ -291,42 +321,67 @@ def convert_cobol_to_csharp():
         standards_context = ""
         if vector_store:
             rag_results = query_vector_store(vector_store, "Relevant COBOL program and C# conversion patterns", k=5)
-            rag_context = "\n\nRAG CONTEXT:\n" + "\n".join([f"Source: {r.metadata['source']}\n{r.page_content}\n" for r in rag_results])
-            standards_results = query_vector_store(vector_store, "Relevant coding standards and guidelines", k=3)
-            standards_context = "\n\nSTANDARDS CONTEXT:\n" + "\n".join([f"Source: {r.metadata['source']}\n{r.page_content}\n" for r in standards_results])
-            logger.info("Added RAG and standards context")
+            if rag_results:
+                rag_context = "\n\nRAG CONTEXT:\n" + "\n".join([f"Source: {r.metadata.get('source', 'unknown')}\n{r.page_content}\n" for r in rag_results])
+                standards_results = query_vector_store(vector_store, "Relevant coding standards and guidelines", k=3)
+                if standards_results:
+                    standards_context = "\n\nSTANDARDS CONTEXT:\n" + "\n".join([f"Source: {r.metadata.get('source', 'unknown')}\n{r.page_content}\n" for r in standards_results])
+                logger.info("Added RAG and standards context")
+            else:
+                logger.warning("No RAG results returned from vector store")
 
         # Detect database usage and get DB template
         db_usage = detect_database_usage(cobol_code_str, source_language="COBOL")
         db_type = db_usage.get("db_type", "none")
         db_setup_template = get_db_template("C#") if db_usage.get("has_db", False) else ""
 
-        # Create conversion prompt
+        # Create enhanced conversion prompt
         conversion_prompt = f"""
-        Convert the following COBOL code to C# (.NET 8), adhering to the business and technical requirements.
+        You are an expert COBOL to C# (.NET 8) migration specialist. Convert the provided COBOL code to a modern, 
+        well-structured C# application following the target structure and requirements provided.
         
-        Source Language: COBOL
-        Target Language: C#
+        IMPORTANT: Use the target structure as your blueprint for organizing the code. Create ALL the files and 
+        components specified in the target structure.
         
-        COBOL Code:
+        **SOURCE CODE:**
         {cobol_code_str}
         
-        COBOL Analysis:
+        **COBOL ANALYSIS:**
         {cobol_analysis_str}
         
-        Business Requirements:
+        **TARGET STRUCTURE (FOLLOW THIS CLOSELY):**
+        {target_structure_str}
+        
+        **BUSINESS REQUIREMENTS:**
         {business_requirements}
         
-        Technical Requirements:
+        **TECHNICAL REQUIREMENTS:**
         {technical_requirements}
         
-        Database Setup Template:
+        **DATABASE TEMPLATE:**
         {db_setup_template}
         
+        **RAG CONTEXT:**
         {rag_context}
+        
+        **STANDARDS CONTEXT:**
         {standards_context}
         
-        Please provide a complete C# .NET 8 solution with proper folder structure.
+        **CONVERSION GUIDELINES:**
+        1. Follow the target structure exactly - create all specified projects, folders, and files
+        2. Map all COBOL data structures to appropriate C# models/entities
+        3. Convert all CICS operations to appropriate .NET patterns
+        4. Implement proper service layer architecture
+        5. Create comprehensive API controllers with proper endpoints
+        6. Use Entity Framework Core for data access
+        7. Implement proper dependency injection
+        8. Add comprehensive error handling and logging
+        9. Follow .NET 8 best practices and conventions
+        10. Ensure thread safety and async/await patterns
+        11. Add proper validation and security measures
+        12. Include proper configuration management
+        
+        **REQUIRED OUTPUT:** Provide a complete C# .NET 8 solution with proper folder structure.
         """
 
         # Call Azure OpenAI for conversion
@@ -334,12 +389,11 @@ def convert_cobol_to_csharp():
             {
                 "role": "system",
                 "content": (
-                    "You are an expert in COBOL to C# migration. "
-                    "Convert the provided COBOL code to C# (.NET 8), adhering to the business, technical requirements, and coding standards. "
-                    "Use the COBOL analysis JSON to understand program structure, variables, and dependencies. "
-                    "Incorporate the provided database setup template for database operations. "
-                    "Organize the output in a standard .NET 8 folder structure (e.g., Controllers, Services, Models, Data). "
-                    "Output the C# code as a JSON object with the following structure:\n"
+                    "You are an expert COBOL to C# migration specialist with deep knowledge of both mainframe systems and modern .NET development. "
+                    "Your task is to convert COBOL/CICS applications to modern, scalable C# .NET 8 applications. "
+                    "You understand enterprise architecture patterns, clean code principles, and modern development practices. "
+                    "You MUST follow the provided target structure precisely and create ALL specified components. "
+                    "Output your conversion as a JSON object with the following structure:\n"
                     "{\n"
                     "  \"converted_code\": [\n"
                     "    {\n"
@@ -367,7 +421,7 @@ def convert_cobol_to_csharp():
         conversion_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
             messages=conversion_msgs,
-            temperature=0.3,
+            temperature=0.2,
             max_tokens=8000
         )
 
@@ -392,7 +446,8 @@ def convert_cobol_to_csharp():
         files = flatten_converted_code(
             converted_json.get("converted_code", []), 
             converted_json.get("unit_tests", ""),
-            project_id
+            project_id,
+            target_structure
         )
         
         logger.info(f"Generated {len(files)} files for .NET project")
@@ -416,7 +471,7 @@ def convert_cobol_to_csharp():
 def get_converted_files(base_name):
     """Return the file tree and contents for a given conversion (by base_name) from ConvertedCode."""
     try:
-        converted_code_dir = os.path.join(output_dir, "converted", base_name)
+        converted_code_dir = os.path.join("output", "converted", base_name)
         if not os.path.exists(converted_code_dir):
             return jsonify({"error": "Converted files not found"}), 404
         

@@ -74,6 +74,188 @@ def get_cobol_files_for_analysis(classified_files: Dict[str, List[Dict[str, Any]
     
     return analysis_files
 
+def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any], classified_files: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+    """Create target structure analysis using GPT"""
+    logger.info(f"=== TARGET STRUCTURE ANALYSIS STARTED for project: {project_id} ===")
+    
+    # Combine all COBOL-related content
+    cobol_content = ""
+    for category in ["COBOL Code", "Copybooks", "JCL"]:
+        for file_info in classified_files.get(category, []):
+            cobol_content += f"\n\n=== {file_info['fileName']} ===\n{file_info['content']}"
+    
+    if not cobol_content.strip():
+        logger.warning("No COBOL content found for target structure analysis")
+        return {"error": "No COBOL content available for analysis"}
+    
+    structure_prompt = f"""
+    You are an expert software architect specializing in COBOL to .NET 8 migration. 
+    Analyze the provided COBOL/CICS code and create a comprehensive target structure for a modern .NET 8 application.
+    
+    Based on the code structure, business logic, data models, and CICS operations, design a complete .NET 8 project structure that follows:
+    - Clean Architecture principles
+    - SOLID design principles
+    - .NET 8 best practices
+    - Modern software patterns
+    
+    Analyze the following COBOL code and provide a detailed target structure:
+    
+    {cobol_content}
+    
+    Provide your analysis in the following JSON format:
+    {{
+      "project_name": "string",
+      "architecture_pattern": "string",
+      "projects": [
+        {{
+          "name": "string",
+          "type": "string",
+          "purpose": "string",
+          "folders": [
+            {{
+              "name": "string",
+              "purpose": "string",
+              "files": [
+                {{
+                  "name": "string",
+                  "type": "string",
+                  "purpose": "string",
+                  "key_classes": ["string"],
+                  "dependencies": ["string"]
+                }}
+              ]
+            }}
+          ]
+        }}
+      ],
+      "data_models": [
+        {{
+          "name": "string",
+          "source": "string",
+          "properties": [
+            {{
+              "name": "string",
+              "type": "string",
+              "source_field": "string"
+            }}
+          ]
+        }}
+      ],
+      "services": [
+        {{
+          "name": "string",
+          "purpose": "string",
+          "methods": [
+            {{
+              "name": "string",
+              "purpose": "string",
+              "parameters": ["string"],
+              "return_type": "string"
+            }}
+          ]
+        }}
+      ],
+      "controllers": [
+        {{
+          "name": "string",
+          "purpose": "string",
+          "endpoints": [
+            {{
+              "method": "string",
+              "route": "string",
+              "purpose": "string"
+            }}
+          ]
+        }}
+      ],
+      "infrastructure": [
+        {{
+          "component": "string",
+          "purpose": "string",
+          "implementation": "string"
+        }}
+      ],
+      "database_design": {{
+        "tables": [
+          {{
+            "name": "string",
+            "source": "string",
+            "columns": [
+              {{
+                "name": "string",
+                "type": "string",
+                "source_field": "string"
+              }}
+            ]
+          }}
+        ]
+      }},
+      "key_patterns": ["string"],
+      "external_dependencies": ["string"],
+      "configuration_requirements": ["string"]
+    }}
+    
+    Focus on:
+    1. Identifying all data structures from COBOL records
+    2. Mapping CICS operations to appropriate .NET patterns
+    3. Converting file operations to database operations
+    4. Identifying business logic for service layer
+    5. Creating appropriate API endpoints
+    6. Handling transaction management
+    7. Implementing proper error handling
+    8. Security considerations
+    9. Logging and auditing requirements
+    10. Integration points
+    """
+    
+    try:
+        structure_msgs = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert software architect specializing in COBOL to .NET 8 migration. "
+                    "You understand legacy mainframe systems and modern .NET architecture patterns. "
+                    "Your task is to analyze COBOL code and design a comprehensive, modern .NET 8 project structure "
+                    "that maintains all business logic while following current best practices."
+                )
+            },
+            {
+                "role": "user",
+                "content": structure_prompt
+            }
+        ]
+        
+        log_processing_step("Calling GPT for target structure analysis", {
+            "prompt_length": len(structure_prompt),
+            "project_id": project_id
+        }, "TARGET_STRUCTURE")
+        
+        structure_response = client.chat.completions.create(
+            model=AZURE_OPENAI_DEPLOYMENT_NAME,
+            messages=structure_msgs,
+            temperature=0.2,
+            max_tokens=4000
+        )
+        
+        log_gpt_interaction("TARGET_STRUCTURE", AZURE_OPENAI_DEPLOYMENT_NAME, structure_msgs, structure_response)
+        
+        structure_json = extract_json_from_response(structure_response.choices[0].message.content)
+        
+        # Save target structure JSON
+        output_dir = os.path.join("output", "analysis", project_id)
+        os.makedirs(output_dir, exist_ok=True)
+        structure_path = os.path.join(output_dir, "target_structure.json")
+        with open(structure_path, "w") as f:
+            json.dump(structure_json, f, indent=2)
+        logger.info(f"Target structure saved to: {structure_path}")
+        
+        logger.info("=== TARGET STRUCTURE ANALYSIS COMPLETED ===")
+        return structure_json
+        
+    except Exception as e:
+        logger.error(f"Error creating target structure analysis: {str(e)}")
+        return {"error": str(e)}
+
 @bp.route("/analysis-status", methods=["GET"])
 def analysis_status():
     """Return the current analysis status for the project"""
@@ -100,8 +282,9 @@ def analyze_requirements():
     Enhanced flow:
     1) Classify uploaded files
     2) Generate cobol_analysis.json
-    3) Index files for RAG
-    4) Run GPT for business & technical requirements
+    3) Generate target_structure.json
+    4) Index files for RAG
+    5) Run GPT for business & technical requirements
     """
     try:
         data = request.json
@@ -149,11 +332,15 @@ def analyze_requirements():
             json.dump(cobol_json, f, indent=2)
         logger.info(f"COBOL JSON created at: {analysis_path}")
 
-        # 3) INDEX FOR RAG
-        log_processing_step("Indexing files for RAG", {"project_id": project_id}, 4)
-        index_files_for_rag(project_id, cobol_json, file_data)  # Pass file_data
+        # 3) GENERATE TARGET STRUCTURE JSON
+        log_processing_step("Generating target structure analysis", {"project_id": project_id}, 4)
+        target_structure = create_target_structure_analysis(project_id, file_data, classified)
+
+        # 4) INDEX FOR RAG
+        log_processing_step("Indexing files for RAG", {"project_id": project_id}, 5)
+        index_files_for_rag(project_id, cobol_json, file_data)
         
-        # 4) GPT REQUIREMENTS ANALYSIS
+        # 5) GPT REQUIREMENTS ANALYSIS
         src = data.get("sourceLanguage")
         tgt = data.get("targetLanguage")
         cobol_list = [f["content"] for f in classified.get("COBOL Code", [])]
@@ -165,11 +352,12 @@ def analyze_requirements():
             "source_language": src,
             "target_language": tgt,
             "cobol_files_count": len(cobol_list)
-        }, 5)
+        }, 6)
 
         # Combine COBOL code and analysis
         cobol_code_str = "\n".join(cobol_list)
         cobol_analysis_str = json.dumps(cobol_json, indent=2)
+        target_structure_str = json.dumps(target_structure, indent=2)
         
         # Add standards and RAG context
         standards_context = ""
@@ -181,11 +369,14 @@ def analyze_requirements():
         rag_context = ""
         if vector_store:
             rag_results = query_vector_store(vector_store, "Relevant COBOL program and standards information", k=5)
-            rag_context = "\n\nRAG CONTEXT:\n" + "\n".join([f"Source: {r.metadata['source']}\n{r.page_content}\n" for r in rag_results])
-            logger.info(f"Added RAG context with {len(rag_results)} results")
+            if rag_results:
+                rag_context = "\n\nRAG CONTEXT:\n" + "\n".join([f"Source: {r.metadata.get('source', 'unknown')}\n{r.page_content}\n" for r in rag_results])
+                logger.info(f"Added RAG context with {len(rag_results)} results")
+            else:
+                logger.warning("No RAG results returned from vector store")
         
-        bus_prompt = create_business_requirements_prompt(src, cobol_code_str) + standards_context + rag_context + f"\n\nCOBOL ANALYSIS:\n{cobol_analysis_str}"
-        tech_prompt = create_technical_requirements_prompt(src, tgt, cobol_code_str) + standards_context + rag_context + f"\n\nCOBOL ANALYSIS:\n{cobol_analysis_str}"
+        bus_prompt = create_business_requirements_prompt(src, cobol_code_str) + standards_context + rag_context + f"\n\nCOBOL ANALYSIS:\n{cobol_analysis_str}" + f"\n\nTARGET STRUCTURE:\n{target_structure_str}"
+        tech_prompt = create_technical_requirements_prompt(src, tgt, cobol_code_str) + standards_context + rag_context + f"\n\nCOBOL ANALYSIS:\n{cobol_analysis_str}" + f"\n\nTARGET STRUCTURE:\n{target_structure_str}"
 
         # Business Requirements Analysis
         business_msgs = [
@@ -194,8 +385,8 @@ def analyze_requirements():
                 "content": (
                     f"You are an expert in analyzing COBOL/CICS code to extract business requirements. "
                     f"You understand COBOL, CICS commands, and mainframe business processes deeply. "
-                    f"You have access to comprehensive analysis results including CICS patterns, RAG context, and standards documents. "
-                    f"Use the provided COBOL analysis JSON to understand program structure, variables, and dependencies. "
+                    f"You have access to comprehensive analysis results including CICS patterns, RAG context, standards documents, and target structure analysis. "
+                    f"Use the provided COBOL analysis JSON and target structure to understand program structure, variables, and dependencies. "
                     f"Output your analysis in JSON format with the following structure:\n\n"
                     f"{{\n"
                     f'  "Overview": {{\n'
@@ -231,7 +422,7 @@ def analyze_requirements():
 
         log_processing_step("Running business requirements analysis", {
             "prompt_length": len(bus_prompt)
-        }, 6)
+        }, 7)
 
         business_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
@@ -251,7 +442,7 @@ def analyze_requirements():
                 "content": (
                     f"You are an expert in COBOL to .NET 8 migration. "
                     f"You deeply understand both COBOL and .NET 8 and can identify technical challenges and requirements for migration. "
-                    f"Use the provided COBOL analysis JSON to understand program structure, variables, and dependencies. "
+                    f"Use the provided COBOL analysis JSON and target structure to understand program structure, variables, and dependencies. "
                     f"Output your analysis in JSON format with the following structure:\n"
                     f"{{\n"
                     f'  "technicalRequirements": [\n'
@@ -269,7 +460,7 @@ def analyze_requirements():
 
         log_processing_step("Running technical requirements analysis", {
             "prompt_length": len(tech_prompt)
-        }, 7)
+        }, 8)
 
         technical_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
@@ -288,6 +479,7 @@ def analyze_requirements():
             "cobol_files": get_cobol_files_for_analysis(classified),
             "classified_files": classified,
             "cobol_analysis": cobol_json,
+            "target_structure": target_structure,
             "analysis_results": {
                 "business_requirements": business_json,
                 "technical_requirements": technical_json,
@@ -298,14 +490,16 @@ def analyze_requirements():
         log_processing_step("Analysis completed successfully", {
             "business_rules_count": len(business_json.get("Business Rules & Requirements", {}).get("Business Rules", [])),
             "technical_requirements_count": len(technical_json.get("technicalRequirements", [])),
+            "target_structure_created": bool(target_structure and "error" not in target_structure),
             "conversionContextReady": True
-        }, 8)
+        }, 9)
 
         return jsonify({
             "status": "success",
             "project_id": project_id,
             "business_requirements": business_json,
             "technical_requirements": technical_json,
+            "target_structure": target_structure,
             "file_classification": classified,
             "cobol_analysis": cobol_json,
             "conversionContextReady": True
