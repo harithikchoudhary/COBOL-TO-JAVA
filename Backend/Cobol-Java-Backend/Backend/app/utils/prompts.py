@@ -2,6 +2,8 @@
 Module for generating prompts for code analysis and conversion.
 """
 
+
+
 def create_business_requirements_prompt(source_language, source_code):
     """
     Creates a prompt for analyzing business requirements from source code.
@@ -110,63 +112,10 @@ def create_technical_requirements_prompt(source_language, target_language, sourc
             {source_code}
             """
 
-def create_dotnet_specific_prompt(source_language, source_code, business_requirements, technical_requirements, db_setup_template):
-    """
-    Creates a .NET 8-specific prompt for code conversion.
-    
-    Args:
-        source_language (str): The programming language of the source code
-        source_code (str): The source code to convert
-        business_requirements (str): The business requirements extracted from analysis
-        technical_requirements (str): The technical requirements extracted from analysis
-        db_setup_template (str): The database setup template for .NET 8
-        
-    Returns:
-        str: The .NET 8-specific prompt for code conversion
-    """
-    return f"""
-    .NET 8-Specific Requirements:
-    - Use .NET 8 framework
-    - Follow C# naming conventions (PascalCase for public members, camelCase for private)
-    - Implement proper exception handling using try-catch blocks
-    - Use C# 12 features where appropriate
-    - Implement proper logging using Microsoft.Extensions.Logging
-    - Use dependency injection with IServiceCollection
-    - Follow SOLID principles
-    - Use Entity Framework Core for database operations
-    - Implement proper validation using System.ComponentModel.DataAnnotations
-    - Use proper C# namespace structure (Company.Project.*)
-
-    Required NuGet Packages:
-    - Microsoft.AspNetCore.App
-    - Microsoft.EntityFrameworkCore
-    - Microsoft.Extensions.Logging
-    - AutoMapper
-
-    .NET 8 Project Structure:
-    src/
-    ├── Controllers/
-    ├── Services/
-    │   └── Interfaces/       # Service layer interfaces
-    ├── Repositories/
-    │   └── Interfaces/       # Repository layer interfaces
-    ├── Models/
-    ├── DTOs/
-
-    .NET 8-Specific Attributes:
-    - Use [ApiController] for API controllers
-    - Use [Route] for routing
-    - Use [FromBody] for request body binding
-    - Use [Required] for validation
-    - Use [JsonPropertyName] for JSON serialization
-    """
-
 def create_code_conversion_prompt(
     source_language,
     target_language,
     source_code,
-    business_requirements,
-    technical_requirements,
     db_setup_template
 ):
     """
@@ -176,8 +125,6 @@ def create_code_conversion_prompt(
         source_language (str): The programming language of the source code
         target_language (str): The target programming language for conversion (.NET 8)
         source_code (str): The source code to convert
-        business_requirements (str): The business requirements extracted from analysis
-        technical_requirements (str): The technical requirements extracted from analysis
         db_setup_template (str): The database setup template for .NET 8
 
     Returns:
@@ -190,11 +137,9 @@ def create_code_conversion_prompt(
 
     # Accept multiple synonyms
     if normalized_target in [".net 8", "c#", "csharp", ".net"]:
-        language_specific_prompt = create_dotnet_specific_prompt(
+        language_specific_prompt = (
             source_language,
             source_code,
-            business_requirements,
-            technical_requirements,
             db_setup_template
         )
     else:
@@ -210,38 +155,54 @@ def create_code_conversion_prompt(
 
     {language_specific_prompt}
 
-    Required Output Structure:
+    ENHANCED OUTPUT STRUCTURE REQUIREMENTS:
     
-    Give output in below structure mentioned clearly. Each section must be properly formatted with clear section markers.
+    Analyze the COBOL code complexity and generate the appropriate number of components:
     
-    Your response must be organized in the following sections, each clearly marked with a section header:
-
-    ##Entity
-    FileName: [filename]
-    // Entity code here
-
-    ##Repository
-    FileName: [filename]
-    // Repository code here
-
-    ##Service
-    FileName: [filename]
-    // Service code here
-
-    ##Controller
-    FileName: [filename]
-    // Controller code here
-
-    ##appsettings.json
-    // Configuration here
-
-    ##Dependencies
-    // Dependencies configuration here
-
-    Each section must be clearly separated using the above headers. Include only relevant code for each layer.
-    Ensure proper dependency injection and relationships between layers are maintained.
-    Each code block must be properly formatted with the correct language identifier (e.g., csharp for code, json for configuration).
-    File names must be clearly specified for each section.
+    1. **Multiple Controllers**: Create separate controllers for different business domains or major functions
+    2. **Multiple Services**: Implement service layer with separate services for different business logic areas
+    3. **Multiple Models**: Create entity models for each major data structure found in the COBOL code
+    4. **Multiple Repositories**: Implement repository pattern with separate repositories for different data access needs
+    5. **DTOs**: Create data transfer objects for complex data structures when needed
+    
+    COMPONENT GENERATION GUIDELINES:
+    
+    - **Controllers**: Create one controller per major business function or COBOL program
+      - Use descriptive names like "CustomerController", "OrderController", "ReportController"
+      - Each controller should handle related business operations
+      - Implement proper HTTP methods (GET, POST, PUT, DELETE)
+    
+    - **Services**: Create services for business logic separation
+      - Use descriptive names like "CustomerService", "OrderService", "ValidationService"
+      - Each service should handle specific business domain logic
+      - Implement interfaces for dependency injection
+    
+    - **Models**: Create entity models for data structures
+      - Use descriptive names like "Customer", "Order", "Product"
+      - Include proper validation attributes
+      - Follow Entity Framework Core conventions
+    
+    - **Repositories**: Create repositories for data access
+      - Use descriptive names like "CustomerRepository", "OrderRepository"
+      - Implement repository pattern with interfaces
+      - Handle different data sources (database, files, etc.)
+    
+    - **DTOs**: Create data transfer objects when needed
+      - Use for complex data structures or API responses
+      - Separate internal models from external contracts
+    
+    NAMING CONVENTIONS:
+    - Use PascalCase for all public members and class names
+    - Use descriptive, business-focused names
+    - Follow .NET naming conventions
+    - Include proper namespaces (Company.Project.*)
+    
+    ARCHITECTURE PATTERNS:
+    - Implement Clean Architecture principles
+    - Use Dependency Injection throughout
+    - Follow SOLID principles
+    - Implement proper separation of concerns
+    - Use async/await patterns for all I/O operations
 
     Requirements:
     - The output should be a complete, executable implementation in .NET 8
@@ -251,6 +212,18 @@ def create_code_conversion_prompt(
     - Ensure consistent data handling, formatting, and computations
     - DO NOT include markdown code blocks (like ```csharp or ```) in your response, just provide the raw code
     - Do not return any unwanted code in {target_language} or functions which are not in {source_language}.
+    - **NEVER use placeholder comments or stub implementations (such as 'return await Task.FromResult(new Account());' or '// Placeholder for actual implementation'). You MUST fully implement all business logic and method bodies based on the COBOL source and requirements.**
+    
+    MULTIPLE COMPONENT GENERATION REQUIREMENTS:
+    - **Analyze the COBOL code structure** to identify distinct business domains and functions
+    - **Create separate controllers** for each major business function (e.g., CustomerController, OrderController, ReportController)
+    - **Implement multiple services** for different business logic areas (e.g., CustomerService, OrderService, ValidationService)
+    - **Generate multiple models** for different data structures found in the COBOL code
+    - **Create multiple repositories** for different data access patterns (e.g., CustomerRepository, OrderRepository, FileRepository)
+    - **Use descriptive, business-focused names** for all components
+    - **Ensure proper relationships** between controllers, services, and repositories
+    - **Implement dependency injection** for all service and repository dependencies
+    - **Follow single responsibility principle** - each component should have one clear purpose
 
     Database-Specific Instructions:
     - If the {source_language} code includes any database-related operations, automatically generate the necessary setup code using Entity Framework Core
@@ -258,11 +231,6 @@ def create_code_conversion_prompt(
 
     {db_setup_template if db_setup_template else 'No database setup required.'}
 
-    Business Requirements:
-    {business_requirements if business_requirements else 'None provided.'}
-
-    Technical Requirements:
-    {technical_requirements if technical_requirements else 'None provided.'}
 
     Source Code ({source_language}):
     {source_code}
@@ -283,7 +251,7 @@ def create_code_conversion_prompt(
 
     return base_prompt
 
-def create_unit_test_prompt(target_language, converted_code, business_requirements, technical_requirements):
+def create_unit_test_prompt(target_language, unit_test_input):
     """Create a prompt for generating unit tests for the converted .NET 8 code"""
     
     prompt = f"""
@@ -292,15 +260,10 @@ def create_unit_test_prompt(target_language, converted_code, business_requiremen
     Please generate unit tests for the following {target_language} code. The tests should verify that 
     the code meets all business requirements and handles edge cases appropriately.
     
-    Business Requirements:
-    {business_requirements}
-    
-    Technical Requirements:
-    {technical_requirements}
     
     Converted Code ({target_language}):
     
-    {converted_code}
+    {unit_test_input}
     
     Guidelines for the unit tests:
     1. Use NUnit or xUnit as the unit testing framework for .NET 8
@@ -317,7 +280,7 @@ def create_unit_test_prompt(target_language, converted_code, business_requiremen
     
     return prompt
 
-def create_functional_test_prompt(target_language, converted_code, business_requirements):
+def create_functional_test_prompt(target_language, unit_test_input):
     """Create a prompt for generating functional test cases based on business requirements"""
     
     prompt = f"""
@@ -327,12 +290,10 @@ def create_functional_test_prompt(target_language, converted_code, business_requ
     Please generate comprehensive functional test cases that verify the application meets all business requirements.
     These test cases will be used by QA engineers to validate the application functionality.
     
-    Business Requirements:
-    {business_requirements}
     
     Converted Code ({target_language}):
     
-    {converted_code}
+    {unit_test_input}
     
     Guidelines for functional test cases:
     1. Create test cases that cover all business requirements
