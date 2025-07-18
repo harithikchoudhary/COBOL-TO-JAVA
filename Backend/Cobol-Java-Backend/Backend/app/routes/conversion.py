@@ -117,9 +117,8 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None,
 }'''
         files[f"{project_name}/appsettings.json"] = appsettings_content
 
-    # Add test project if unit_test_code is provided
-    if unit_test_code:
-        test_csproj_content = f'''<Project Sdk="Microsoft.NET.Sdk">
+    # Add test project csproj file first
+    test_csproj_content = f'''<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
@@ -136,9 +135,47 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None,
     <ProjectReference Include="../{project_name}/{project_name}.csproj" />
   </ItemGroup>
 </Project>'''
-        files[f"{test_project_name}/{test_project_name}.csproj"] = test_csproj_content
-        files[f"{test_project_name}/UnitTests.cs"] = unit_test_code
+    files[f"{test_project_name}/{test_project_name}.csproj"] = test_csproj_content
 
+    # Add unit test files if unit_test_code is provided
+    if unit_test_code:
+        logger.info(f"Processing unit test code: {type(unit_test_code)}")
+        
+        # Handle different formats of unit_test_code
+        if isinstance(unit_test_code, list):
+            # Format: [{"fileName": "...", "content": "..."}]
+            for test_file in unit_test_code:
+                if isinstance(test_file, dict):
+                    file_name = test_file.get("fileName")
+                    content = test_file.get("content", "")
+                    if file_name and content:
+                        files[f"{test_project_name}/Tests/{file_name}"] = content
+                        logger.info(f"Added unit test file: {file_name}")
+        
+        elif isinstance(unit_test_code, dict):
+            # Handle different dict formats
+            if "unitTestFiles" in unit_test_code:
+                # Format: {"unitTestFiles": [{"fileName": "...", "content": "..."}]}
+                for test_file in unit_test_code["unitTestFiles"]:
+                    if isinstance(test_file, dict):
+                        file_name = test_file.get("fileName")
+                        content = test_file.get("content", "")
+                        if file_name and content:
+                            files[f"{test_project_name}/{file_name}"] = content
+                            logger.info(f"Added unit test file: {file_name}")
+            else:
+                # Direct content mapping
+                for file_name, content in unit_test_code.items():
+                    if content:
+                        files[f"{test_project_name}/{file_name}"] = content
+                        logger.info(f"Added unit test file: {file_name}")
+        
+        elif isinstance(unit_test_code, str):
+            # Single string content - create default file
+            if unit_test_code.strip():
+                files[f"{test_project_name}/UnitTests.cs"] = unit_test_code
+                logger.info("Added single unit test file: UnitTests.cs")
+        
         # Add solution file
         sln_content = f'''
 Microsoft Visual Studio Solution File, Format Version 12.00
@@ -312,8 +349,6 @@ def convert_cobol_to_csharp():
         cobol_code_str = "\n".join(cobol_code_list)
         cobol_analysis_str = json.dumps(cobol_json, indent=2)
         target_structure_str = json.dumps(target_structure, indent=2)
-        business_requirements = json.dumps(data.get("businessRequirements", {}), indent=2)
-        technical_requirements = json.dumps(data.get("technicalRequirements", {}), indent=2)
 
         # Load RAG context
         vector_store = load_vector_store(project_id)
@@ -352,11 +387,6 @@ def convert_cobol_to_csharp():
         **TARGET STRUCTURE (FOLLOW THIS CLOSELY):**
         {target_structure_str}
         
-        **BUSINESS REQUIREMENTS:**
-        {business_requirements}
-        
-        **TECHNICAL REQUIREMENTS:**
-        {technical_requirements}
         
         **DATABASE TEMPLATE:**
         {db_setup_template}
@@ -434,6 +464,137 @@ def convert_cobol_to_csharp():
             logger.error("Failed to extract JSON from conversion response")
             return jsonify({"error": "Failed to process conversion response.", "files": {}}), 500
 
+        # --- BEGIN: Unit and Functional Test Generation Integration ---
+        # Extract Controllers and Services for test generation
+        converted_code = converted_json.get("converted_code", [])
+        # Try to extract Controllers and Services from the converted_code list
+        controllers = []
+        print(controllers)
+        services = []
+        print(services)
+        for file_info in converted_code:
+            if isinstance(file_info, dict):
+                file_name = file_info.get("file_name", "")
+                path = file_info.get("path", "")
+                content = file_info.get("content", "")
+                # Heuristics: look for 'Controller' or 'Service' in file name or path
+                if "controller" in file_name.lower() or "controller" in path.lower():
+                    controllers.append({"file_name": file_name, "path": path, "content": content})
+                if "service" in file_name.lower() or "service" in path.lower():
+                    services.append({"file_name": file_name, "path": path, "content": content})
+
+        # Compose a minimal dict to pass to the unit/functional test prompt
+        unit_test_input = {
+            "Controllers": controllers,
+            "Services": services
+        }
+        print("[DEBUG] Extracted controllers:", controllers)
+        print("[DEBUG] Extracted services:", services)
+
+        # Generate unit test prompt
+        print("[DEBUG] Creating unit test prompt with input:", unit_test_input)
+        unit_test_prompt = create_unit_test_prompt(
+            "C#",
+            unit_test_input,
+        )
+        unit_test_system = (
+            "You are an expert test engineer specializing in writing comprehensive unit tests for .NET 8 applications. "
+            "For EACH Controller class found, generate a separate unit test file named '[ControllerName]Tests.cs'. "
+            "Return your response in JSON as follows:\n"
+            "{\n"
+            '  "unitTestFiles": [{'
+            '       "fileName": "[ControllerName]Tests.cs",'
+            '       "content": "...unit test code..."'
+            '   }, ...],'
+            '  "testDescription": "...",'
+            '  "coverage": [...],'
+            '  "businessRuleTests": [...]'
+            "}\n"
+        )
+
+        unit_test_messages = [
+            {"role": "system", "content": unit_test_system},
+            {"role": "user", "content": unit_test_prompt}
+        ]
+        print("[DEBUG] Sending unit test messages to LLM:", unit_test_messages)
+        try:
+            unit_test_response = client.chat.completions.create(
+                model=AZURE_OPENAI_DEPLOYMENT_NAME,
+                messages=unit_test_messages,
+                temperature=0.1,
+                max_tokens=3000,
+                response_format={"type": "json_object"}
+            )
+            unit_test_content = unit_test_response.choices[0].message.content.strip()
+            print("[DEBUG] Raw unit test LLM response:", unit_test_content)
+            try:
+                unit_test_json = json.loads(unit_test_content)
+                print("[DEBUG] Parsed unit test JSON:", unit_test_json)
+                logger.info("✅ Unit test JSON parsed successfully")
+            except json.JSONDecodeError:
+                logger.warning("⚠️ Failed to parse unit test JSON directly")
+                unit_test_json = extract_json_from_response(unit_test_content)
+                print("[DEBUG] Extracted unit test JSON via fallback:", unit_test_json)
+            # Fix: Extract unit test files correctly from the JSON
+            unit_test_code = unit_test_json.get("unitTestFiles")
+            if not unit_test_code:
+                unit_test_code = unit_test_json.get("unitTestCode", "")
+            print("[DEBUG] Final unit test code:", unit_test_code)
+        except Exception as e:
+            logger.error(f"Unit test generation failed: {e}")
+            print("[ERROR] Exception during unit test generation:", e)
+            try:
+                unit_test_json = json.loads(unit_test_content)
+                print("[DEBUG] Exception fallback, parsed unit test JSON:", unit_test_json)
+                unit_test_code = unit_test_json.get("unitTestFiles", [])
+            except Exception as ex:
+                print("[ERROR] Exception fallback also failed:", ex)
+                unit_test_json = {}
+                unit_test_code = []
+
+        # Generate functional test prompt
+        functional_test_prompt = create_functional_test_prompt(
+            "C#",
+            unit_test_input
+        )
+        functional_test_system = (
+            "You are an expert QA engineer specializing in creating functional tests for .NET 8 applications. "
+            "You create comprehensive test scenarios that verify the application meets all business requirements. "
+            "Focus on user journey tests, acceptance criteria, and business domain validation. "
+            "Return your response in JSON format with the following structure:\n"
+            "{\n"
+            '  "functionalTests": [\n'
+            '    {"id": "FT1", "title": "Test scenario title", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"},\n'
+            '    {"id": "FT2", "title": "Another test scenario", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"}\n'
+            '  ],\n'
+            '  "testStrategy": "Description of the overall testing approach",\n'
+            '  "domainCoverage": ["List of business domain areas covered"]\n'
+            "}"
+        )
+        functional_test_messages = [
+            {"role": "system", "content": functional_test_system},
+            {"role": "user", "content": functional_test_prompt}
+        ]
+        try:
+            functional_test_response = client.chat.completions.create(
+                model=AZURE_OPENAI_DEPLOYMENT_NAME,
+                messages=functional_test_messages,
+                temperature=0.1,
+                max_tokens=3000,
+                response_format={"type": "json_object"}
+            )
+            functional_test_content = functional_test_response.choices[0].message.content.strip()
+            try:
+                functional_test_json = json.loads(functional_test_content)
+                logger.info("✅ Functional test JSON parsed successfully")
+            except json.JSONDecodeError:
+                logger.warning("⚠️ Failed to parse functional test JSON directly")
+                functional_test_json = extract_json_from_response(functional_test_content)
+        except Exception as e:
+            logger.error(f"Functional test generation failed: {e}")
+            functional_test_json = {}
+        # --- END: Unit and Functional Test Generation Integration ---
+
         # Save converted code JSON
         output_dir_path = os.path.join("output", "converted", project_id)
         os.makedirs(output_dir_path, exist_ok=True)
@@ -445,7 +606,7 @@ def convert_cobol_to_csharp():
         # Create and save .NET folder structure
         files = flatten_converted_code(
             converted_json.get("converted_code", []), 
-            converted_json.get("unit_tests", ""),
+            unit_test_code,
             project_id,
             target_structure
         )
@@ -457,8 +618,9 @@ def convert_cobol_to_csharp():
             "project_id": project_id,
             "converted_code": converted_json.get("converted_code", []),
             "conversion_notes": converted_json.get("conversion_notes", []),
-            "unit_tests": converted_json.get("unit_tests", ""),
-            "functional_tests": converted_json.get("functional_tests", ""),
+            "unit_tests": unit_test_code,
+            "unit_test_details": unit_test_json,
+            "functional_tests": functional_test_json,
             "files": files
         })
 

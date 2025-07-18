@@ -112,15 +112,13 @@ def create_technical_requirements_prompt(source_language, target_language, sourc
             {source_code}
             """
 
-def create_dotnet_specific_prompt(source_language, source_code, business_requirements, technical_requirements, db_setup_template):
+def create_dotnet_specific_prompt(source_language, source_code, db_setup_template):
     """
     Creates a .NET 8-specific prompt for code conversion.
     
     Args:
         source_language (str): The programming language of the source code
         source_code (str): The source code to convert
-        business_requirements (str): The business requirements extracted from analysis
-        technical_requirements (str): The technical requirements extracted from analysis
         db_setup_template (str): The database setup template for .NET 8
         
     Returns:
@@ -167,8 +165,6 @@ def create_code_conversion_prompt(
     source_language,
     target_language,
     source_code,
-    business_requirements,
-    technical_requirements,
     db_setup_template
 ):
     """
@@ -178,8 +174,6 @@ def create_code_conversion_prompt(
         source_language (str): The programming language of the source code
         target_language (str): The target programming language for conversion (.NET 8)
         source_code (str): The source code to convert
-        business_requirements (str): The business requirements extracted from analysis
-        technical_requirements (str): The technical requirements extracted from analysis
         db_setup_template (str): The database setup template for .NET 8
 
     Returns:
@@ -195,8 +189,6 @@ def create_code_conversion_prompt(
         language_specific_prompt = create_dotnet_specific_prompt(
             source_language,
             source_code,
-            business_requirements,
-            technical_requirements,
             db_setup_template
         )
     else:
@@ -288,11 +280,6 @@ def create_code_conversion_prompt(
 
     {db_setup_template if db_setup_template else 'No database setup required.'}
 
-    Business Requirements:
-    {business_requirements if business_requirements else 'None provided.'}
-
-    Technical Requirements:
-    {technical_requirements if technical_requirements else 'None provided.'}
 
     Source Code ({source_language}):
     {source_code}
@@ -313,7 +300,7 @@ def create_code_conversion_prompt(
 
     return base_prompt
 
-def create_unit_test_prompt(target_language, converted_code, business_requirements, technical_requirements):
+def create_unit_test_prompt(target_language, converted_code):
     """Create a prompt for generating unit tests for the converted .NET 8 code"""
     
     prompt = f"""
@@ -322,11 +309,6 @@ def create_unit_test_prompt(target_language, converted_code, business_requiremen
     Please generate unit tests for the following {target_language} code. The tests should verify that 
     the code meets all business requirements and handles edge cases appropriately.
     
-    Business Requirements:
-    {business_requirements}
-    
-    Technical Requirements:
-    {technical_requirements}
     
     Converted Code ({target_language}):
     
@@ -347,7 +329,7 @@ def create_unit_test_prompt(target_language, converted_code, business_requiremen
     
     return prompt
 
-def create_functional_test_prompt(target_language, converted_code, business_requirements):
+def create_functional_test_prompt(target_language, converted_code):
     """Create a prompt for generating functional test cases based on business requirements"""
     
     prompt = f"""
@@ -357,8 +339,6 @@ def create_functional_test_prompt(target_language, converted_code, business_requ
     Please generate comprehensive functional test cases that verify the application meets all business requirements.
     These test cases will be used by QA engineers to validate the application functionality.
     
-    Business Requirements:
-    {business_requirements}
     
     Converted Code ({target_language}):
     

@@ -341,7 +341,7 @@ const handleFileUpload = async (e) => {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded border text-center py-5">
+        <div className="bg-white rounded border text-center py-5 d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '400px' }}>
           <FileText size={48} className="text-secondary mb-3" />
           <div>No project files uploaded yet.</div>
         </div>

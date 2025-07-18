@@ -353,8 +353,6 @@ const handleConvert = async (setActiveTab) => {
         sourceLanguage: "COBOL",
         targetLanguage: "C#",
         sourceCode: sourceCode, // Pass the parsed object
-        businessRequirements,
-        technicalRequirements,
         projectId,
         cobolFilename: Object.keys(uploadedFiles)[0] || "BANKING.CBL"
       }),
