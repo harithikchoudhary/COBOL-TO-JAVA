@@ -7,7 +7,7 @@ from datetime import datetime
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
-from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
+from langchain_openai import AzureOpenAIEmbeddings
 from ..config import logger, AZURE_CONFIG, output_dir
 import PyPDF2
 from docx import Document as DocxDocument
@@ -18,11 +18,11 @@ STANDARDS_RAG_DIR = Path(output_dir) / "standards-rag"
 def get_embedding_client():
     """Initialize Azure OpenAI embedding client."""
     try:
-        embed_model = AzureOpenAIEmbedding(
-            model=AZURE_CONFIG["AZURE_OPENAI_EMBED_MODEL"],
-            deployment_name=AZURE_CONFIG["AZURE_OPENAI_EMBED_DEPLOYMENT"],
-            api_key=AZURE_CONFIG["AZURE_OPENAI_EMBED_API_KEY"],
+        embed_model = AzureOpenAIEmbeddings(
             azure_endpoint=AZURE_CONFIG["AZURE_OPENAI_EMBED_API_ENDPOINT"],
+            api_key=AZURE_CONFIG["AZURE_OPENAI_EMBED_API_KEY"],
+            model=AZURE_CONFIG["AZURE_OPENAI_EMBED_MODEL"],
+            azure_deployment=AZURE_CONFIG["AZURE_OPENAI_EMBED_DEPLOYMENT"],
             api_version=AZURE_CONFIG["AZURE_OPENAI_EMBED_VERSION"],
         )
         logger.info("Azure OpenAI embedding client initialized successfully")
@@ -33,36 +33,11 @@ def get_embedding_client():
 
 embedding_client = get_embedding_client()
 
-class AzureOpenAIEmbeddingWrapper:
-    """Wrapper for Azure OpenAI embeddings compatible with LangChain."""
-    def __init__(self, azure_embedding_client):
-        self.client = azure_embedding_client
-    
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        try:
-            embeddings = []
-            for text in texts:
-                embedding = self.client.get_text_embedding(text)
-                embeddings.append(embedding)
-            return embeddings
-        except Exception as e:
-            logger.error(f"Error embedding documents: {str(e)}")
-            raise
-    
-    def embed_query(self, text: str) -> List[float]:
-        try:
-            return self.client.get_text_embedding(text)
-        except Exception as e:
-            logger.error(f"Error embedding query: {str(e)}")
-            raise
-
-embedding_wrapper = AzureOpenAIEmbeddingWrapper(embedding_client)
-
 def test_embedding_service():
     """Test the embedding service."""
     try:
         test_text = "This is a test document for embedding."
-        embedding = embedding_wrapper.embed_query(test_text)
+        embedding = embedding_client.embed_query(test_text)
         logger.info(f"Embedding test successful. Dimension: {len(embedding)}")
         return True
     except Exception as e:
@@ -133,13 +108,13 @@ def index_standards_document(project_id: str, file_path: Path):
     try:
         vector_store = FAISS.load_local(
             str(output_dir),
-            embedding_wrapper,
+            embedding_client,
             allow_dangerous_deserialization=True
         )
         vector_store.add_documents(chunks)
         logger.info(f"Updated existing standards vector store for project: {project_id}")
     except Exception:
-        vector_store = FAISS.from_documents(chunks, embedding_wrapper)
+        vector_store = FAISS.from_documents(chunks, embedding_client)
         logger.info(f"Created new standards vector store for project: {project_id}")
     
     try:
@@ -226,13 +201,13 @@ def index_files_for_rag(project_id: str, cobol_json: Dict[str, Any], file_data: 
     try:
         vector_store = FAISS.load_local(
             str(output_dir),
-            embedding_wrapper,
+            embedding_client,
             allow_dangerous_deserialization=True
         )
         vector_store.add_documents(chunks)
         logger.info(f"Updated existing vector store for project: {project_id}")
     except Exception:
-        vector_store = FAISS.from_documents(chunks, embedding_wrapper)
+        vector_store = FAISS.from_documents(chunks, embedding_client)
         logger.info(f"Created new vector store for project: {project_id}")
     
     try:
@@ -267,7 +242,7 @@ def load_vector_store(project_id: str):
         if cobol_faiss_path.exists():
             cobol_vector_store = FAISS.load_local(
                 str(cobol_faiss_path), 
-                embedding_wrapper, 
+                embedding_client, 
                 allow_dangerous_deserialization=True
             )
             vector_stores.append(cobol_vector_store)
@@ -276,7 +251,7 @@ def load_vector_store(project_id: str):
         if standards_faiss_path.exists():
             standards_vector_store = FAISS.load_local(
                 str(standards_faiss_path),
-                embedding_wrapper,
+                embedding_client,
                 allow_dangerous_deserialization=True
             )
             vector_stores.append(standards_vector_store)

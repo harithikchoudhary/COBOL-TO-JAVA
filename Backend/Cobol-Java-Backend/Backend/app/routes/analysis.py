@@ -90,13 +90,20 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
     
     structure_prompt = f"""
     You are an expert software architect specializing in COBOL to .NET 8 migration. 
-    Analyze the provided COBOL/CICS code and create a comprehensive target structure for a modern .NET 8 application.
+    Analyze the provided COBOL/CICS code and create a comprehensive target structure for a modern .NET 8 WebAPI application.
     
-    Based on the code structure, business logic, data models, and CICS operations, design a complete .NET 8 project structure that follows:
-    - Clean Architecture principles
-    - SOLID design principles
+    Based on the code structure, business logic, data models, and CICS operations, design a standard .NET 8 WebAPI project structure that follows:
+    - Standard .NET 8 WebAPI conventions
     - .NET 8 best practices
-    - Modern software patterns
+    
+    The structure should include:
+    - Controllers (for API endpoints)
+    - Models (for data structures)
+    - Services (for business logic) with Interfaces
+    - Repositories (for data access) with Interfaces
+    - Program.cs
+    - appsettings.json
+    - Entity Framework Core setup ONLY if the COBOL code interacts with a database
     
     Analyze the following COBOL code and provide a detailed target structure:
     
@@ -105,30 +112,21 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
     Provide your analysis in the following JSON format:
     {{
       "project_name": "string",
-      "architecture_pattern": "string",
-      "projects": [
+      "architecture_pattern": "Standard .NET 8 WebAPI",
+      "folders": [
         {{
           "name": "string",
-          "type": "string",
           "purpose": "string",
-          "folders": [
+          "files": [
             {{
               "name": "string",
-              "purpose": "string",
-              "files": [
-                {{
-                  "name": "string",
-                  "type": "string",
-                  "purpose": "string",
-                  "key_classes": ["string"],
-                  "dependencies": ["string"]
-                }}
-              ]
+              "type": "string",
+              "purpose": "string"
             }}
           ]
         }}
       ],
-      "data_models": [
+      "models": [
         {{
           "name": "string",
           "source": "string",
@@ -137,20 +135,6 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
               "name": "string",
               "type": "string",
               "source_field": "string"
-            }}
-          ]
-        }}
-      ],
-      "services": [
-        {{
-          "name": "string",
-          "purpose": "string",
-          "methods": [
-            {{
-              "name": "string",
-              "purpose": "string",
-              "parameters": ["string"],
-              "return_type": "string"
             }}
           ]
         }}
@@ -168,11 +152,18 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
           ]
         }}
       ],
-      "infrastructure": [
+      "services": [
         {{
-          "component": "string",
-          "purpose": "string",
-          "implementation": "string"
+          "name": "string",
+          "interface": "string",
+          "purpose": "string"
+        }}
+      ],
+      "repositories": [
+        {{
+          "name": "string",
+          "interface": "string",
+          "purpose": "string"
         }}
       ],
       "database_design": {{
@@ -190,22 +181,20 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
           }}
         ]
       }},
-      "key_patterns": ["string"],
       "external_dependencies": ["string"],
       "configuration_requirements": ["string"]
     }}
     
     Focus on:
     1. Identifying all data structures from COBOL records
-    2. Mapping CICS operations to appropriate .NET patterns
-    3. Converting file operations to database operations
-    4. Identifying business logic for service layer
-    5. Creating appropriate API endpoints
-    6. Handling transaction management
-    7. Implementing proper error handling
-    8. Security considerations
-    9. Logging and auditing requirements
-    10. Integration points
+    2. Mapping CICS operations to appropriate .NET WebAPI patterns
+    3. Converting file operations to database operations (if present)
+    4. Creating appropriate API endpoints in Controllers
+    5. Defining Services and Repositories with interfaces for business logic and data access
+    6. Implementing proper error handling and validation
+    7. Security considerations
+    8. Logging and auditing requirements
+    9. Integration points
     """
     
     try:
@@ -215,7 +204,7 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
                 "content": (
                     "You are an expert software architect specializing in COBOL to .NET 8 migration. "
                     "You understand legacy mainframe systems and modern .NET architecture patterns. "
-                    "Your task is to analyze COBOL code and design a comprehensive, modern .NET 8 project structure "
+                    "Your task is to analyze COBOL code and design a standard .NET 8 project structure "
                     "that maintains all business logic while following current best practices."
                 )
             },

@@ -216,6 +216,43 @@ EndGlobal
                 f.write(content)
             logger.info(f"Saved file: {full_path}")
 
+    # --- POST-PROCESSING: Ensure appsettings.json and Program.cs are correct ---
+    # 1. Move any appsettings.json to the project root
+    appsettings_keys = [k for k in files if k.lower().endswith("appsettings.json") and k != f"{project_name}/appsettings.json"]
+    for key in appsettings_keys:
+        files[f"{project_name}/appsettings.json"] = files[key]
+        del files[key]
+
+    # 2. Ensure Program.cs exists in the project root
+    program_cs_path = f"{project_name}/Program.cs"
+    if not any(k.lower() == program_cs_path.lower() for k in files):
+        # Standard .NET 8 minimal hosting model template
+        files[program_cs_path] = '''
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllers();
+// Add other services, e.g., DbContext, repositories, etc.
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();
+'''
+
     return files
 
 def get_source_code_from_project(project_id):

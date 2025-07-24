@@ -2,8 +2,6 @@
 Module for generating prompts for code analysis and conversion.
 """
 
-
-
 def create_business_requirements_prompt(source_language, source_code):
     """
     Creates a prompt for analyzing business requirements from source code.
@@ -18,7 +16,7 @@ def create_business_requirements_prompt(source_language, source_code):
     return f"""
             You are a business analyst responsible for analyzing and documenting the business requirements from the following {source_language} code. Your task is to interpret the code's intent and extract meaningful business logic suitable for non-technical stakeholders.
 
-            The code may be written in a legacy language like COBOL, possibly lacking comments or modern structure. You must infer business rules by examining variable names, control flow, data manipulation, and any input/output operations. Focus only on **business intent**—do not describe technical implementation.
+            The code may be written in a legacy language like COBOL, possibly lacking comments or modern structure. You must infer business rules by examining variable names, control flow, data manipulation, and any input/output operations. Focus only on business intent—do not describe technical implementation.
 
             ### Output Format Instructions:
             - Use plain text headings and paragraphs with the following structure:
@@ -114,7 +112,7 @@ def create_technical_requirements_prompt(source_language, target_language, sourc
 
 def create_dotnet_specific_prompt(source_language, source_code, db_setup_template):
     """
-    Creates a .NET 8-specific prompt for code conversion.
+    Creates a .NET 8-specific prompt for code conversion (WebAPI structure with standard folders).
     
     Args:
         source_language (str): The programming language of the source code
@@ -125,33 +123,32 @@ def create_dotnet_specific_prompt(source_language, source_code, db_setup_templat
         str: The .NET 8-specific prompt for code conversion
     """
     return f"""
-    .NET 8-Specific Requirements:
+    .NET 8 WebAPI Requirements:
     - Use .NET 8 framework
     - Follow C# naming conventions (PascalCase for public members, camelCase for private)
     - Implement proper exception handling using try-catch blocks
     - Use C# 12 features where appropriate
-    - Implement proper logging using Microsoft.Extensions.Logging
+    - Implement logging using Microsoft.Extensions.Logging
     - Use dependency injection with IServiceCollection
-    - Follow SOLID principles
-    - Use Entity Framework Core for database operations
-    - Implement proper validation using System.ComponentModel.DataAnnotations
+    - Use Entity Framework Core for database operations if needed
+    - Implement validation using System.ComponentModel.DataAnnotations
     - Use proper C# namespace structure (Company.Project.*)
 
     Required NuGet Packages:
     - Microsoft.AspNetCore.App
-    - Microsoft.EntityFrameworkCore
+    - Microsoft.EntityFrameworkCore (if database is used)
     - Microsoft.Extensions.Logging
-    - AutoMapper
 
-    .NET 8 Project Structure:
-    src/
-    ├── Controllers/
-    ├── Services/
-    │   └── Interfaces/       # Service layer interfaces
-    ├── Repositories/
-    │   └── Interfaces/       # Repository layer interfaces
-    ├── Models/
-    ├── DTOs/
+    .NET 8 WebAPI Project Structure:
+    MyProject/
+      Controllers/
+      Models/
+      Services/
+        Interfaces/
+      Repositories/
+        Interfaces/
+      Program.cs
+      appsettings.json
 
     .NET 8-Specific Attributes:
     - Use [ApiController] for API controllers
@@ -159,6 +156,8 @@ def create_dotnet_specific_prompt(source_language, source_code, db_setup_templat
     - Use [FromBody] for request body binding
     - Use [Required] for validation
     - Use [JsonPropertyName] for JSON serialization
+    - For each business domain or major function, create appropriately named Controllers, Services, Repositories, and Models (e.g., CustomerController, ICustomerService, CustomerService, ICustomerRepository, CustomerRepository, CustomerModel) by analyzing the input files.
+    - Always create interfaces for Services and Repositories and implement them in concrete classes.
     """
 
 def create_code_conversion_prompt(
@@ -181,7 +180,7 @@ def create_code_conversion_prompt(
     """
     language_specific_prompt = ""
 
-# Normalize the input for safe comparison
+    # Normalize the input for safe comparison
     normalized_target = target_language.lower().strip()
 
     # Accept multiple synonyms
@@ -194,9 +193,8 @@ def create_code_conversion_prompt(
     else:
         raise ValueError("Only .NET 8 / C# is supported as the target language.")
 
-
     base_prompt = f"""
-    Important: Please ensure that the {source_language} code is translated into its exact equivalent in {target_language}, maintaining a clean layered architecture.
+    Important: Please ensure that the {source_language} code is translated into its exact equivalent in {target_language}, using a standard .NET 8 WebAPI project structure.
     Convert the following {source_language} code to {target_language} while strictly adhering to the provided business and technical requirements.
 
     Source Language: {source_language}
@@ -204,98 +202,30 @@ def create_code_conversion_prompt(
 
     {language_specific_prompt}
 
-    ENHANCED OUTPUT STRUCTURE REQUIREMENTS:
-    
-    Analyze the COBOL code complexity and generate the appropriate number of components:
-    
-    1. **Multiple Controllers**: Create separate controllers for different business domains or major functions
-    2. **Multiple Services**: Implement service layer with separate services for different business logic areas
-    3. **Multiple Models**: Create entity models for each major data structure found in the COBOL code
-    4. **Multiple Repositories**: Implement repository pattern with separate repositories for different data access needs
-    5. **DTOs**: Create data transfer objects for complex data structures when needed
-    
-    COMPONENT GENERATION GUIDELINES:
-    
-    - **Controllers**: Create one controller per major business function or COBOL program
-      - Use descriptive names like "CustomerController", "OrderController", "ReportController"
-      - Each controller should handle related business operations
-      - Implement proper HTTP methods (GET, POST, PUT, DELETE)
-    
-    - **Services**: Create services for business logic separation
-      - Use descriptive names like "CustomerService", "OrderService", "ValidationService"
-      - Each service should handle specific business domain logic
-      - Implement interfaces for dependency injection
-    
-    - **Models**: Create entity models for data structures
-      - Use descriptive names like "Customer", "Order", "Product"
-      - Include proper validation attributes
-      - Follow Entity Framework Core conventions
-    
-    - **Repositories**: Create repositories for data access
-      - Use descriptive names like "CustomerRepository", "OrderRepository"
-      - Implement repository pattern with interfaces
-      - Handle different data sources (database, files, etc.)
-    
-    - **DTOs**: Create data transfer objects when needed
-      - Use for complex data structures or API responses
-      - Separate internal models from external contracts
-    
-    NAMING CONVENTIONS:
-    - Use PascalCase for all public members and class names
-    - Use descriptive, business-focused names
-    - Follow .NET naming conventions
-    - Include proper namespaces (Company.Project.*)
-    
-    ARCHITECTURE PATTERNS:
-    - Implement Clean Architecture principles
-    - Use Dependency Injection throughout
-    - Follow SOLID principles
-    - Implement proper separation of concerns
-    - Use async/await patterns for all I/O operations
-
-    Requirements:
-    - The output should be a complete, executable implementation in .NET 8
-    - Maintain all business logic, functionality, and behavior of the original code
-    - Produce idiomatic code following .NET 8 best practices
-    - Include all necessary class definitions, method implementations, and boilerplate code
-    - Ensure consistent data handling, formatting, and computations
-    - DO NOT include markdown code blocks (like ```csharp or ```) in your response, just provide the raw code
-    - Do not return any unwanted code in {target_language} or functions which are not in {source_language}.
-    - **NEVER use placeholder comments or stub implementations (such as 'return await Task.FromResult(new Account());' or '// Placeholder for actual implementation'). You MUST fully implement all business logic and method bodies based on the COBOL source and requirements.**
-    
-    MULTIPLE COMPONENT GENERATION REQUIREMENTS:
-    - **Analyze the COBOL code structure** to identify distinct business domains and functions
-    - **Create separate controllers** for each major business function (e.g., CustomerController, OrderController, ReportController)
-    - **Implement multiple services** for different business logic areas (e.g., CustomerService, OrderService, ValidationService)
-    - **Generate multiple models** for different data structures found in the COBOL code
-    - **Create multiple repositories** for different data access patterns (e.g., CustomerRepository, OrderRepository, FileRepository)
-    - **Use descriptive, business-focused names** for all components
-    - **Ensure proper relationships** between controllers, services, and repositories
-    - **Implement dependency injection** for all service and repository dependencies
-    - **Follow single responsibility principle** - each component should have one clear purpose
-
-    Database-Specific Instructions:
-    - If the {source_language} code includes any database-related operations, automatically generate the necessary setup code using Entity Framework Core
-    - Follow this example format for database initialization and setup:
-
-    {db_setup_template if db_setup_template else 'No database setup required.'}
-
+    OUTPUT STRUCTURE REQUIREMENTS:
+    - Use a standard .NET 8 WebAPI structure:
+      MyProject/
+        Controllers/
+        Models/
+        Services/
+          Interfaces/
+        Repositories/
+          Interfaces/
+        Program.cs
+        appsettings.json
+    - Place business logic in Controllers and Services, and data access logic in Repositories.
+    - Always create interfaces for Services and Repositories and implement them in concrete classes.
+    - Use Entity Framework Core only if the original COBOL code interacts with a database.
+    - Use standard .NET 8 conventions for controllers, models, services, repositories, and configuration.
+    - Implement all required endpoints in Controllers.
+    - Use dependency injection for required services (e.g., DbContext, Logger, Services, Repositories).
+    - Implement proper exception handling and validation.
+    - The output should be a complete, executable .NET 8 WebAPI project.
+    - Do NOT include markdown code blocks (like ```csharp or ```), just provide the raw code.
+    - Do NOT include placeholder comments or stub implementations; fully implement all business logic and method bodies based on the COBOL source and requirements.
 
     Source Code ({source_language}):
     {source_code}
-
-    IMPORTANT: Only return the complete converted code WITHOUT any markdown formatting. DO NOT wrap your code in triple backticks (```). Return just the raw code itself.
-
-    Additional Database Setup Instructions:
-    If database operations are detected in the source code, include these files in your output:
-
-    ##appsettings.json
-    - Database connection configuration
-    - Logging settings
-
-    ##Dependencies
-    - Required database dependencies (e.g., Microsoft.EntityFrameworkCore)
-    - EF Core provider dependencies (e.g., Pomelo.EntityFrameworkCore.MySql)
     """
 
     return base_prompt
