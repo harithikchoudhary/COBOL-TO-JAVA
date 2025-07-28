@@ -90,7 +90,7 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
     
     structure_prompt = f"""
     You are an expert software architect specializing in COBOL to .NET 8 migration. 
-    Analyze the provided COBOL/CICS code and create a comprehensive target structure for a modern .NET 8 WebAPI application.
+    Analyze the provided COBOL code and create a comprehensive target structure for a modern .NET 8 WebAPI application.
     
     Based on the code structure, business logic, data models, and CICS operations, design a standard .NET 8 WebAPI project structure that follows:
     - Standard .NET 8 WebAPI conventions
@@ -99,11 +99,17 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
     The structure should include:
     - Controllers (for API endpoints)
     - Models (for data structures)
-    - Services (for business logic) with Interfaces
-    - Repositories (for data access) with Interfaces
+    - Services (for business logic) 
+    - Repositories (for data access)
+    - Interfaces (for services and repositories)
+    - Database design (if applicable)
+    - Configuration files (appsettings.json)
+    - Logging and error handling
+    - Security considerations(authentication, authorization)
+    - Integration points (if any)
     - Program.cs
-    - appsettings.json
-    - Entity Framework Core setup ONLY if the COBOL code interacts with a database
+    - Entity Framework Core setup Always
+    - Application DbContext for database interactions
     
     Analyze the following COBOL code and provide a detailed target structure:
     
@@ -372,7 +378,7 @@ def analyze_requirements():
             {
                 "role": "system",
                 "content": (
-                    f"You are an expert in analyzing COBOL/CICS code to extract business requirements. "
+                    f"You are an expert in analyzing COBOL code to extract business requirements. "
                     f"You understand COBOL, CICS commands, and mainframe business processes deeply. "
                     f"You have access to comprehensive analysis results including CICS patterns, RAG context, standards documents, and target structure analysis. "
                     f"Use the provided COBOL analysis JSON and target structure to understand program structure, variables, and dependencies. "

@@ -384,7 +384,7 @@ def convert_cobol_to_csharp():
         
         # Prepare conversion data
         cobol_code_str = "\n".join(cobol_code_list)
-        cobol_analysis_str = json.dumps(cobol_json, indent=2)
+        # cobol_analysis_str = json.dumps(cobol_json, indent=2)
         target_structure_str = json.dumps(target_structure, indent=2)
 
         # Load RAG context
@@ -418,8 +418,6 @@ def convert_cobol_to_csharp():
         **SOURCE CODE:**
         {cobol_code_str}
         
-        **COBOL ANALYSIS:**
-        {cobol_analysis_str}
         
         **TARGET STRUCTURE (FOLLOW THIS CLOSELY):**
         {target_structure_str}

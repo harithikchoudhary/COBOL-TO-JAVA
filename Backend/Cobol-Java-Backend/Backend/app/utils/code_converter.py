@@ -1266,7 +1266,6 @@ def should_chunk_code(code: str, line_threshold: int = 24000) -> bool:
     return len(code.splitlines()) > line_threshold
 
 
-# Factory function to create a CodeConverter instance
 def create_code_converter(client, model_name: str) -> CodeConverter:
     """
     Create a CodeConverter instance.
