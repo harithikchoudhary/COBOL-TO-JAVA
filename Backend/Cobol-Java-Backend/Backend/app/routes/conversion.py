@@ -3,13 +3,13 @@ from ..config import logger, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_
 from openai import AzureOpenAI
 import logging
 import os
-from ..utils.code_converter import create_code_converter
-from ..utils.prompts import create_code_conversion_prompt, create_unit_test_prompt, create_functional_test_prompt
+from ..utils.prompts import  create_unit_test_prompt, create_functional_test_prompt
 from ..utils.logs import log_request_details, log_processing_step, log_gpt_interaction
 from ..utils.response import extract_json_from_response
 from ..utils.db_usage import detect_database_usage
 from ..utils.db_templates import get_db_template
 from ..utils.rag_indexer import load_vector_store, query_vector_store
+from ..utils.prompts import  create_cobol_to_dotnet_conversion_prompt
 import json
 import re
 import time
@@ -384,7 +384,6 @@ def convert_cobol_to_csharp():
         
         # Prepare conversion data
         cobol_code_str = "\n".join(cobol_code_list)
-        # cobol_analysis_str = json.dumps(cobol_json, indent=2)
         target_structure_str = json.dumps(target_structure, indent=2)
 
         # Load RAG context
@@ -407,44 +406,34 @@ def convert_cobol_to_csharp():
         db_type = db_usage.get("db_type", "none")
         db_setup_template = get_db_template("C#") if db_usage.get("has_db", False) else ""
 
-        # Create enhanced conversion prompt
+        # Create conversion prompt using the imported function
+        base_conversion_prompt = create_cobol_to_dotnet_conversion_prompt(cobol_code_str, db_setup_template)
+        
+        # Enhanced conversion prompt with additional context
         conversion_prompt = f"""
-        You are an expert COBOL to C# (.NET 8) migration specialist. Convert the provided COBOL code to a modern, 
-        well-structured C# application following the target structure and requirements provided.
-        
-        IMPORTANT: Use the target structure as your blueprint for organizing the code. Create ALL the files and 
-        components specified in the target structure.
-        
-        **SOURCE CODE:**
-        {cobol_code_str}
-        
+
+        {base_conversion_prompt}
         
         **TARGET STRUCTURE (FOLLOW THIS CLOSELY):**
         {target_structure_str}
-        
-        
-        **DATABASE TEMPLATE:**
-        {db_setup_template}
         
         **RAG CONTEXT:**
         {rag_context}
         
         **STANDARDS CONTEXT:**
         {standards_context}
-        
-        **CONVERSION GUIDELINES:**
-        1. Follow the target structure exactly - create all specified projects, folders, and files
-        2. Map all COBOL data structures to appropriate C# models/entities
-        3. Convert all CICS operations to appropriate .NET patterns
-        4. Implement proper service layer architecture
-        5. Create comprehensive API controllers with proper endpoints
-        6. Use Entity Framework Core for data access
-        7. Implement proper dependency injection
-        8. Add comprehensive error handling and logging
-        9. Follow .NET 8 best practices and conventions
-        10. Ensure thread safety and async/await patterns
-        11. Add proper validation and security measures
-        12. Include proper configuration management
+
+        **Important Instructions**
+        - Ensure all business logic is preserved and converted accurately.
+        - Use modern .NET 8 patterns and practices.
+        - Implement proper error handling and validation.
+        - Follow SOLID principles and clean architecture.
+        - Use dependency injection for services and repositories.
+        - Implement logging using Serilog.
+        - Use Entity Framework Core for database interactions.
+        - Ensure all converted code is well-structured and maintainable.
+
+
         
         **REQUIRED OUTPUT:** Provide a complete C# .NET 8 solution with proper folder structure.
         """
@@ -455,7 +444,8 @@ def convert_cobol_to_csharp():
                 "role": "system",
                 "content": (
                     "You are an expert COBOL to C# migration specialist with deep knowledge of both mainframe systems and modern .NET development. "
-                    "Your task is to convert COBOL/CICS applications to modern, scalable C# .NET 8 applications. "
+                    "Your task is to convert COBOL applications to modern, scalable C# .NET 8 applications. "
+                    "Your task is to check the business logic in COBOL code , understand it and convert equivalent business logic in .NET 8 and implement in services"
                     "You understand enterprise architecture patterns, clean code principles, and modern development practices. "
                     "You MUST follow the provided target structure precisely and create ALL specified components. "
                     "Output your conversion as a JSON object with the following structure:\n"
@@ -470,8 +460,6 @@ def convert_cobol_to_csharp():
                     "  \"conversion_notes\": [\n"
                     "    {\"note\": \"string\", \"severity\": \"Info/Warning/Error\"}\n"
                     "  ],\n"
-                    "  \"unit_tests\": \"string\",\n"
-                    "  \"functional_tests\": \"string\"\n"
                     "}"
                 )
             },
@@ -486,8 +474,8 @@ def convert_cobol_to_csharp():
         conversion_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
             messages=conversion_msgs,
-            temperature=0.2,
-            max_tokens=8000
+            temperature = 0.1
+
         )
 
         logger.info(f"Conversion response received. Usage: {conversion_response.usage}")

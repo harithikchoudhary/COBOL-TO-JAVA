@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Dict, List, Any
 from ..utils.prompts import (
     create_business_requirements_prompt,
-    create_technical_requirements_prompt
+    create_technical_requirements_prompt,
+    create_target_structure_prompt
 )
 from ..utils.logs import (
     log_request_details,
@@ -80,7 +81,7 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
     
     # Combine all COBOL-related content
     cobol_content = ""
-    for category in ["COBOL Code", "Copybooks", "JCL"]:
+    for category in ["COBOL Code", "Copybooks", "JCL", "VSAM Definitions", "BMS Maps", "Control Files"]:
         for file_info in classified_files.get(category, []):
             cobol_content += f"\n\n=== {file_info['fileName']} ===\n{file_info['content']}"
     
@@ -88,120 +89,8 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
         logger.warning("No COBOL content found for target structure analysis")
         return {"error": "No COBOL content available for analysis"}
     
-    structure_prompt = f"""
-    You are an expert software architect specializing in COBOL to .NET 8 migration. 
-    Analyze the provided COBOL code and create a comprehensive target structure for a modern .NET 8 WebAPI application.
-    
-    Based on the code structure, business logic, data models, and CICS operations, design a standard .NET 8 WebAPI project structure that follows:
-    - Standard .NET 8 WebAPI conventions
-    - .NET 8 best practices
-    
-    The structure should include:
-    - Controllers (for API endpoints)
-    - Models (for data structures)
-    - Services (for business logic) 
-    - Repositories (for data access)
-    - Interfaces (for services and repositories)
-    - Database design (if applicable)
-    - Configuration files (appsettings.json)
-    - Logging and error handling
-    - Security considerations(authentication, authorization)
-    - Integration points (if any)
-    - Program.cs
-    - Entity Framework Core setup Always
-    - Application DbContext for database interactions
-    
-    Analyze the following COBOL code and provide a detailed target structure:
-    
-    {cobol_content}
-    
-    Provide your analysis in the following JSON format:
-    {{
-      "project_name": "string",
-      "architecture_pattern": "Standard .NET 8 WebAPI",
-      "folders": [
-        {{
-          "name": "string",
-          "purpose": "string",
-          "files": [
-            {{
-              "name": "string",
-              "type": "string",
-              "purpose": "string"
-            }}
-          ]
-        }}
-      ],
-      "models": [
-        {{
-          "name": "string",
-          "source": "string",
-          "properties": [
-            {{
-              "name": "string",
-              "type": "string",
-              "source_field": "string"
-            }}
-          ]
-        }}
-      ],
-      "controllers": [
-        {{
-          "name": "string",
-          "purpose": "string",
-          "endpoints": [
-            {{
-              "method": "string",
-              "route": "string",
-              "purpose": "string"
-            }}
-          ]
-        }}
-      ],
-      "services": [
-        {{
-          "name": "string",
-          "interface": "string",
-          "purpose": "string"
-        }}
-      ],
-      "repositories": [
-        {{
-          "name": "string",
-          "interface": "string",
-          "purpose": "string"
-        }}
-      ],
-      "database_design": {{
-        "tables": [
-          {{
-            "name": "string",
-            "source": "string",
-            "columns": [
-              {{
-                "name": "string",
-                "type": "string",
-                "source_field": "string"
-              }}
-            ]
-          }}
-        ]
-      }},
-      "external_dependencies": ["string"],
-      "configuration_requirements": ["string"]
-    }}
-    
-    Focus on:
-    1. Identifying all data structures from COBOL records
-    2. Mapping CICS operations to appropriate .NET WebAPI patterns
-    3. Converting file operations to database operations (if present)
-    4. Creating appropriate API endpoints in Controllers
-    5. Defining Services and Repositories with interfaces for business logic and data access
-    6. Implementing proper error handling and validation
-    7. Security considerations
-    8. Logging and auditing requirements
-    9. Integration points
-    """
+    # Use the dynamic, detailed prompt
+    structure_prompt = create_target_structure_prompt("COBOL/Mainframe", cobol_content)
     
     try:
         structure_msgs = [

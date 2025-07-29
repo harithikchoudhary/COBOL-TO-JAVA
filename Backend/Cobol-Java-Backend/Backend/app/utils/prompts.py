@@ -1,6 +1,103 @@
 """
 Module for generating prompts for code analysis and conversion.
 """
+def create_target_structure_prompt(source_language, source_code):
+    """
+    Creates a prompt for analyzing COBOL code and all related artifacts (JCL, VSAM, Copybooks, BMS Maps, Control Files, CICS screens/sections) to generate a comprehensive target .NET 8 WebAPI project structure.
+
+    Args:
+        source_language (str): The programming language of the source code (e.g., COBOL)
+        source_code (str): The source code and related artifacts to analyze (should include all relevant content)
+
+    Returns:
+        str: The prompt for target structure analysis
+    """
+    return f"""
+    You are an expert software architect specializing in COBOL to .NET 8 migration.
+    Analyze the provided {source_language} code and ALL related mainframe artifacts to create a comprehensive target structure for a modern .NET 8 WebAPI application.
+
+    The input may include:
+    - COBOL source code (programs, modules)
+    - JCL (Job Control Language) scripts
+    - VSAM file definitions
+    - Copybooks (data structure definitions)
+    - BMS Maps (CICS screen definitions)
+    - Control Files (configuration, batch control)
+    - CICS commands and screen sections
+    - Any other legacy mainframe artifacts
+
+    For each artifact type, perform the following:
+    1. Identify and describe its purpose in the legacy system.
+    2. Map its functionality and structure to the appropriate .NET 8 WebAPI components (Controllers, Models, Services, Repositories, Configuration, etc.).
+    3. For JCL: Describe how batch jobs, scheduling, and file operations should be represented or replaced in .NET 8 (e.g., background services, scheduled jobs, or API endpoints).
+    4. For VSAM: Map file-based data storage to relational database tables using Entity Framework Core, and describe the migration of data access patterns.
+    5. For Copybooks: Extract all data structures and show how they become C# models/entities.
+    6. For BMS Maps: Identify all CICS screen definitions and describe their equivalent in a modern web API (e.g., API endpoints, DTOs, or UI integration points).
+    7. For Control Files: Explain how configuration and control logic should be handled in .NET (e.g., appsettings.json, environment variables).
+    8. For CICS commands and screens: Map transaction and screen logic to .NET 8 patterns (API endpoints, controllers, service methods, etc.).
+    9. For each artifact, note any special migration considerations, dependencies, or integration points.
+
+    Based on the code structure, business logic, data models, and all mainframe artifacts, design a standard .NET 8 WebAPI project structure that follows:
+    - Standard .NET 8 WebAPI conventions
+    - .NET 8 best practices
+
+    The structure should include:
+    - Controllers (for API endpoints)
+    - Models (for data structures)
+    - Services (for business logic)
+    - Repositories (for data access)
+    - Interfaces (for services and repositories)
+    - Database design (if applicable)
+    - Configuration files (appsettings.json)
+    - Logging and error handling
+    - Security considerations (authentication, authorization)
+    - Integration points (if any)
+    - Program.cs
+    - Entity Framework Core setup (always include if data is present)
+    - Application DbContext for database interactions
+    - Batch/background job handling (if JCL or batch logic is present)
+    - UI integration points (if BMS/CICS screens are present)
+
+    Analyze the following {source_language} code and artifacts and provide a detailed target structure:
+
+    {source_code}
+
+    Provide your analysis in a DYNAMIC JSON format. The JSON structure should be flexible and reflect only the relevant sections and keys for the provided artifacts. Do NOT include empty or irrelevant sections. Add or omit keys as appropriate for the content. Example structure (adapt as needed):
+    {{
+      "project_name": "string",
+      "architecture_pattern": "Standard .NET 8 WebAPI",
+      "folders": [
+        {{
+          "name": "string",
+          "purpose": "string",
+          "folder_structure": [
+            {{
+              "name": "string",
+              "type": "string",
+              "purpose": "string"
+            }}
+          ]
+        }}
+      ],
+      "external_dependencies": ["string"],
+      "configuration_requirements": ["string"]
+    }}
+    
+    Note: This JSON format is only a guideline. Adapt the structure to fit the actual content and artifacts found in the analysis. Do not include all keys if not relevant. Add new keys if needed for special artifacts or migration considerations.
+
+    Focus on:
+    1. Identifying all data structures from COBOL records and copybooks
+    2. Mapping CICS operations and BMS screens to appropriate .NET WebAPI patterns (controllers, endpoints, DTOs)
+    3. Converting file operations and VSAM definitions to database operations (Entity Framework Core)
+    4. Creating appropriate API endpoints in Controllers for all business and screen logic
+    5. Defining Services and Repositories with interfaces for business logic and data access
+    6. Implementing proper error handling and validation
+    7. Security considerations
+    8. Logging and auditing requirements
+    9. Integration points (including batch jobs, control files, and external systems)
+    10. UI or API integration for legacy screens (if BMS/CICS present)
+    11. Batch/background job handling for JCL logic
+    """
 
 def create_business_requirements_prompt(source_language, source_code):
     """
@@ -110,19 +207,23 @@ def create_technical_requirements_prompt(source_language, target_language, sourc
             {source_code}
             """
 
-def create_dotnet_specific_prompt(source_language, source_code, db_setup_template):
+def create_cobol_to_dotnet_conversion_prompt(source_code, db_setup_template):
     """
-    Creates a .NET 8-specific prompt for code conversion (WebAPI structure with standard folders).
+    Creates a comprehensive prompt for converting COBOL code to .NET 8 WebAPI.
     
     Args:
-        source_language (str): The programming language of the source code
-        source_code (str): The source code to convert
+        source_code (str): The COBOL source code to convert
         db_setup_template (str): The database setup template for .NET 8
         
     Returns:
-        str: The .NET 8-specific prompt for code conversion
+        str: The complete COBOL to .NET 8 conversion prompt
     """
     return f"""
+    COBOL TO .NET 8 WEBAPI CONVERSION
+
+    Important: Please ensure that the COBOL code is translated into its exact equivalent in .NET 8, using a standard WebAPI project structure.
+    Convert the following COBOL code to .NET 8 while strictly adhering to the provided business and technical requirements.
+
     .NET 8 WebAPI Requirements:
     - Use .NET 8 framework
     - Follow C# naming conventions (PascalCase for public members, camelCase for private)
@@ -158,78 +259,27 @@ def create_dotnet_specific_prompt(source_language, source_code, db_setup_templat
     - Use [JsonPropertyName] for JSON serialization
     - For each business domain or major function, create appropriately named Controllers, Services, Repositories, and Models (e.g., CustomerController, ICustomerService, CustomerService, ICustomerRepository, CustomerRepository, CustomerModel) by analyzing the input files.
     - Always create interfaces for Services and Repositories and implement them in concrete classes.
-    """
-
-def create_code_conversion_prompt(
-    source_language,
-    target_language,
-    source_code,
-    db_setup_template
-):
-    """
-    Creates a prompt for converting code from one language to .NET 8.
-
-    Args:
-        source_language (str): The programming language of the source code
-        target_language (str): The target programming language for conversion (.NET 8)
-        source_code (str): The source code to convert
-        db_setup_template (str): The database setup template for .NET 8
-
-    Returns:
-        str: The prompt for code conversion
-    """
-    language_specific_prompt = ""
-
-    # Normalize the input for safe comparison
-    normalized_target = target_language.lower().strip()
-
-    # Accept multiple synonyms
-    if normalized_target in [".net 8", "c#", "csharp", ".net"]:
-        language_specific_prompt = create_dotnet_specific_prompt(
-            source_language,
-            source_code,
-            db_setup_template
-        )
-    else:
-        raise ValueError("Only .NET 8 / C# is supported as the target language.")
-
-    base_prompt = f"""
-    Important: Please ensure that the {source_language} code is translated into its exact equivalent in {target_language}, using a standard .NET 8 WebAPI project structure.
-    Convert the following {source_language} code to {target_language} while strictly adhering to the provided business and technical requirements.
-
-    Source Language: {source_language}
-    Target Language: {target_language}
-
-    {language_specific_prompt}
 
     OUTPUT STRUCTURE REQUIREMENTS:
-    - Use a standard .NET 8 WebAPI structure:
-      MyProject/
-        Controllers/
-        Models/
-        Services/
-          Interfaces/
-        Repositories/
-          Interfaces/
-        Program.cs
-        appsettings.json
-    - Place business logic in Controllers and Services, and data access logic in Repositories.
-    - Always create interfaces for Services and Repositories and implement them in concrete classes.
-    - Use Entity Framework Core only if the original COBOL code interacts with a database.
-    - Use standard .NET 8 conventions for controllers, models, services, repositories, and configuration.
-    - Implement all required endpoints in Controllers.
-    - Use dependency injection for required services (e.g., DbContext, Logger, Services, Repositories).
-    - Implement proper exception handling and validation.
-    - The output should be a complete, executable .NET 8 WebAPI project.
-    - Do NOT include markdown code blocks (like ```csharp or ```), just provide the raw code.
-    - Do NOT include placeholder comments or stub implementations; fully implement all business logic and method bodies based on the COBOL source and requirements.
+    - Use a standard .NET 8 WebAPI structure with Controllers, Models, Services, and Repositories
+    - Place business logic in Controllers and Services, and data access logic in Repositories
+    - Always create interfaces for Services and Repositories and implement them in concrete classes
+    - Use Entity Framework Core only if the original COBOL code interacts with a database
+    - Use standard .NET 8 conventions for controllers, models, services, repositories, and configuration
+    - Implement all required endpoints in Controllers
+    - Use dependency injection for required services (e.g., DbContext, Logger, Services, Repositories)
+    - Implement proper exception handling and validation
+    - The output should be a complete, executable .NET 8 WebAPI project
+    - Do NOT include markdown code blocks (like ```csharp or ```), just provide the raw code
+    - Do NOT include placeholder comments or stub implementations; fully implement all business logic and method bodies based on the COBOL source and requirements
 
-    Source Code ({source_language}):
+    Database Setup Template:
+    {db_setup_template}
+
+    COBOL Source Code:
     {source_code}
     """
-
-    return base_prompt
-
+    
 def create_unit_test_prompt(target_language, converted_code):
     """Create a prompt for generating unit tests for the converted .NET 8 code"""
     
