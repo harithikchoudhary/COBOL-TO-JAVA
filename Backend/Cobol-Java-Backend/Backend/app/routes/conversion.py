@@ -1,21 +1,22 @@
-from flask import Blueprint, request, jsonify, current_app
-from ..config import logger, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_NAME, output_dir
-from openai import AzureOpenAI
 import logging
 import os
-from ..utils.code_converter import create_code_converter
-from ..utils.prompts import create_code_conversion_prompt, create_unit_test_prompt, create_functional_test_prompt
-from ..utils.logs import log_request_details, log_processing_step, log_gpt_interaction
-from ..utils.response import extract_json_from_response
-from ..utils.db_usage import detect_database_usage
-from ..utils.db_templates import get_db_template
-from ..utils.rag_indexer import load_vector_store, query_vector_store
 import json
 import re
 import time
 import traceback
 import uuid
 from pathlib import Path
+from flask import Blueprint, request, jsonify, current_app
+from ..config import logger, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_NAME, output_dir
+from openai import AzureOpenAI
+from ..utils.code_converter import create_code_converter, should_chunk_code
+from ..utils.prompts import create_code_conversion_prompt, create_unit_test_prompt, create_functional_test_prompt
+from ..utils.logs import log_request_details, log_processing_step, log_gpt_interaction
+from ..utils.response import extract_json_from_response
+from ..utils.db_usage import detect_database_usage
+from ..utils.db_templates import get_db_template
+from ..utils.rag_indexer import load_vector_store, query_vector_store
+import shutil
 
 bp = Blueprint('conversion', __name__, url_prefix='/cobo')
 
@@ -25,51 +26,69 @@ client = AzureOpenAI(
     azure_endpoint=AZURE_OPENAI_ENDPOINT,
 )
 
-def save_json_response(cobol_filename, json_obj):
-    """Save the full JSON response to the json_output directory, using the COBOL filename as base."""
+def setup_logging(project_id: str = None):
+    log_dir = f"output/converted/{project_id}" if project_id else "output/converted"
+    os.makedirs(log_dir, exist_ok=True)
+    logging.basicConfig(
+        filename=f"{log_dir}/conversion.log",
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        filemode='a'
+    )
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    console.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger = logging.getLogger(__name__)
+    logger.addHandler(console)
+    return logger
+
+logger = setup_logging()
+
+def save_json_response(cobol_filename, json_obj, project_id=None):
     base_dir = os.path.dirname(output_dir)
-    json_output_dir = os.path.join(base_dir, "json_output")
+    json_output_dir = os.path.join(base_dir, "json_output", project_id if project_id else "")
     os.makedirs(json_output_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(cobol_filename))[0] if cobol_filename else f"converted_{int(time.time())}"
     output_filename = f"{base_name}_output.json"
     output_path = os.path.join(json_output_dir, output_filename)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(json_obj, f, indent=2, ensure_ascii=False)
+    logger.info(f"Saved JSON response to: {output_path}")
     return output_path
 
 def build_conversion_instructions():
-    """Build basic conversion instructions"""
     return """
 BASIC CONVERSION INSTRUCTIONS:
 1. Convert COBOL code to modern .NET 8 patterns
 2. Use standard .NET conventions and best practices
 3. Ensure proper error handling and validation
 4. Follow SOLID principles and clean architecture
+5. Preserve COBOL business logic and comments
+6. Handle CICS operations with REST API equivalents
+7. Use async/await for I/O operations
 """
 
 def extract_project_name(target_structure):
-    """Extract project name from target structure"""
     if isinstance(target_structure, dict):
         return target_structure.get("project_name", "BankingSystem")
     return "BankingSystem"
 
 def flatten_converted_code(converted_code, unit_test_code=None, project_id=None, target_structure=None):
-    """Create a standard .NET 8 folder structure and save it to the filesystem."""
     files = {}
-    
-    # Extract project name from target structure
     project_name = extract_project_name(target_structure) if target_structure else "BankingSystem"
     test_project_name = f"{project_name}.Tests"
 
-    # Process each file in converted_code
+    if isinstance(converted_code, str):
+        converted_code = [{"file_name": "ConvertedCode.cs", "path": "", "content": converted_code}]
+    elif isinstance(converted_code, dict) and "convertedCode" in converted_code:
+        converted_code = [{"file_name": "ConvertedCode.cs", "path": "", "content": converted_code["convertedCode"]}]
+
     if isinstance(converted_code, list):
         for file_info in converted_code:
             if isinstance(file_info, dict):
                 file_name = file_info.get("file_name", "")
                 content = file_info.get("content", "")
                 path = file_info.get("path", "")
-
-                # Create proper file path based on target structure
                 if path:
                     if not path.startswith(project_name):
                         file_path = f"{project_name}/{path}/{file_name}"
@@ -77,10 +96,26 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None,
                         file_path = f"{path}/{file_name}"
                 else:
                     file_path = f"{project_name}/{file_name}"
-
                 files[file_path] = content
 
-    # Add main project file if not exists
+    if target_structure and isinstance(target_structure, dict):
+        for cls in target_structure.get("classes", []):
+            class_name = cls.get("name", "")
+            class_content = f"""
+namespace {project_name};
+public {cls.get('type', 'class')} {class_name} {{
+    // Fields
+    {chr(10).join([f"{field.get('access_modifier', 'private')} {field.get('type')} _{field.get('name')};" for field in cls.get('fields', [])])}
+
+    // Methods
+    {chr(10).join([f"{method.get('access_modifier', 'public')} {method.get('return_type')} {method.get('name')}({chr(44).join([f"{param.get('type')} {param.get('name')}" for param in method.get('parameters', [])])}) {{}}" for method in cls.get('methods', [])])}
+}}
+"""
+            file_path = f"{project_name}/{class_name}.cs"
+            if file_path not in files:
+                files[file_path] = class_content
+            self.logger.info(f"Generated class file {file_path} from target structure")
+
     if not any(f.endswith(".csproj") for f in files.keys()):
         csproj_content = f'''<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
@@ -100,24 +135,24 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None,
   </ItemGroup>
 </Project>'''
         files[f"{project_name}/{project_name}.csproj"] = csproj_content
+        logger.info(f"Generated {project_name}.csproj")
 
-    # Add appsettings.json if not exists
     if not any("appsettings.json" in f for f in files.keys()):
-        appsettings_content = '''{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=BankingSystem;Trusted_Connection=true;TrustServerCertificate=true;"
-  },
-  "Logging": {
-    "LogLevel": {
+        appsettings_content = f'''{{
+  "ConnectionStrings": {{
+    "DefaultConnection": "Server=localhost;Database={project_name};Trusted_Connection=true;TrustServerCertificate=true;"
+  }},
+  "Logging": {{
+    "LogLevel": {{
       "Default": "Information",
       "Microsoft.AspNetCore": "Warning"
-    }
-  },
+    }}
+  }},
   "AllowedHosts": "*"
-}'''
+}}'''
         files[f"{project_name}/appsettings.json"] = appsettings_content
+        logger.info(f"Generated appsettings.json")
 
-    # Add test project csproj file first
     test_csproj_content = f'''<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -136,14 +171,11 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None,
   </ItemGroup>
 </Project>'''
     files[f"{test_project_name}/{test_project_name}.csproj"] = test_csproj_content
+    logger.info(f"Generated {test_project_name}.csproj")
 
-    # Add unit test files if unit_test_code is provided
     if unit_test_code:
         logger.info(f"Processing unit test code: {type(unit_test_code)}")
-        
-        # Handle different formats of unit_test_code
         if isinstance(unit_test_code, list):
-            # Format: [{"fileName": "...", "content": "..."}]
             for test_file in unit_test_code:
                 if isinstance(test_file, dict):
                     file_name = test_file.get("fileName")
@@ -151,33 +183,26 @@ def flatten_converted_code(converted_code, unit_test_code=None, project_id=None,
                     if file_name and content:
                         files[f"{test_project_name}/Tests/{file_name}"] = content
                         logger.info(f"Added unit test file: {file_name}")
-        
         elif isinstance(unit_test_code, dict):
-            # Handle different dict formats
             if "unitTestFiles" in unit_test_code:
-                # Format: {"unitTestFiles": [{"fileName": "...", "content": "..."}]}
                 for test_file in unit_test_code["unitTestFiles"]:
                     if isinstance(test_file, dict):
                         file_name = test_file.get("fileName")
                         content = test_file.get("content", "")
                         if file_name and content:
-                            files[f"{test_project_name}/{file_name}"] = content
+                            files[f"{test_project_name}/Tests/{file_name}"] = content
                             logger.info(f"Added unit test file: {file_name}")
             else:
-                # Direct content mapping
                 for file_name, content in unit_test_code.items():
                     if content:
-                        files[f"{test_project_name}/{file_name}"] = content
+                        files[f"{test_project_name}/Tests/{file_name}"] = content
                         logger.info(f"Added unit test file: {file_name}")
-        
         elif isinstance(unit_test_code, str):
-            # Single string content - create default file
             if unit_test_code.strip():
-                files[f"{test_project_name}/UnitTests.cs"] = unit_test_code
+                files[f"{test_project_name}/Tests/UnitTests.cs"] = unit_test_code
                 logger.info("Added single unit test file: UnitTests.cs")
-        
-        # Add solution file
-        sln_content = f'''
+
+    sln_content = f'''
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31912.275
@@ -203,9 +228,9 @@ Global
     EndGlobalSection
 EndGlobal
 '''.strip()
-        files[f"{project_name}.sln"] = sln_content
+    files[f"{project_name}.sln"] = sln_content
+    logger.info(f"Generated {project_name}.sln")
 
-    # Save files to the filesystem
     if project_id:
         output_dir_path = os.path.join("output", "converted", project_id)
         os.makedirs(output_dir_path, exist_ok=True)
@@ -214,37 +239,29 @@ EndGlobal
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
             with open(full_path, "w", encoding="utf-8") as f:
                 f.write(content)
-            logger.info(f"Saved file: {full_path}")
+            logger.info(f"Saved file: {full_path} (size: {len(content)})")
+        logger.info(f"Saved {len(files)} files to {output_dir_path}")
 
-    # --- POST-PROCESSING: Ensure appsettings.json and Program.cs are correct ---
-    # 1. Move any appsettings.json to the project root
     appsettings_keys = [k for k in files if k.lower().endswith("appsettings.json") and k != f"{project_name}/appsettings.json"]
     for key in appsettings_keys:
         files[f"{project_name}/appsettings.json"] = files[key]
         del files[key]
 
-    # 2. Ensure Program.cs exists in the project root
     program_cs_path = f"{project_name}/Program.cs"
     if not any(k.lower() == program_cs_path.lower() for k in files):
-        # Standard .NET 8 minimal hosting model template
-        files[program_cs_path] = '''
+        files[program_cs_path] = f'''
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
 builder.Services.AddControllers();
-// Add other services, e.g., DbContext, repositories, etc.
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
-{
+{{
     app.UseDeveloperExceptionPage();
-}
+}}
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
@@ -252,13 +269,12 @@ app.MapControllers();
 
 app.Run();
 '''
+        logger.info(f"Generated {program_cs_path}")
 
     return files
 
 def get_source_code_from_project(project_id):
-    """Get source code from uploaded project files"""
     try:
-        # Load from comprehensive analysis data if available
         if hasattr(current_app, 'comprehensive_analysis_data') and current_app.comprehensive_analysis_data:
             project_data = current_app.comprehensive_analysis_data
             if project_data.get('project_id') == project_id:
@@ -266,8 +282,7 @@ def get_source_code_from_project(project_id):
                 if cobol_files:
                     logger.info(f"Found {len(cobol_files)} COBOL files in analysis data")
                     return cobol_files
-        
-        # Fallback: Load from uploads directory
+
         uploads_dir = Path("uploads") / project_id
         if uploads_dir.exists():
             source_code = {}
@@ -275,23 +290,18 @@ def get_source_code_from_project(project_id):
                 if file_path.is_file() and file_path.suffix.lower() in ['.cbl', '.cpy', '.jcl']:
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         source_code[file_path.name] = f.read()
-            
             if source_code:
                 logger.info(f"Loaded {len(source_code)} files from uploads directory")
                 return source_code
-        
+
         logger.warning(f"No source code found for project {project_id}")
         return {}
-        
     except Exception as e:
         logger.error(f"Error getting source code for project {project_id}: {str(e)}")
         return {}
 
 def load_analysis_data(project_id):
-    """Load analysis data including cobol_analysis.json and target_structure.json"""
     analysis_data = {}
-    
-    # Load COBOL analysis
     cobol_analysis_path = os.path.join("output", "analysis", project_id, "cobol_analysis.json")
     if os.path.exists(cobol_analysis_path):
         with open(cobol_analysis_path, "r", encoding="utf-8") as f:
@@ -299,8 +309,7 @@ def load_analysis_data(project_id):
         logger.info(f"Loaded COBOL analysis for project: {project_id}")
     else:
         logger.warning(f"COBOL analysis not found for project: {project_id}")
-    
-    # Load target structure
+
     target_structure_path = os.path.join("output", "analysis", project_id, "target_structure.json")
     if os.path.exists(target_structure_path):
         with open(target_structure_path, "r", encoding="utf-8") as f:
@@ -308,7 +317,7 @@ def load_analysis_data(project_id):
         logger.info(f"Loaded target structure for project: {project_id}")
     else:
         logger.warning(f"Target structure not found for project: {project_id}")
-    
+
     return analysis_data
 
 @bp.route("/convert", methods=["POST"])
@@ -321,24 +330,19 @@ def convert_cobol_to_csharp():
             logger.error("Project ID is missing in request")
             return jsonify({"error": "Project ID is missing. Please upload files first.", "files": {}}), 400
 
+        logger = setup_logging(project_id)
         logger.info(f"Starting conversion for project: {project_id}")
 
-        # Load analysis data (cobol_analysis.json and target_structure.json)
         analysis_data = load_analysis_data(project_id)
-        
         if not analysis_data.get("cobol_analysis"):
             logger.error(f"No COBOL analysis data found for project: {project_id}")
             return jsonify({"error": "No analysis data found. Please run analysis first.", "files": {}}), 400
-        
+
         cobol_json = analysis_data["cobol_analysis"]
         target_structure = analysis_data.get("target_structure", {})
-        
         logger.info(f"Loaded analysis data for project: {project_id}")
 
-        # Get source code - try multiple sources
         source_code = {}
-        
-        # First try: from request data
         request_source_code = data.get("sourceCode", {})
         if request_source_code:
             logger.info("Using source code from request")
@@ -348,46 +352,37 @@ def convert_cobol_to_csharp():
                 except json.JSONDecodeError:
                     logger.error("Failed to parse sourceCode from request")
                     request_source_code = {}
-            
-            # Extract content from file objects
             for file_name, file_data in request_source_code.items():
                 if isinstance(file_data, dict) and 'content' in file_data:
                     source_code[file_name] = file_data['content']
                 elif isinstance(file_data, str):
                     source_code[file_name] = file_data
-        
-        # Second try: from project files
+
         if not source_code:
             logger.info("Getting source code from project files")
             source_code = get_source_code_from_project(project_id)
-        
-        # Validate source code
+
         if not source_code:
             logger.error(f"No source code found for project: {project_id}")
             return jsonify({"error": "No source code found. Please upload COBOL files first.", "files": {}}), 400
-        
-        # Filter only COBOL-related files
+
         cobol_code_list = []
         for file_name, content in source_code.items():
             if isinstance(content, str) and content.strip():
-                # Check if it's a COBOL file
                 if (file_name.lower().endswith(('.cbl', '.cpy', '.jcl')) or 
                     any(keyword in content.upper() for keyword in ['IDENTIFICATION DIVISION', 'PROGRAM-ID', 'PROCEDURE DIVISION', 'WORKING-STORAGE'])):
                     cobol_code_list.append(content)
                     logger.info(f"Added COBOL file: {file_name}")
-        
+
         if not cobol_code_list:
             logger.error("No valid COBOL code found in source files")
             return jsonify({"error": "No valid COBOL code found for conversion.", "files": {}}), 400
-        
+
         logger.info(f"Found {len(cobol_code_list)} COBOL files for conversion")
-        
-        # Prepare conversion data
+
         cobol_code_str = "\n".join(cobol_code_list)
-        # cobol_analysis_str = json.dumps(cobol_json, indent=2)
         target_structure_str = json.dumps(target_structure, indent=2)
 
-        # Load RAG context
         vector_store = load_vector_store(project_id)
         rag_context = ""
         standards_context = ""
@@ -402,12 +397,10 @@ def convert_cobol_to_csharp():
             else:
                 logger.warning("No RAG results returned from vector store")
 
-        # Detect database usage and get DB template
         db_usage = detect_database_usage(cobol_code_str, source_language="COBOL")
         db_type = db_usage.get("db_type", "none")
         db_setup_template = get_db_template("C#") if db_usage.get("has_db", False) else ""
 
-        # Create enhanced conversion prompt
         conversion_prompt = f"""
         You are an expert COBOL to C# (.NET 8) migration specialist. Convert the provided COBOL code to a modern, 
         well-structured C# application following the target structure and requirements provided.
@@ -418,10 +411,8 @@ def convert_cobol_to_csharp():
         **SOURCE CODE:**
         {cobol_code_str}
         
-        
         **TARGET STRUCTURE (FOLLOW THIS CLOSELY):**
         {target_structure_str}
-        
         
         **DATABASE TEMPLATE:**
         {db_setup_template}
@@ -435,7 +426,7 @@ def convert_cobol_to_csharp():
         **CONVERSION GUIDELINES:**
         1. Follow the target structure exactly - create all specified projects, folders, and files
         2. Map all COBOL data structures to appropriate C# models/entities
-        3. Convert all CICS operations to appropriate .NET patterns
+        3. Convert all CICS operations to REST API endpoints
         4. Implement proper service layer architecture
         5. Create comprehensive API controllers with proper endpoints
         6. Use Entity Framework Core for data access
@@ -445,114 +436,79 @@ def convert_cobol_to_csharp():
         10. Ensure thread safety and async/await patterns
         11. Add proper validation and security measures
         12. Include proper configuration management
-        
-        **REQUIRED OUTPUT:** Provide a complete C# .NET 8 solution with proper folder structure.
+        13. Preserve COBOL comments and business logic
+        14. Handle large COBOL files by ensuring logical chunking and context-aware merging
         """
 
-        # Call Azure OpenAI for conversion
-        conversion_msgs = [
-            {
-                "role": "system",
-                "content": (
-                    "You are an expert COBOL to C# migration specialist with deep knowledge of both mainframe systems and modern .NET development. "
-                    "Your task is to convert COBOL/CICS applications to modern, scalable C# .NET 8 applications. "
-                    "You understand enterprise architecture patterns, clean code principles, and modern development practices. "
-                    "You MUST follow the provided target structure precisely and create ALL specified components. "
-                    "Output your conversion as a JSON object with the following structure:\n"
-                    "{\n"
-                    "  \"converted_code\": [\n"
-                    "    {\n"
-                    "      \"file_name\": \"string\",\n"
-                    "      \"path\": \"string\",\n"
-                    "      \"content\": \"string\"\n"
-                    "    }\n"
-                    "  ],\n"
-                    "  \"conversion_notes\": [\n"
-                    "    {\"note\": \"string\", \"severity\": \"Info/Warning/Error\"}\n"
-                    "  ],\n"
-                    "  \"unit_tests\": \"string\",\n"
-                    "  \"functional_tests\": \"string\"\n"
-                    "}"
-                )
-            },
-            {
-                "role": "user",
-                "content": conversion_prompt
-            }
-        ]
+        code_converter = create_code_converter(client, AZURE_OPENAI_DEPLOYMENT_NAME)
+        if should_chunk_code(cobol_code_str):
+            logger.info(f"Code size ({len(cobol_code_str.splitlines())} lines) exceeds threshold, initiating chunking")
+            chunks = code_converter.chunk_code(
+                cobol_code_str, source_language="COBOL", chunk_size=23500, chunk_overlap=1000, project_id=project_id
+            )
+            converted_json = code_converter.convert_code_chunks(
+                chunks=chunks,
+                source_language="COBOL",
+                target_language="C#",
+                business_requirements=build_conversion_instructions(),
+                technical_requirements=target_structure_str,
+                db_setup_template=db_setup_template,
+                project_id=project_id
+            )
+        else:
+            logger.info("Code size within threshold, converting directly")
+            converted_json = code_converter._convert_single_chunk(
+                code_chunk=cobol_code_str,
+                source_language="COBOL",
+                target_language="C#",
+                business_requirements=build_conversion_instructions(),
+                technical_requirements=target_structure_str,
+                db_setup_template=db_setup_template
+            )
 
-        logger.info("Calling Azure OpenAI for conversion")
-        
-        conversion_response = client.chat.completions.create(
-            model=AZURE_OPENAI_DEPLOYMENT_NAME,
-            messages=conversion_msgs,
-            temperature=0.2,
-            max_tokens=8000
-        )
-
-        logger.info(f"Conversion response received. Usage: {conversion_response.usage}")
-
-        # Extract and parse the JSON response
-        converted_json = extract_json_from_response(conversion_response.choices[0].message.content)
-        
-        if not converted_json:
-            logger.error("Failed to extract JSON from conversion response")
+        if not converted_json.get("convertedCode"):
+            logger.error("Failed to obtain converted code")
             return jsonify({"error": "Failed to process conversion response.", "files": {}}), 500
 
-        # --- BEGIN: Unit and Functional Test Generation Integration ---
-        # Extract Controllers and Services for test generation
-        converted_code = converted_json.get("converted_code", [])
-        # Try to extract Controllers and Services from the converted_code list
-        controllers = []
-        print(controllers)
-        services = []
-        print(services)
+        converted_code = [
+            {"file_name": "ConvertedCode.cs", "path": "", "content": converted_json["convertedCode"]}
+        ]
+        logger.info("Generating unit tests")
+        unit_test_input = {
+            "Controllers": [],
+            "Services": []
+        }
         for file_info in converted_code:
             if isinstance(file_info, dict):
                 file_name = file_info.get("file_name", "")
                 path = file_info.get("path", "")
                 content = file_info.get("content", "")
-                # Heuristics: look for 'Controller' or 'Service' in file name or path
                 if "controller" in file_name.lower() or "controller" in path.lower():
-                    controllers.append({"file_name": file_name, "path": path, "content": content})
+                    unit_test_input["Controllers"].append({"file_name": file_name, "path": path, "content": content})
                 if "service" in file_name.lower() or "service" in path.lower():
-                    services.append({"file_name": file_name, "path": path, "content": content})
+                    unit_test_input["Services"].append({"file_name": file_name, "path": path, "content": content})
 
-        # Compose a minimal dict to pass to the unit/functional test prompt
-        unit_test_input = {
-            "Controllers": controllers,
-            "Services": services
-        }
-        print("[DEBUG] Extracted controllers:", controllers)
-        print("[DEBUG] Extracted services:", services)
-
-        # Generate unit test prompt
-        print("[DEBUG] Creating unit test prompt with input:", unit_test_input)
-        unit_test_prompt = create_unit_test_prompt(
-            "C#",
-            unit_test_input,
-        )
+        unit_test_prompt = create_unit_test_prompt("C#", unit_test_input)
         unit_test_system = (
             "You are an expert test engineer specializing in writing comprehensive unit tests for .NET 8 applications. "
-            "For EACH Controller class found, generate a separate unit test file named '[ControllerName]Tests.cs'. "
+            "For EACH Controller and Service class found, generate a separate unit test file named '[ClassName]Tests.cs'. "
             "Return your response in JSON as follows:\n"
             "{\n"
-            '  "unitTestFiles": [{'
-            '       "fileName": "[ControllerName]Tests.cs",'
-            '       "content": "...unit test code..."'
-            '   }, ...],'
-            '  "testDescription": "...",'
-            '  "coverage": [...],'
-            '  "businessRuleTests": [...]'
-            "}\n"
+            '  "unitTestFiles": [\n'
+            '    {"fileName": "[ClassName]Tests.cs", "content": "...unit test code..."}\n'
+            '  ],\n'
+            '  "testDescription": "...",\n'
+            '  "coverage": [...],\n'
+            '  "businessRuleTests": [...]\n'
+            "}"
         )
 
         unit_test_messages = [
             {"role": "system", "content": unit_test_system},
             {"role": "user", "content": unit_test_prompt}
         ]
-        print("[DEBUG] Sending unit test messages to LLM:", unit_test_messages)
         try:
+            logger.info("Calling Azure OpenAI for unit test generation")
             unit_test_response = client.chat.completions.create(
                 model=AZURE_OPENAI_DEPLOYMENT_NAME,
                 messages=unit_test_messages,
@@ -561,46 +517,28 @@ def convert_cobol_to_csharp():
                 response_format={"type": "json_object"}
             )
             unit_test_content = unit_test_response.choices[0].message.content.strip()
-            print("[DEBUG] Raw unit test LLM response:", unit_test_content)
             try:
                 unit_test_json = json.loads(unit_test_content)
-                print("[DEBUG] Parsed unit test JSON:", unit_test_json)
-                logger.info("✅ Unit test JSON parsed successfully")
-            except json.JSONDecodeError:
-                logger.warning("⚠️ Failed to parse unit test JSON directly")
-                unit_test_json = extract_json_from_response(unit_test_content)
-                print("[DEBUG] Extracted unit test JSON via fallback:", unit_test_json)
-            # Fix: Extract unit test files correctly from the JSON
-            unit_test_code = unit_test_json.get("unitTestFiles")
-            if not unit_test_code:
-                unit_test_code = unit_test_json.get("unitTestCode", "")
-            print("[DEBUG] Final unit test code:", unit_test_code)
-        except Exception as e:
-            logger.error(f"Unit test generation failed: {e}")
-            print("[ERROR] Exception during unit test generation:", e)
-            try:
-                unit_test_json = json.loads(unit_test_content)
-                print("[DEBUG] Exception fallback, parsed unit test JSON:", unit_test_json)
+                logger.info("Unit test JSON parsed successfully")
                 unit_test_code = unit_test_json.get("unitTestFiles", [])
-            except Exception as ex:
-                print("[ERROR] Exception fallback also failed:", ex)
-                unit_test_json = {}
-                unit_test_code = []
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse unit test JSON directly")
+                unit_test_json = extract_json_from_response(unit_test_content)
+                unit_test_code = unit_test_json.get("unitTestFiles", [])
+        except Exception as e:
+            logger.error(f"Unit test generation failed: {str(e)}")
+            unit_test_json = {}
+            unit_test_code = []
 
-        # Generate functional test prompt
-        functional_test_prompt = create_functional_test_prompt(
-            "C#",
-            unit_test_input
-        )
+        logger.info("Generating functional tests")
+        functional_test_prompt = create_functional_test_prompt("C#", unit_test_input)
         functional_test_system = (
             "You are an expert QA engineer specializing in creating functional tests for .NET 8 applications. "
-            "You create comprehensive test scenarios that verify the application meets all business requirements. "
-            "Focus on user journey tests, acceptance criteria, and business domain validation. "
+            "Create comprehensive test scenarios that verify the application meets all business requirements. "
             "Return your response in JSON format with the following structure:\n"
             "{\n"
             '  "functionalTests": [\n'
             '    {"id": "FT1", "title": "Test scenario title", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"},\n'
-            '    {"id": "FT2", "title": "Another test scenario", "steps": ["Step 1", "Step 2"], "expectedResult": "Expected outcome", "businessRule": "Related business rule"}\n'
             '  ],\n'
             '  "testStrategy": "Description of the overall testing approach",\n'
             '  "domainCoverage": ["List of business domain areas covered"]\n'
@@ -611,6 +549,7 @@ def convert_cobol_to_csharp():
             {"role": "user", "content": functional_test_prompt}
         ]
         try:
+            logger.info("Calling Azure OpenAI for functional test generation")
             functional_test_response = client.chat.completions.create(
                 model=AZURE_OPENAI_DEPLOYMENT_NAME,
                 messages=functional_test_messages,
@@ -621,16 +560,14 @@ def convert_cobol_to_csharp():
             functional_test_content = functional_test_response.choices[0].message.content.strip()
             try:
                 functional_test_json = json.loads(functional_test_content)
-                logger.info("✅ Functional test JSON parsed successfully")
+                logger.info("Functional test JSON parsed successfully")
             except json.JSONDecodeError:
-                logger.warning("⚠️ Failed to parse functional test JSON directly")
+                logger.warning("Failed to parse functional test JSON directly")
                 functional_test_json = extract_json_from_response(functional_test_content)
         except Exception as e:
-            logger.error(f"Functional test generation failed: {e}")
+            logger.error(f"Functional test generation failed: {str(e)}")
             functional_test_json = {}
-        # --- END: Unit and Functional Test Generation Integration ---
 
-        # Save converted code JSON
         output_dir_path = os.path.join("output", "converted", project_id)
         os.makedirs(output_dir_path, exist_ok=True)
         output_path = os.path.join(output_dir_path, "converted_csharp.json")
@@ -638,40 +575,44 @@ def convert_cobol_to_csharp():
             json.dump(converted_json, f, indent=2)
         logger.info(f"Converted C# code saved to: {output_path}")
 
-        # Create and save .NET folder structure
         files = flatten_converted_code(
-            converted_json.get("converted_code", []), 
+            converted_code,
             unit_test_code,
             project_id,
-            target_structure
+            target_structure=converted_json.get("targetStructure")
         )
-        
-        logger.info(f"Generated {len(files)} files for .NET project")
+
+        temp_dir = os.path.join("output", "converted", project_id, "temp_chunks")
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+            logger.info(f"Cleaned up temporary chunk files in {temp_dir}")
+
+        logger.info(f"Generated {len(files)} files for .NET project in {output_dir_path}")
 
         return jsonify({
             "status": "success",
             "project_id": project_id,
-            "converted_code": converted_json.get("converted_code", []),
-            "conversion_notes": converted_json.get("conversion_notes", []),
+            "converted_code": converted_code,
+            "conversion_notes": converted_json.get("conversionNotes", []),
             "unit_tests": unit_test_code,
             "unit_test_details": unit_test_json,
             "functional_tests": functional_test_json,
-            "files": files
+            "files": files,
+            "target_structure": converted_json.get("targetStructure", {})
         })
 
     except Exception as e:
-        logger.error(f"❌ Conversion failed: {str(e)}")
+        logger.error(f"Conversion failed: {str(e)}")
         traceback.print_exc()
         return jsonify({"error": str(e), "files": {}}), 500
 
 @bp.route("/converted-files/<base_name>", methods=["GET"])
 def get_converted_files(base_name):
-    """Return the file tree and contents for a given conversion (by base_name) from ConvertedCode."""
     try:
         converted_code_dir = os.path.join("output", "converted", base_name)
         if not os.path.exists(converted_code_dir):
             return jsonify({"error": "Converted files not found"}), 404
-        
+
         file_tree = {"files": {}}
         for root, dirs, files in os.walk(converted_code_dir):
             for file in files:
@@ -683,7 +624,7 @@ def get_converted_files(base_name):
                 except Exception as e:
                     logger.error(f"Error reading file {file_path}: {str(e)}")
                     file_tree["files"][rel_path] = f"Error reading file: {str(e)}"
-        
+
         return jsonify(file_tree)
     except Exception as e:
         logger.error(f"Error getting converted files: {str(e)}")
