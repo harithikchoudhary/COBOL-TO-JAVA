@@ -97,10 +97,57 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
             {
                 "role": "system",
                 "content": (
-                    "You are an expert software architect specializing in COBOL to .NET 8 migration. "
-                    "You understand legacy mainframe systems and modern .NET architecture patterns. "
-                    "Your task is to analyze COBOL code and design a standard .NET 8 project structure "
-                    "that maintains all business logic while following current best practices."
+                    "ROLE & GOAL:\n"
+                    "You are a senior software architect specializing in COBOL → .NET 8 WebAPI migrations. "
+                    "Your sole task is to analyze the supplied COBOL artifacts (COBOL programs, copybooks, JCL) and design a "
+                    "clean, layered .NET 8 WebAPI target structure that preserves business logic and follows modern best practices.\n"
+                    "\n"
+                    "DELIVERABLE (STRICT):\n"
+                    "• Produce ONLY a single JSON object that matches the caller-provided schema exactly (no extra top-level fields). "
+                    "• Do NOT output code, markdown, prose, or commentary—JSON only. "
+                    "• If something is unknown, use a concise 'TBD' string or an empty array while keeping the schema intact. "
+                    "• Keep names realistic and consistent with .NET conventions (PascalCase for types/files; plural table names where applicable).\n"
+                    "\n"
+                    "SCOPE & METHOD:\n"
+                    "1) Identify domains and operations from COBOL PROCEDURE DIVISION paragraphs and section names. "
+                    "2) Extract data structures from WORKING-STORAGE and FILE SECTION (and copybooks) and map to C# models and (if applicable) EF Core entities.\n"
+                    "3) Map COBOL file I/O and CICS interactions:\n"
+                    "   • READ/WRITE/OPEN/CLOSE → repository methods; EF Core when persistence is implied.\n"
+                    "   • EXEC CICS data access → repositories; transactions → EF Core transactions. "
+                    "   • External program/terminal calls → integration/service clients with clear interfaces.\n"
+                    "4) Define Controllers only for API surfaces (no business logic in controllers). "
+                    "5) Put business rules in Services with interfaces; data access in Repositories with interfaces. "
+                    "6) Include Program.cs, appsettings.json, and minimal configuration/references to wire DI, logging, and (if needed) EF Core.\n"
+                    "\n"
+                    "ARCHITECTURE REQUIREMENTS:\n"
+                    "• Pattern: Standard .NET 8 WebAPI layering: Controllers → Services (Interfaces) → Repositories (Interfaces) → EF Core (if used). "
+                    "• Logging: Microsoft.Extensions.Logging use is assumed; central error handling recommended. "
+                    "• Validation: DataAnnotations on request/DTO models. "
+                    "• Security: Note authentication/authorization if sensitive operations or data are implied; otherwise leave as TBD. "
+                    "• Configuration: Connection strings, external endpoints, feature flags in appsettings.json. "
+                    "• EF Core: Include DbContext only if persistent storage is indicated by COBOL (files/VSAM/DB ops). "
+                    "• Integration: If COBOL suggests batch/JCL, propose BackgroundService skeleton in folders (no code—just file names and purpose).\n"
+                    "\n"
+                    "NAMING & CONTENT GUIDELINES:\n"
+                    "• Folder names: Controllers, Models, Services/Interfaces, Repositories/Interfaces, Data (for DbContext), Configuration, Middleware (if you include error handling). "
+                    "• File items must include: name, type (e.g., 'C# class', 'json'), and purpose aligned to the detected business capability. "
+                    "• Controllers expose endpoints (HTTP verbs, routes) derived from COBOL use cases; be precise but avoid inventing unrelated endpoints. "
+                    "• Models: derive property names/types from COBOL PIC clauses; when unsure, mark type as 'string' with 'TBD' purpose. "
+                    "• Tables/columns: only when persistence is implied; map to EF entities and columns with reasonable SQL types (int, decimal(scale,precision), nvarchar(n), date/datetime). "
+                    "• External dependencies: list only what the structure truly needs (e.g., 'Microsoft.EntityFrameworkCore' if EF is used).\n"
+                    "\n"
+                    "QUALITY GUARDRAILS:\n"
+                    "• No hallucination: Derive every folder/file/model/controller/service/repository from evidence in the COBOL/JCL/copybooks. "
+                    "  If an item is inferred to complete the architecture, prefix its purpose with 'Inferred:' and keep it minimal. "
+                    "• Keep controllers thin; services hold business logic; repositories handle data access only. "
+                    "• Do not include tests or full implementation code—this task is structure design only. "
+                    "• Ensure consistency across names (e.g., Customer → CustomersController, ICustomerService, CustomerService, ICustomerRepository, CustomerRepository, Customers table).\n"
+                    "\n"
+                    "OUTPUT REMINDERS:\n"
+                    "• Return JSON matching the exact schema provided by the user prompt. "
+                    "• Use empty arrays where nothing applies. "
+                    "• Keep descriptions concise and actionable. "
+                    "• Do not exceed the schema or embed narrative text outside of 'purpose' fields."
                 )
             },
             {
@@ -108,6 +155,7 @@ def create_target_structure_analysis(project_id: str, file_data: Dict[str, Any],
                 "content": structure_prompt
             }
         ]
+
         
         log_processing_step("Calling GPT for target structure analysis", {
             "prompt_length": len(structure_prompt),
@@ -356,6 +404,22 @@ def analyze_requirements():
         log_gpt_interaction("TECHNICAL_REQUIREMENTS", AZURE_OPENAI_DEPLOYMENT_NAME, technical_msgs, technical_response)
 
         technical_json = extract_json_from_response(technical_response.choices[0].message.content)
+
+        # Save business and technical requirements to files for conversion use
+        output_dir = os.path.join("output", "analysis", project_id)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save business requirements
+        business_req_path = os.path.join(output_dir, "business_requirements.json")
+        with open(business_req_path, "w", encoding="utf-8") as f:
+            json.dump(business_json, f, indent=2)
+        logger.info(f"Business requirements saved to: {business_req_path}")
+        
+        # Save technical requirements
+        tech_req_path = os.path.join(output_dir, "technical_requirements.json")
+        with open(tech_req_path, "w", encoding="utf-8") as f:
+            json.dump(technical_json, f, indent=2)
+        logger.info(f"Technical requirements saved to: {tech_req_path}")
 
         # Store analysis data for conversion use
         current_app.comprehensive_analysis_data = {

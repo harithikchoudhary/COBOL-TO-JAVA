@@ -1,6 +1,93 @@
 """
 Module for generating prompts for code analysis and conversion.
 """
+
+def get_conversion_instructions():
+    """Get the conversion instructions (dos and donts) for COBOL to C# conversion"""
+    return """
+    You are an expert COBOL to C# converter. Your task is to convert COBOL code to C# while preserving business logic and adhering to best practices.
+    Follow these guidelines strictly:
+        DO's
+
+        1. **Preserve Business Logic:** 
+        - Extract all COBOL `PROCEDURE DIVISION` logic and move it into Services (not Controllers).
+        - Retain original functionality, calculations, validations, and control flow.
+
+        2. **Follow Layered Architecture:**
+        - Controllers → Services → Repositories.
+        - Controllers must only handle HTTP requests and responses.
+        - Services handle business logic.
+        - Repositories handle data access (EF Core or in-memory).
+
+        3. **Use Standard .NET 8 Patterns:**
+        - Dependency Injection for all Services and Repositories.
+        - Proper exception handling (ErrorHandlingMiddleware + try/catch).
+        - Logging with ILogger<T>.
+        - Validation with DataAnnotations.
+
+        4. **Map COBOL Data Structures Carefully:**
+        - `WORKING-STORAGE` and `RECORD` sections → C# Models.
+        - Ensure correct type mappings (e.g., `PIC 9(n)` → int/long/decimal).
+
+        5. **Ensure Security:**
+        - Implement authentication/authorization if sensitive operations are detected.
+        - Validate all inputs to prevent data corruption.
+
+        6. **Output Complete Solution:**
+        - Include **all required files** (Controllers, Models, Services, Repositories, DbContext, Program.cs, appsettings.json, etc.).
+        - Provide fully implemented, compilable code.
+
+        7. **Replace File I/O and CICS:**
+        - Convert file reads/writes to EF Core database operations where applicable.
+        - Convert EXEC CICS calls into service abstractions or external API integrations.
+
+        8. **Implement Full Endpoints:**
+        - Every major COBOL function should map to at least one API endpoint in Controllers.
+
+        9. **Document Important Parts:**
+        - Use XML doc comments (///) above Service methods to explain business rules or assumptions.
+
+        10. **Handle Transactions and Concurrency:**
+            - Use EF Core transactions for multi-step updates.
+            - Implement optimistic concurrency if COBOL implied record locking.
+
+        ========================================
+        DON'Ts
+        ========================================
+        1. **Don't Omit Logic:**
+        - Do NOT leave placeholders or TODO comments.
+        - Do NOT simplify business rules; preserve all conditions and flows.
+
+        2. **Don't Put Business Logic in Controllers or Repositories:**
+        - Keep Controllers thin.
+        - Do NOT embed calculations or validations in Repositories.
+
+        3. **Don't Break Naming Conventions:**
+        - Avoid COBOL-style names (e.g., CUSTOMER-ID); convert to PascalCase (CustomerId).
+
+        4. **Don't Use Non-Standard Packages:**
+        - Only use built-in Microsoft.* packages unless explicitly instructed.
+
+        5. **Don't Skip Error Handling:**
+        - Never leave unhandled exceptions; wrap logic in try/catch where needed.
+
+        6. **Don't Produce Partial Code:**
+        - Never output incomplete projects.
+        - Never output just a single file unless explicitly requested.
+
+        7. **Don't Use Console Output or File-Based Debugging:**
+        - Use ILogger for logging instead of `Console.WriteLine`.
+
+        8. **Don't Hardcode Configuration:**
+        - Use appsettings.json for connection strings, external endpoints, and secrets.
+
+        9. **Don't Expose Internal Implementation Details in API Responses:**
+        - Only return sanitized models (DTOs) from Controllers.
+
+        10. **Don't Include Markdown Syntax or Commentary in Output:**
+            - Output should be raw code files only (no ``` markers or extra explanation).
+        """
+
 def create_target_structure_prompt(source_language, source_code):
     """
     Creates a prompt for analyzing COBOL code and all related artifacts (JCL, VSAM, Copybooks, BMS Maps, Control Files, CICS screens/sections) to generate a comprehensive target .NET 8 WebAPI project structure.
@@ -58,7 +145,7 @@ def create_target_structure_prompt(source_language, source_code):
     - Batch/background job handling (if JCL or batch logic is present)
     - UI integration points (if BMS/CICS screens are present)
 
-    Analyze the following {source_language} code and artifacts and provide a detailed target structure:
+    Analyze the following COBOL source code, CICS, VSAM, Copybooks, BMS and artifacts and provide a detailed target structure:
 
     {source_code}
 
@@ -207,79 +294,197 @@ def create_technical_requirements_prompt(source_language, target_language, sourc
             {source_code}
             """
 
-def create_cobol_to_dotnet_conversion_prompt(source_code, db_setup_template):
+def create_cobol_to_dotnet_conversion_prompt(source_code: str, db_setup_template: str) -> str:
     """
-    Creates a comprehensive prompt for converting COBOL code to .NET 8 WebAPI.
-    
+    Creates a comprehensive prompt for converting COBOL code to .NET 8 WebAPI (C#),
+    with detailed business-logic handling and COBOL-specific migration guidance.
+
     Args:
-        source_code (str): The COBOL source code to convert
-        db_setup_template (str): The database setup template for .NET 8
-        
+        source_code (str): The COBOL source code to convert.
+        db_setup_template (str): The database setup template/instructions for .NET 8 (EF Core).
+
     Returns:
-        str: The complete COBOL to .NET 8 conversion prompt
+        str: The complete COBOL -> .NET 8 conversion prompt.
     """
     return f"""
-    COBOL TO .NET 8 WEBAPI CONVERSION
+COBOL → .NET 8 C# WEBAPI CONVERSION (FULL PROJECT, PRODUCTION-READY)
 
-    Important: Please ensure that the COBOL code is translated into its exact equivalent in .NET 8, using a standard WebAPI project structure.
-    Convert the following COBOL code to .NET 8 while strictly adhering to the provided business and technical requirements.
+ROLE:
+You are a senior modernization engineer. Convert the COBOL code below into a complete, runnable .NET 8 WebAPI solution in C#, following clean layering, built-in .NET features, and SOLID principles.
 
-    .NET 8 WebAPI Requirements:
-    - Use .NET 8 framework
-    - Follow C# naming conventions (PascalCase for public members, camelCase for private)
-    - Implement proper exception handling using try-catch blocks
-    - Use C# 12 features where appropriate
-    - Implement logging using Microsoft.Extensions.Logging
-    - Use dependency injection with IServiceCollection
-    - Use Entity Framework Core for database operations if needed
-    - Implement validation using System.ComponentModel.DataAnnotations
-    - Use proper C# namespace structure (Company.Project.*)
+HIGH-LEVEL OBJECTIVES:
+- Preserve business rules and data flow exactly as implemented in COBOL.
+- Replace file-based I/O with EF Core database operations when applicable.
+- Expose business capabilities as REST endpoints with proper validation, error handling, and logging.
+- Produce a compilable .NET 8 WebAPI solution with all necessary files.
 
-    Required NuGet Packages:
-    - Microsoft.AspNetCore.App
-    - Microsoft.EntityFrameworkCore (if database is used)
-    - Microsoft.Extensions.Logging
+========================================
+A) .NET 8 WEBAPI REQUIREMENTS
+========================================
+- Target: .NET 8 / C# 12.
+- Naming: PascalCase (public types/members), camelCase (locals/params/private fields).
+- Controllers: Mark with [ApiController], [Route("api/[controller]")].
+- Model Binding: Use [FromBody] for request DTOs. Use DataAnnotations (e.g., [Required], [StringLength], [Range]).
+- Dependency Injection: Use IServiceCollection; constructor injection only.
+- Logging: Use Microsoft.Extensions.Logging (ILogger<T>).
+- EF Core: Use only if the COBOL code performs persistent operations; otherwise keep in-memory abstractions with interfaces.
+- Configuration: Use appsettings.json (+ environment-specific variants).
+- Versioning (basic): Route-based or conventional (e.g., /api/v1/...).
+- Do NOT use third-party packages unless strictly necessary. Prefer built-in BCL and Microsoft.* packages.
 
-    .NET 8 WebAPI Project Structure:
-    MyProject/
-      Controllers/
-      Models/
-      Services/
-        Interfaces/
-      Repositories/
-        Interfaces/
-      Program.cs
-      appsettings.json
+Required (built-in) packages:
+- Microsoft.AspNetCore.App (metapackage)
+- Microsoft.EntityFrameworkCore (if persistence is needed)
+- Microsoft.Extensions.Logging
 
-    .NET 8-Specific Attributes:
-    - Use [ApiController] for API controllers
-    - Use [Route] for routing
-    - Use [FromBody] for request body binding
-    - Use [Required] for validation
-    - Use [JsonPropertyName] for JSON serialization
-    - For each business domain or major function, create appropriately named Controllers, Services, Repositories, and Models (e.g., CustomerController, ICustomerService, CustomerService, ICustomerRepository, CustomerRepository, CustomerModel) by analyzing the input files.
-    - Always create interfaces for Services and Repositories and implement them in concrete classes.
+Optional (only if necessary, not required): API Explorer/Swagger via Swashbuckle (do not include if not asked).
 
-    OUTPUT STRUCTURE REQUIREMENTS:
-    - Use a standard .NET 8 WebAPI structure with Controllers, Models, Services, and Repositories
-    - Place business logic in Controllers and Services, and data access logic in Repositories
-    - Always create interfaces for Services and Repositories and implement them in concrete classes
-    - Use Entity Framework Core only if the original COBOL code interacts with a database
-    - Use standard .NET 8 conventions for controllers, models, services, repositories, and configuration
-    - Implement all required endpoints in Controllers
-    - Use dependency injection for required services (e.g., DbContext, Logger, Services, Repositories)
-    - Implement proper exception handling and validation
-    - The output should be a complete, executable .NET 8 WebAPI project
-    - Do NOT include markdown code blocks (like ```csharp or ```), just provide the raw code
-    - Do NOT include placeholder comments or stub implementations; fully implement all business logic and method bodies based on the COBOL source and requirements
+========================================
+B) PROJECT STRUCTURE (REFERENCE — ADD MORE IF NEEDED)
+========================================
+MyProject/
+  Controllers/
+  Models/
+  Services/
+    Interfaces/
+  Repositories/
+    Interfaces/
+  Middleware/
+  Configuration/
+  Program.cs
+  appsettings.json
+  appsettings.Development.json
 
-    Database Setup Template:
-    {db_setup_template}
+Notes:
+- You may add folders for Infrastructure, BackgroundJobs (Hosted Services), Integration (external systems), Security, etc., IF evidence exists in COBOL (e.g., batch jobs, external calls).
+- For messaging or external systems, define abstractions (e.g., IExternalSystemClient, IMessageBus) without pinning to a vendor.
 
-    COBOL Source Code:
-    {source_code}
-    """
-    
+========================================
+C) BUSINESS LOGIC HANDLING (MANDATORY)
+========================================
+- Extract COBOL business logic from PROCEDURE DIVISION. Identify paragraphs/sections implementing rules.
+- Map COBOL control flow to idiomatic C#:
+  - IF / EVALUATE ⇒ if / switch.
+  - PERFORM / PERFORM THRU ⇒ method calls (split into cohesive private/public service methods).
+  - GO TO ⇒ refactor into structured control flow; eliminate unstructured jumps.
+  - MOVE / COMPUTE ⇒ assignments/expressions with proper types.
+  - CALL ⇒ service-layer method calls or integration clients.
+- Place ALL business rules in Services (not Controllers, not Repositories).
+- Public service classes MUST have interfaces (e.g., IPremiumService, IEligibilityService).
+- Keep services cohesive; split large procedures into smaller testable methods with clear names (e.g., CalculatePremium, ValidateEligibility, NormalizeCustomerData).
+- Document assumptions as XML doc comments (///) above methods. Avoid TODOs and placeholders; fully implement logic inferred from COBOL.
+
+========================================
+D) DATA MODELING & TYPE MAPPING
+========================================
+- Map WORKING-STORAGE, FILE SECTION, and RECORD definitions to C# models/entities.
+- Type conversions:
+  - PIC 9(n)      ⇒ int / long (choose range-aware), or decimal for arithmetic/precision.
+  - PIC 9(n)V9(m) ⇒ decimal (scale m).
+  - COMP-3       ⇒ decimal (packed).
+  - PIC X(n)     ⇒ string.
+  - Date/Time formats ⇒ DateOnly/TimeOnly/DateTime per semantics.
+- Normalize field names to PascalCase in C#; preserve original COBOL field name in an XML summary if helpful.
+- If data is persisted in COBOL files, model equivalent EF Core entities and DbContext, with keys and relationships.
+- Validate structurally with DataAnnotations (e.g., max length for PIC X(n), numeric ranges for PIC 9).
+
+========================================
+E) FILE I/O & CICS MIGRATION
+========================================
+- READ/WRITE/OPEN/CLOSE (sequential/indexed files): Replace with repository methods using EF Core (e.g., Find, Add, Update, Remove, SaveChangesAsync).
+- RECORD locking logic: Map to EF Core concurrency patterns (rowversion/timestamp or optimistic concurrency).
+- EXEC CICS equivalents:
+  - Data access ⇒ repository + DbContext.
+  - Transactional units ⇒ EF Core transactions (IDbContextTransaction) where required.
+  - External calls ⇒ define service/HTTP client interfaces; implement with HttpClient (typed clients via DI).
+  - Message passing ⇒ define IMessageBus interface (leave provider-agnostic).
+- JCL/batch indications: Implement IHostedService/BackgroundService for scheduled/batch processes. Move parameterization to configuration.
+
+========================================
+F) CONTROLLERS & ENDPOINTS
+========================================
+- Controllers are thin: input validation, call service methods, return appropriate results.
+- Use IActionResult/Results for HTTP behavior:
+  - 200/201 for success with data/creation.
+  - 204 when no content.
+  - 400 for validation errors; 404 for missing resources; 409 for conflicts; 500 for unhandled errors.
+- Implement pagination for list endpoints (query params: page, pageSize) if original logic iterates large sets.
+- Ensure idempotency where COBOL implied re-runs (e.g., batch writes) — add natural keys/constraints and conflict handling.
+
+========================================
+G) ERROR HANDLING, TRANSACTIONS, AUDIT
+========================================
+- Centralize exception handling via middleware (e.g., ErrorHandlingMiddleware).
+- Use ILogger for:
+  - Start/End of major service operations.
+  - Validation failures and business rule violations.
+  - External system timeouts/retries (if applicable).
+- For multi-step operations, use EF Core transactions.
+- Add created/updated timestamps and (if needed) correlation/activity IDs on operations for auditability.
+
+========================================
+H) SECURITY (AS NEEDED)
+========================================
+- If original code implies protected operations, add JWT Bearer authentication (Microsoft.AspNetCore.Authentication.JwtBearer) and role-based authorization.
+- Validate inputs rigorously; never trust client data.
+- Avoid exposing internal IDs if not necessary.
+
+========================================
+I) CONFIGURATION & ENVIRONMENTS
+========================================
+- Use appsettings.json + appsettings.Development.json for overrides.
+- Connection strings and external endpoints MUST be in configuration.
+- Bind strongly typed options via IOptions<T> (Configuration/Options pattern).
+
+========================================
+J) PERFORMANCE & QUALITY
+========================================
+- Avoid N+1 queries; use projection and pagination.
+- Prefer async (Task-based) for I/O operations.
+- Keep cyclomatic complexity low by splitting methods logically.
+- Ensure repository queries are filtered and indexed appropriately.
+
+========================================
+K) OUTPUT FORMAT (STRICT)
+========================================
+- Output a FULL solution with all files. No markdown code fences (no ```), no extra commentary.
+- For EACH file, print:
+  === <relative-path-from-root> ===
+  <file contents>
+
+Required files (extend as needed by detected features):
+- Program.cs
+- appsettings.json (+ appsettings.Development.json)
+- Controllers/*.cs (at least one)
+- Models/*.cs (entities/DTOs as needed)
+- Services/Interfaces/*.cs and Services/*.cs
+- Repositories/Interfaces/*.cs and Repositories/*.cs
+- Middleware/ErrorHandlingMiddleware.cs (centralized exception handling)
+- Data/AppDbContext.cs (if persistence needed)
+- Configuration/Options classes (if using options pattern)
+
+========================================
+L) ACCEPTANCE CRITERIA
+========================================
+- Compilable .NET 8 WebAPI.
+- No placeholders, no TODOs; fully implemented logic based on COBOL.
+- Clean separation: Controllers (HTTP) → Services (business) → Repositories (data).
+- Interfaces for all public services/repositories.
+- EF Core only when COBOL indicates persistent storage.
+- Sufficient XML summaries for non-obvious business decisions/assumptions.
+- Adheres to naming conventions and layering rules above.
+
+========================================
+M) ENTITY FRAMEWORK CORE SETUP (IF NEEDED)
+========================================
+{db_setup_template}
+
+========================================
+N) COBOL SOURCE CODE (INPUT)
+========================================
+{source_code}
+"""
+ 
 def create_unit_test_prompt(target_language, converted_code):
     """Create a prompt for generating unit tests for the converted .NET 8 code"""
     

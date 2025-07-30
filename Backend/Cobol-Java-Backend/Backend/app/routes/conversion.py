@@ -3,7 +3,7 @@ from ..config import logger, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_
 from openai import AzureOpenAI
 import logging
 import os
-from ..utils.prompts import  create_unit_test_prompt, create_functional_test_prompt
+from ..utils.prompts import  create_unit_test_prompt, create_functional_test_prompt, get_conversion_instructions
 from ..utils.logs import log_request_details, log_processing_step, log_gpt_interaction
 from ..utils.response import extract_json_from_response
 from ..utils.db_usage import detect_database_usage
@@ -37,15 +37,6 @@ def save_json_response(cobol_filename, json_obj):
         json.dump(json_obj, f, indent=2, ensure_ascii=False)
     return output_path
 
-def build_conversion_instructions():
-    """Build basic conversion instructions"""
-    return """
-BASIC CONVERSION INSTRUCTIONS:
-1. Convert COBOL code to modern .NET 8 patterns
-2. Use standard .NET conventions and best practices
-3. Ensure proper error handling and validation
-4. Follow SOLID principles and clean architecture
-"""
 
 def extract_project_name(target_structure):
     """Extract project name from target structure"""
@@ -288,7 +279,7 @@ def get_source_code_from_project(project_id):
         return {}
 
 def load_analysis_data(project_id):
-    """Load analysis data including cobol_analysis.json and target_structure.json"""
+    """Load analysis data including cobol_analysis.json, target_structure.json, and business_requirements.json"""
     analysis_data = {}
     
     # Load COBOL analysis
@@ -309,7 +300,26 @@ def load_analysis_data(project_id):
     else:
         logger.warning(f"Target structure not found for project: {project_id}")
     
+    # Load business requirements - NEW
+    business_requirements_path = os.path.join("output", "analysis", project_id, "business_requirements.json")
+    if os.path.exists(business_requirements_path):
+        with open(business_requirements_path, "r", encoding="utf-8") as f:
+            analysis_data["business_requirements"] = json.load(f)
+        logger.info(f"Loaded business requirements for project: {project_id}")
+    else:
+        logger.warning(f"Business requirements not found for project: {project_id}")
+    
+    # Load technical requirements - NEW
+    technical_requirements_path = os.path.join("output", "analysis", project_id, "technical_requirements.json")
+    if os.path.exists(technical_requirements_path):
+        with open(technical_requirements_path, "r", encoding="utf-8") as f:
+            analysis_data["technical_requirements"] = json.load(f)
+        logger.info(f"Loaded technical requirements for project: {project_id}")
+    else:
+        logger.warning(f"Technical requirements not found for project: {project_id}")
+    
     return analysis_data
+
 
 @bp.route("/convert", methods=["POST"])
 def convert_cobol_to_csharp():
@@ -323,7 +333,7 @@ def convert_cobol_to_csharp():
 
         logger.info(f"Starting conversion for project: {project_id}")
 
-        # Load analysis data (cobol_analysis.json and target_structure.json)
+        # Load analysis data (cobol_analysis.json, target_structure.json, business_requirements.json, technical_requirements.json)
         analysis_data = load_analysis_data(project_id)
         
         if not analysis_data.get("cobol_analysis"):
@@ -332,6 +342,8 @@ def convert_cobol_to_csharp():
         
         cobol_json = analysis_data["cobol_analysis"]
         target_structure = analysis_data.get("target_structure", {})
+        business_requirements = analysis_data.get("business_requirements", {})
+        technical_requirements = analysis_data.get("technical_requirements", {})
         
         logger.info(f"Loaded analysis data for project: {project_id}")
 
@@ -385,6 +397,8 @@ def convert_cobol_to_csharp():
         # Prepare conversion data
         cobol_code_str = "\n".join(cobol_code_list)
         target_structure_str = json.dumps(target_structure, indent=2)
+        business_requirements_str = json.dumps(business_requirements, indent=2)
+        technical_requirements_str = json.dumps(technical_requirements, indent=2)
 
         # Load RAG context
         vector_store = load_vector_store(project_id)
@@ -409,13 +423,20 @@ def convert_cobol_to_csharp():
         # Create conversion prompt using the imported function
         base_conversion_prompt = create_cobol_to_dotnet_conversion_prompt(cobol_code_str, db_setup_template)
         
-        # Enhanced conversion prompt with additional context
+        # Enhanced conversion prompt with additional context including business requirements
         conversion_prompt = f"""
 
         {base_conversion_prompt}
         
         **TARGET STRUCTURE (FOLLOW THIS CLOSELY):**
         {target_structure_str}
+
+
+        **BUSINESS REQUIREMENTS (CRITICAL - ENSURE ALL BUSINESS LOGIC IS PRESERVED):**
+        {business_requirements_str}
+        
+        **Do's and Don'ts Prompt**
+        {get_conversion_instructions()}
         
         **RAG CONTEXT:**
         {rag_context}
@@ -424,18 +445,18 @@ def convert_cobol_to_csharp():
         {standards_context}
 
         **Important Instructions**
-        - Ensure all business logic is preserved and converted accurately.
-        - Use modern .NET 8 patterns and practices.
-        - Implement proper error handling and validation.
+        - Ensure all business logic from the BUSINESS REQUIREMENTS is preserved and converted accurately.
+        - Map each business rule to appropriate C# implementation patterns.
+        - Use modern .NET 8 patterns and practices while maintaining business functionality.
+        - Implement proper error handling and validation as specified in requirements.
         - Follow SOLID principles and clean architecture.
         - Use dependency injection for services and repositories.
         - Implement logging using Serilog.
         - Use Entity Framework Core for database interactions.
         - Ensure all converted code is well-structured and maintainable.
-
-
+        - Pay special attention to business rules and constraints mentioned in the requirements.
         
-        **REQUIRED OUTPUT:** Provide a complete C# .NET 8 solution with proper folder structure.
+        **REQUIRED OUTPUT:** Provide a complete C# .NET 8 solution with proper folder structure that implements all business requirements.
         """
 
         # Call Azure OpenAI for conversion
@@ -444,8 +465,8 @@ def convert_cobol_to_csharp():
                 "role": "system",
                 "content": (
                     "You are an expert COBOL to C# migration specialist with deep knowledge of both mainframe systems and modern .NET development. "
-                    "Your task is to convert COBOL applications to modern, scalable C# .NET 8 applications. "
-                    "Your task is to check the business logic in COBOL code , understand it and convert equivalent business logic in .NET 8 and implement in services"
+                    "Your task is to convert COBOL applications to modern, scalable C# .NET 8 applications while preserving ALL business logic and requirements. "
+                    "You have been provided with comprehensive business requirements analysis - you MUST ensure every business rule and requirement is properly implemented in the C# code. "
                     "You understand enterprise architecture patterns, clean code principles, and modern development practices. "
                     "You MUST follow the provided target structure precisely and create ALL specified components. "
                     "Output your conversion as a JSON object with the following structure:\n"
@@ -460,6 +481,9 @@ def convert_cobol_to_csharp():
                     "  \"conversion_notes\": [\n"
                     "    {\"note\": \"string\", \"severity\": \"Info/Warning/Error\"}\n"
                     "  ],\n"
+                    "  \"business_rules_implemented\": [\n"
+                    "    {\"rule\": \"string\", \"implementation\": \"string\", \"location\": \"string\"}\n"
+                    "  ]\n"
                     "}"
                 )
             },
@@ -469,13 +493,12 @@ def convert_cobol_to_csharp():
             }
         ]
 
-        logger.info("Calling Azure OpenAI for conversion")
+        logger.info("Calling Azure OpenAI for conversion with business requirements")
         
         conversion_response = client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
             messages=conversion_msgs,
             temperature = 0.1
-
         )
 
         logger.info(f"Conversion response received. Usage: {conversion_response.usage}")
